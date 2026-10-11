@@ -44,20 +44,42 @@ const slugify = (s) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
 const urlPath = (...parts) => parts.join('/').split('/').filter(Boolean).map(encodeURIComponent).join('/');
 const exists = (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
 
-/** Newest file modification time inside a game folder (skips repo/tooling folders). */
+// Files that don't count as a game update: things publish.bat never uploads, docs, and
+// screenshots/covers sitting in the game's top folder.
+const SKIP_FILES = /\.(pem|key|blend\d*|bat|pyc|md|txt)$|^(\.gitignore|\.gitattributes|\.gitmodules|desktop\.ini|thumbs\.db|\.ds_store|license.*)$/i;
+
+/** Extra skips from publish-exclude.txt: bare names match anywhere, paths are relative to the arcade folder. */
+function loadExcludes() {
+  const names = [], paths = [];
+  let text = '';
+  try { text = fs.readFileSync(path.join(ROOT, 'publish-exclude.txt'), 'utf8'); } catch { return { names, paths }; }
+  for (let line of text.split(/\r?\n/)) {
+    line = line.trim().replace(/[\\/]+$/, '');
+    if (!line || line.startsWith('#')) continue;
+    if (/[\\/]/.test(line)) paths.push(path.normalize(path.join(ROOT, line)).toLowerCase());
+    else names.push(new RegExp('^' + line.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'));
+  }
+  return { names, paths };
+}
+const EXCLUDES = loadExcludes();
+const excluded = (full, name) => EXCLUDES.names.some((r) => r.test(name)) || EXCLUDES.paths.includes(full.toLowerCase());
+
+/** When the game itself last changed: newest modification time of the files that ship with it. */
 function newestMtime(dir) {
   let newest = 0;
-  const walk = (d) => {
+  const walk = (d, top) => {
     let entries;
     try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
     for (const e of entries) {
-      if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(path.join(d, e.name)); }
-      else if (e.isFile()) {
-        try { newest = Math.max(newest, fs.statSync(path.join(d, e.name)).mtimeMs); } catch { /* ignore */ }
+      const full = path.join(d, e.name);
+      if (excluded(full, e.name)) continue;
+      if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(full, false); }
+      else if (e.isFile() && !SKIP_FILES.test(e.name) && !(top && IMG.test(e.name))) {
+        try { newest = Math.max(newest, fs.statSync(full).mtimeMs); } catch { /* ignore */ }
       }
     }
   };
-  walk(dir);
+  walk(dir, true);
   return newest;
 }
 

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galactic Tower Defense</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Animated starfield behind everything -->
+  <canvas id="bgStars" aria-hidden="true"></canvas>
+
+  <!-- ============================== MAIN MENU ============================== -->
+  <section id="menuScreen" class="screen active">
+    <div id="menuMain" class="menu-panel active">
+      <div class="logo">
+        <div class="logo-emblem" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <polygon points="50,4 92,27 92,73 50,96 8,73 8,27" class="emblem-outer"/>
+            <polygon points="50,18 79,34 79,66 50,82 21,66 21,34" class="emblem-inner"/>
+            <path d="M50 26 L58 46 L78 50 L58 54 L50 74 L42 54 L22 50 L42 46 Z" class="emblem-star"/>
+          </svg>
+        </div>
+        <p class="logo-kicker">Sector Command presents</p>
+        <h1 class="logo-title">Galactic <span>Tower Defense</span></h1>
+        <p class="logo-sub">Hold the line. Defend the core. Become legend.</p>
+      </div>
+
+      <nav class="menu-buttons">
+        <button class="menu-btn primary" id="btnNewGame"><span class="mb-icon">▶</span>New Campaign</button>
+        <button class="menu-btn" id="btnContinue"><span class="mb-icon">⟲</span>Continue<small id="continueInfo"></small></button>
+        <button class="menu-btn" id="btnArchives"><span class="mb-icon">✦</span>Archives</button>
+        <button class="menu-btn" id="btnManual"><span class="mb-icon">☰</span>Field Manual</button>
+        <button class="menu-btn" id="btnSound"><span class="mb-icon">♪</span><span id="soundLabel">Sound: On</span></button>
+      </nav>
+      <p class="menu-foot">v3.0 · An original sci-fi strategy game · No install needed</p>
+    </div>
+
+    <!-- Sector + difficulty selection -->
+    <div id="menuSetup" class="menu-panel">
+      <button class="back-btn" id="btnSetupBack">‹ Back</button>
+
+      <h2 class="setup-step"><span>01</span> Select a sector</h2>
+      <div id="sectorList" class="sector-list"></div>
+
+      <h2 class="setup-title">Choose your difficulty</h2>
+      <p class="setup-tag">Your path will not be easy, Commander.</p>
+      <div id="difficultyList" class="difficulty-list"></div>
+
+      <button class="deploy-btn" id="btnDeploy" disabled>
+        <span class="deploy-label">Deploy</span>
+        <span class="deploy-sub" id="deploySummary">Pick a difficulty</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================== GAME ============================== -->
+  <section id="gameScreen" class="screen">
+    <header class="hud">
+      <div class="hud-brand">
+        <span class="hud-emblem">✦</span>
+        <div>
+          <div class="hud-title">Sector Command</div>
+          <div class="hud-sector" id="hudSector">—</div>
+        </div>
+      </div>
+
+      <div class="hud-stats">
+        <div class="hud-stat credits"><span class="hs-label">Credits</span><span class="hs-val" id="hudCredits">0</span></div>
+        <div class="hud-stat lives"><span class="hs-label">Core</span><span class="hs-val" id="hudLives">0</span></div>
+        <div class="hud-stat wave"><span class="hs-label">Wave</span><span class="hs-val" id="hudWave">0</span></div>
+        <div class="hud-stat score"><span class="hs-label">Score</span><span class="hs-val" id="hudScore">0</span></div>
+      </div>
+
+      <div class="hud-controls">
+        <button class="hud-btn wave-btn" id="btnStartWave" title="Launch the next wave (Space)">Launch Wave</button>
+        <button class="hud-btn" id="btnAuto" title="Automatically launch waves (A)">Auto</button>
+        <button class="hud-btn" id="btnSpeed" title="Game speed (F)">1×</button>
+        <button class="hud-btn" id="btnPause" title="Pause (P)">❚❚</button>
+        <button class="hud-btn" id="btnMute" title="Sound (M)">♪</button>
+        <button class="hud-btn" id="btnMenu" title="Save and quit to menu">☰</button>
+      </div>
+    </header>
+
+    <main class="battle">
+      <div class="board-wrap">
+        <canvas id="board" width="960" height="600"></canvas>
+
+        <div id="waveBanner" class="wave-banner"></div>
+        <div id="toast" class="toast"></div>
+
+        <div id="pauseOverlay" class="overlay">
+          <div class="overlay-card">
+            <h2>Paused</h2>
+            <p>Take a breath, Commander.</p>
+            <div class="overlay-actions">
+              <button class="ov-btn primary" id="btnResume">Resume</button>
+              <button class="ov-btn" id="btnSave">Save</button>
+              <button class="ov-btn" id="btnRestart">Restart</button>
+              <button class="ov-btn" id="btnQuit">Quit to menu</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="endOverlay" class="overlay">
+          <div class="overlay-card">
+            <div class="end-badge" id="endBadge">✦</div>
+            <h2 id="endTitle">Victory</h2>
+            <p id="endText"></p>
+            <div class="end-stats" id="endStats"></div>
+            <div class="overlay-actions">
+              <button class="ov-btn primary" id="btnEndless">Continue: Endless</button>
+              <button class="ov-btn" id="btnPlayAgain">Play again</button>
+              <button class="ov-btn" id="btnEndMenu">Main menu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <section class="panel">
+          <h3 class="panel-title">Deploy Units <small>1–0</small></h3>
+          <div id="towerList" class="tower-list"></div>
+        </section>
+
+        <section class="panel" id="selectedPanel" hidden>
+          <div id="selectedTowerUI"></div>
+        </section>
+
+        <section class="panel">
+          <h3 class="panel-title">Legendary Protocols <small>Q W E</small></h3>
+          <div id="abilityList" class="ability-list"></div>
+        </section>
+
+        <section class="panel">
+          <h3 class="panel-title">Incoming <small id="nextWaveLabel"></small></h3>
+          <div id="wavePreview" class="wave-preview"></div>
+        </section>
+
+        <section class="panel log-panel">
+          <h3 class="panel-title">Comms</h3>
+          <div id="log" class="log" aria-live="polite"></div>
+        </section>
+      </aside>
+    </main>
+  </section>
+
+  <!-- ============================== MODALS ============================== -->
+  <div id="archivesModal" class="modal">
+    <div class="modal-card">
+      <button class="modal-close" data-close>×</button>
+      <h2>Archives</h2>
+      <h4>Records</h4>
+      <div id="recordsList" class="records"></div>
+      <h4>Achievements <small id="achCount"></small></h4>
+      <div id="achievementList" class="ach-grid"></div>
+    </div>
+  </div>
+
+  <div id="manualModal" class="modal">
+    <div class="modal-card">
+      <button class="modal-close" data-close>×</button>
+      <h2>Field Manual</h2>
+      <div class="manual">
+        <p>The Void Swarm is advancing along the hyperlanes toward your <b>core</b>. Deploy units beside the lane to stop them. Every enemy that reaches the core drains its integrity. Lose it all and the sector falls.</p>
+        <h4>Controls</h4>
+        <ul>
+          <li><kbd>1</kbd>–<kbd>0</kbd> pick a unit, then click the battlefield to deploy it. Right click or <kbd>Esc</kbd> cancels.</li>
+          <li>Click a deployed unit to upgrade it (<kbd>U</kbd>), sell it (<kbd>S</kbd>) or change its targeting (<kbd>T</kbd>).</li>
+          <li><kbd>Space</kbd> launches the next wave. Launching early, while enemies are still on the field, pays a bonus.</li>
+          <li><kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> trigger Legendary Protocols. <kbd>F</kbd> changes speed, <kbd>P</kbd> pauses, <kbd>A</kbd> toggles auto waves, <kbd>M</kbd> mutes.</li>
+        </ul>
+        <h4>Economy</h4>
+        <ul>
+          <li>Each cleared wave pays 5% interest on banked credits (up to 60).</li>
+          <li>Selling refunds 70% of what you invested, or 100% if the unit was placed during the current build phase.</li>
+          <li>Your progress autosaves after every cleared wave.</li>
+        </ul>
+        <h4>Know your enemy</h4>
+        <div id="enemyCodex" class="codex"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tooltip" class="tooltip"></div>
+
+  <script src="js/core.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>

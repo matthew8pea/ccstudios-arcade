@@ -1,10 +1,26 @@
 {
-  "generated": 1791724132868,
+  "generated": 1791740053936,
   "site": {
     "title": "CCStudios Arcade",
     "tagline": "Games by Cousin Crew Studios"
   },
   "games": [
+    {
+      "slug": "galactic-tower-defense",
+      "title": "Galactic Tower Defense",
+      "description": "Hold the line across three sectors. Build and upgrade 10 units, fire off Legendary Protocols, and survive the Hollow Sovereign.",
+      "folder": "galactic-tower-defense",
+      "url": "games/galactic-tower-defense/index.html",
+      "cover": "covers/galactic-tower-defense.jpg",
+      "icon": null,
+      "tags": [
+        "Strategy",
+        "Tower Defense"
+      ],
+      "order": null,
+      "added": 1791739000466,
+      "updated": 1791727520881
+    },
     {
       "slug": "galactic-legends",
       "title": "Galactic Legends",
@@ -36,7 +52,7 @@
       ],
       "order": null,
       "added": 0,
-      "updated": 1791669234756
+      "updated": 1791649155199
     },
     {
       "slug": "galactic-playground",

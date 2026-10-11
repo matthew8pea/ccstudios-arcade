@@ -5,16 +5,35 @@
     "Galactic City Defense": {
       "description": "Third-person shooter across Coruscant rooftops, the Jedi Temple and Tatooine. Play as Commander Cody or Commander Fox. VR ready.",
       "cover": "covers/galactic-city-defense.jpg",
-      "tags": ["3D", "Shooter", "VR"]
+      "tags": [
+        "3D",
+        "Shooter",
+        "VR"
+      ]
     },
     "galactic legends": {
       "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
-      "tags": ["Fighting", "Arena"]
+      "tags": [
+        "Fighting",
+        "Arena"
+      ]
     },
     "Galactic-Playground": {
       "description": "2D physics sandbox full of Jedi, Sith, troopers, droids and starships. Build it, break it, blow it up.",
       "cover": "covers/galactic-playground.jpg",
-      "tags": ["Sandbox", "Physics"]
+      "tags": [
+        "Sandbox",
+        "Physics"
+      ]
+    },
+    "galactic-tower-defense": {
+      "title": "Galactic Tower Defense",
+      "description": "Hold the line across three sectors. Build and upgrade 10 units, fire off Legendary Protocols, and survive the Hollow Sovereign.",
+      "cover": "covers/galactic-tower-defense.jpg",
+      "tags": [
+        "Strategy",
+        "Tower Defense"
+      ]
     }
   }
 }
