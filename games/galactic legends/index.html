@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- itch.io / static host: re-upload this file to ship updates; if players see a stale build, bump ?v= on the page or embed URL. -->
+    <title>Galactic Legends</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="styles.css?v=14">
+</head>
+<body>
+    <div id="statCard"></div>
+    <div class="game-container">
+        <!-- ── LOADING SCREEN ──
+             Everything inside .loading-content rises out of a blur in sequence,
+             driven by --reveal-delay. The ring, the readout and the manifest all
+             report real asset progress — nothing here is on a fake timer. -->
+        <div id="loadingScreen">
+            <div class="loading-stars splash-stars" id="loadingStars"></div>
+            <div class="loading-glow"></div>
+            <div class="loading-content">
+                <p class="loading-eyebrow loading-reveal" style="--reveal-delay:0.1s">Cousin Crew Studios</p>
+                <h1 class="loading-title loading-reveal" style="--reveal-delay:0.45s">Galactic Legends</h1>
+                <div class="loading-divider loading-reveal" style="--reveal-delay:0.95s"></div>
+
+                <div class="loading-ring loading-reveal" id="loadingRing" style="--reveal-delay:1.15s">
+                    <svg class="loading-ring-svg" viewBox="0 0 120 120" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="loadingRingGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="120" y2="120">
+                                <stop offset="0%" stop-color="#00A4FF"/>
+                                <stop offset="55%" stop-color="#00cfff"/>
+                                <stop offset="100%" stop-color="#e94560"/>
+                            </linearGradient>
+                        </defs>
+                        <circle class="loading-ring-track" cx="60" cy="60" r="52"></circle>
+                        <circle class="loading-ring-fill" id="loadingRingFill" cx="60" cy="60" r="52"></circle>
+                    </svg>
+                    <div class="loading-ring-readout"><span id="loadingPct">0</span><span class="loading-ring-unit">%</span></div>
+                </div>
+
+                <ul class="loading-manifest loading-reveal" id="loadingManifest" style="--reveal-delay:1.4s">
+                    <li class="loading-manifest-line" data-at="20">Calibrating hyperdrive</li>
+                    <li class="loading-manifest-line" data-at="45">Restoring holorecords</li>
+                    <li class="loading-manifest-line" data-at="70">Priming blasters</li>
+                    <li class="loading-manifest-line" data-at="95">Mustering the Grand Army</li>
+                </ul>
+
+                <div class="loading-tip-slot loading-reveal" style="--reveal-delay:1.65s">
+                    <div class="loading-tip" id="loadingTip">Loading assets…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SPLASH / MAIN MENU ── -->
+        <div id="splashMenu">
+            <div class="splash-stars" id="splashStars"></div>
+
+            <!-- Status strip. Both chips are filled by refreshSplashState(), which
+                 runs every time the splash is shown, not just on load. -->
+            <div class="splash-status">
+                <div class="splash-chip splash-chip-credits" id="splashCredits">🪙 0</div>
+                <div class="splash-chip" id="splashRecordChip"><span class="splash-chip-label">Record</span><span id="splashRecord">—</span></div>
+            </div>
+
+            <div class="splash-top">
+                <p class="splash-eyebrow">Cousin Crew Studios</p>
+                <h1 class="splash-title">Welcome to Galactic Legends</h1>
+                <div class="splash-divider"></div>
+            </div>
+            <div class="splash-buttons">
+                <button class="splash-btn splash-btn-freeplay" id="btnFreeplay">Freeplay</button>
+                <button class="splash-btn splash-btn-shop has-sub" id="btnShop">
+                    <span>Shop<span class="splash-btn-tag" id="shopNewTag" style="display:none;"></span></span>
+                    <span class="splash-btn-sub" id="shopSub">Sprites, patterns and one-offs</span>
+                </button>
+                <button class="splash-btn splash-btn-armory has-sub" id="btnArmory">
+                    <span>Armory</span>
+                    <span class="splash-btn-sub" id="armorySub">Forge a weapon from a pattern</span>
+                </button>
+                <div class="splash-kamino-slot">
+                    <button class="splash-btn splash-btn-creator has-sub" id="btnCreator">
+                        <span>The Zero Point</span>
+                        <span class="splash-btn-sub" id="creatorSub">Fabricate a fighter</span>
+                    </button>
+                    <!-- Parked above the screen by .splash-btn-kamino until the snap
+                         is over, then dropped in by snap-intro.js. -->
+                    <button class="splash-btn splash-btn-kamino has-sub" id="btnKamino">
+                        <span>Kamino</span>
+                        <span class="splash-btn-sub" id="kaminoSub">Clone a fighter</span>
+                    </button>
+                </div>
+                <button class="splash-btn splash-btn-dossier has-sub" id="btnDossier">
+                    <span>Dossier<span class="splash-btn-tag" id="dossierReadyTag" style="display:none;"></span></span>
+                    <span class="splash-btn-sub">Contracts · mastery · match history</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="mainMenu" class="menu-container" style="display:none;">
+            <h1 class="title">Galactic Legends</h1>
+            <p class="subtitle">Select your Battalion, Legion, or Hero.</p>
+            <!-- The season switch lives here rather than in the faction
+                 headings: it is one control that was drawn four times over,
+                 and a heading is a label rather than somewhere to put a
+                 button. Both copies carry .marvel-faction-toggle, which is
+                 what paintToggle() and the click wiring select on. -->
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search characters...">
+                <button type="button" id="marvelToggleMain" class="marvel-faction-toggle" aria-pressed="false">🦸 Marvel</button>
+            </div>
+            <div class="faction-wrapper">
+                <div class="faction-section">
+                    <h2 class="faction-title hero-faction">
+                        <span id="hero-faction-name">Grand Army & Heroes</span>
+                    </h2>
+                    <div class="button-group" id="hero-roster"></div>
+                </div>
+
+                <div class="faction-section">
+                    <h2 class="faction-title villain-faction">
+                        <span id="villain-faction-name">Sith & Separatists</span>
+                    </h2>
+                    <div class="button-group" id="villain-roster"></div>
+                </div>
+            </div>
+
+            <div class="faction-wrapper" id="secret-faction-wrapper" style="display: none;">
+                <div class="faction-section" style="width: 100%;">
+                    <h2 class="faction-title secret-faction" id="secret-faction-toggle" style="cursor: pointer; user-select: none;">Secret Characters <span id="secret-faction-chevron" style="font-size: 0.8em;">▼</span></h2>
+                    <div class="secret-collapse-wrapper">
+                        <div class="button-group" id="secret-roster"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="opponentMenu">
+            <h1 class="title" style="margin:5px 0 0 0; font-size:1.6rem;">Choose Your Opponent</h1>
+
+            <div class="vs-banner">
+                <span id="vsBannerPlayer" class="vs-player-name"></span>
+                <span class="vs-label">VS</span>
+                <span class="vs-question">???</span>
+            </div>
+
+            <div class="opponent-actions">
+                <button class="surprise-button" id="surpriseBtn">⚡ Surprise Me!</button>
+                <button class="back-button" id="backBtn">← Back</button>
+            </div>
+
+            <div class="diff-row">
+                <button class="diff-btn easy" data-diff="easy">Easy</button>
+                <button class="diff-btn normal selected" data-diff="normal">Normal</button>
+                <button class="diff-btn hard" data-diff="hard">Hard</button>
+                <button class="diff-btn legend" data-diff="legend">Legend</button>
+            </div>
+            <div class="arena-row" id="arenaRow">
+                <button class="arena-btn selected" data-arena="space" style="color:#8ae1ff;border-color:#224;">🌌 Deep Space</button>
+                <button class="arena-btn" data-arena="deathstar" style="color:#aaaaaa;">💀 Death Star</button>
+                <button class="arena-btn" data-arena="mustafar" style="color:#ff6600;">🌋 Mustafar</button>
+                <button class="arena-btn" data-arena="hoth" style="color:#aaddff;">❄️ Hoth</button>
+                <button class="arena-btn" data-arena="coruscant" style="color:#ffd700;">🏙️ Coruscant</button>
+                <button class="arena-btn" data-arena="moseisley" style="color:#d4a574;">🍺 Mos Eisley</button>
+                <button class="arena-btn" data-arena="naboo" style="color:#b39ddb;">🏛️ Naboo</button>
+                <button class="arena-btn" data-arena="kashyyyk" style="color:#4a7a4a;">🌳 Kashyyyk</button>
+                <button class="arena-btn" data-arena="mandalore" style="color:#c9814a;">🔰 Mandalore</button>
+                <button class="arena-btn" data-arena="endor" style="color:#8fbf6a;">🌲 Endor</button>
+                <button class="arena-btn" data-arena="petranaki" style="color:#d98a4a;">🏟️ Petranaki Arena</button>
+                <button class="arena-btn" data-arena="cloudcity" style="color:#ff9d7a;">☁️ Cloud City</button>
+                <!-- The Marvel season's own ground, and unlike the season's fighters
+                     it is not behind the toggle: an arena belongs to whoever is
+                     standing on it, and Vader on the terraces is a fight worth
+                     having. -->
+                <!-- Thor and Loki’s ground, and the season’s second arena. Like
+                     Wakanda it sits outside the faction toggle: an arena belongs to
+                     whoever is standing on it. -->
+                <button class="arena-btn" data-arena="asgard" style="color:#f0c66a;">🌈 Asgard</button>
+                <button class="arena-btn" data-arena="wakanda" style="color:#c3b5e8;">🐾 Wakanda</button>
+                <button class="arena-btn" id="randomArenaBtn" data-arena="" style="color:#cc99ff;border-color:#553366;">🎲 Random</button>
+            </div>
+
+            <div class="search-container">
+                <input type="text" id="oppSearchInput" class="search-input" placeholder="🔍 Search opponents...">
+                <button type="button" id="marvelToggleOpp" class="marvel-faction-toggle" aria-pressed="false">🦸 Marvel</button>
+            </div>
+
+            <div class="faction-wrapper">
+                <div class="faction-section">
+                    <h2 class="faction-title hero-faction" style="font-size:1rem;">
+                        <span id="opp-hero-faction-name">Grand Army & Heroes</span>
+                    </h2>
+                    <div class="button-group" id="opp-hero-roster"></div>
+                </div>
+                <div class="faction-section">
+                    <h2 class="faction-title villain-faction" style="font-size:1rem;">
+                        <span id="opp-villain-faction-name">Sith & Separatists</span>
+                    </h2>
+                    <div class="button-group" id="opp-villain-roster"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="pauseOverlay">
+            <div class="pause-box">
+                <div class="pause-title">PAUSED</div>
+                <div class="pause-divider"></div>
+                <button class="pause-btn pause-btn-resume" id="pauseResumeBtn">▶ Resume</button>
+                <button class="pause-btn pause-btn-backup" id="pauseBackupBtn" style="display:none;">📡 Call for Backup</button>
+                <button class="pause-btn pause-btn-quit" id="pauseQuitBtn">✕ Quit Battle</button>
+                <div class="pause-hint">ESC to resume</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+        <div id="mobileControls" class="mobile-controls" aria-hidden="true">
+            <div class="mobile-controls-inner">
+                <div class="touch-stick-wrap">
+                    <div class="touch-stick-base" id="touchStickBase" role="presentation">
+                        <div class="touch-stick-knob" id="touchStickKnob"></div>
+                    </div>
+                </div>
+                <div class="touch-pause-wrap">
+                    <button type="button" class="touch-pause-btn" id="touchPauseBtn" aria-label="Pause">⏸</button>
+                </div>
+                <!-- Right-hand action cluster. Reload and Interact are contextual:
+                     updateTouchActionButtons() in game.js only reveals Reload for
+                     weapons that carry a magazine, and Interact while a hold-to-use
+                     prompt is actually live, so the thumb zone stays uncluttered. -->
+                <div class="touch-fire-wrap">
+                    <div class="touch-action-stack">
+                        <button type="button" class="touch-action-btn" id="touchInteractBtn" aria-label="Interact (hold)" hidden>✋</button>
+                        <button type="button" class="touch-action-btn" id="touchReloadBtn" aria-label="Reload" hidden>🔄</button>
+                        <button type="button" class="touch-action-btn" id="touchThrowBtn" aria-label="Throw blade" hidden>🌀</button>
+                    </div>
+                    <div class="touch-action-stack">
+                        <button type="button" class="touch-action-btn touch-dodge-btn" id="touchDodgeBtn" aria-label="Dodge">💨</button>
+                        <button type="button" class="touch-fire-btn" id="touchFireBtn" aria-label="Fire weapon">🔫</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="hud" class="hud">
+            <div class="hud-side">
+                <div class="portrait-wrap">
+                    <div id="playerPortrait" class="portrait-ring" style="color:#00A4FF;border-color:#00A4FF;">⚔️</div>
+                    <div class="portrait-info">
+                        <span id="playerLabel" class="portrait-name"></span>
+                        <span id="playerWeaponLabel" class="portrait-weapon"></span>
+                    </div>
+                </div>
+                <div class="health-bar-container">
+                    <div id="playerHealthBar" class="health-bar"></div>
+                </div>
+                <div id="playerSubBars" class="sub-bars-container"></div>
+                <span id="playerHealthText" class="health-text"></span>
+                <div class="round-pips" id="playerPips"></div>
+            </div>
+            <div class="hud-side">
+                <div class="portrait-wrap">
+                    <div id="enemyPortrait" class="portrait-ring" style="color:#FF3333;border-color:#FF3333;">⚔️</div>
+                    <div class="portrait-info">
+                        <span id="enemyLabel" class="portrait-name"></span>
+                        <span id="enemyWeaponLabel" class="portrait-weapon"></span>
+                    </div>
+                </div>
+                <div class="health-bar-container">
+                    <div id="enemyHealthBar" class="health-bar enemy"></div>
+                </div>
+                <div id="enemySubBars" class="sub-bars-container"></div>
+                <span id="enemyHealthText" class="health-text"></span>
+                <div class="round-pips" id="enemyPips"></div>
+            </div>
+        </div>
+
+        <div id="comboCounter" class="combo-counter"></div>
+
+        <div id="hudTimer">3:00</div>
+
+        <div id="confettiLayer"></div>
+        <div id="messageOverlay" class="message-overlay">
+            <div class="message-box">
+                <h2 id="messageText" class="message-text"></h2>
+                <div id="seriesScoreDisplay" style="font-family:'Orbitron',sans-serif;font-size:0.9rem;margin-bottom:16px;letter-spacing:3px;color:rgba(255,255,255,0.5);display:none;"></div>
+                <div class="end-stats">
+                    <div class="end-stat-box"><div class="end-stat-label">Time</div><div class="end-stat-val" id="endTime">0:00</div></div>
+                    <div class="end-stat-box"><div class="end-stat-label">Kills</div><div class="end-stat-val" id="endKills">0</div></div>
+                    <div class="end-stat-box"><div class="end-stat-label">HP Left</div><div class="end-stat-val" id="endHP">0</div></div>
+                </div>
+                <div class="end-stats" id="endRoundStats" style="margin-top:6px;">
+                    <div class="end-stat-box"><div class="end-stat-label">Damage</div><div class="end-stat-val" id="endDamage">0</div></div>
+                    <div class="end-stat-box"><div class="end-stat-label">Hits</div><div class="end-stat-val" id="endHits">0</div></div>
+                    <div class="end-stat-box"><div class="end-stat-label">Accuracy</div><div class="end-stat-val" id="endAccuracy">—</div></div>
+                </div>
+                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                    <button id="nextRoundButton" style="display:none;padding:15px 30px;font-size:1rem;background:linear-gradient(135deg,#005588,#003366);color:#00cfff;border:1px solid #00A4FF;font-family:'Orbitron',sans-serif;cursor:pointer;border-radius:6px;transition:0.2s;letter-spacing:1px;">Next Round ▶</button>
+                    <button id="rematchButton" style="display:none;padding:15px 30px;font-size:1rem;background:linear-gradient(135deg,#550000,#330000);color:#ff6666;border:1px solid #e94560;font-family:'Orbitron',sans-serif;cursor:pointer;border-radius:6px;transition:0.2s;letter-spacing:1px;">⚔️ Rematch</button>
+                    <button id="restartButton">Return to Base</button>
+                </div>
+            </div>
+        </div>
+        <div id="announcementBanner"></div>
+        <div id="streakBanner"></div>
+
+        <button id="settingsBtn" title="Settings" aria-label="Settings" aria-expanded="false" aria-controls="settingsPanel">⚙️</button>
+        <button id="fullscreenBtn" title="Fullscreen" aria-label="Toggle fullscreen">⛶</button>
+        <div id="settingsPanel" class="settings-panel" role="dialog" aria-label="Settings">
+            <h3>SETTINGS</h3>
+            <div class="settings-slider-row">
+                <label for="musicVolumeSlider">🎵 Music</label>
+                <input type="range" id="musicVolumeSlider" min="0" max="1" step="0.01" value="0.55" aria-valuemin="0" aria-valuemax="1">
+            </div>
+            <div class="settings-slider-row">
+                <label for="sfxVolumeSlider">🔊 SFX</label>
+                <input type="range" id="sfxVolumeSlider" min="0" max="1" step="0.01" value="1" aria-valuemin="0" aria-valuemax="1">
+            </div>
+            <div class="settings-perf-row" role="group" aria-label="Graphics quality">
+                <span class="settings-perf-label">🖥️ Graphics</span>
+                <div class="settings-perf-btns">
+                    <button type="button" class="perf-btn" data-perf="low" id="perfBtnLow" title="Fewer particles, lower resolution — best on weak devices">Low</button>
+                    <button type="button" class="perf-btn" data-perf="balanced" id="perfBtnBalanced" title="Balanced quality and performance">Balanced</button>
+                    <button type="button" class="perf-btn selected" data-perf="high" id="perfBtnHigh" title="Full visual effects">High</button>
+                </div>
+            </div>
+            <div class="settings-scroll-list" id="settingsScrollList">
+                <button type="button" id="controlsBtn">🎮 Controls</button>
+                <button type="button" id="creditsBtn">🎬 Credits</button>
+                <!-- Starts hidden and is shown by updateSpritesUiVisibility() on
+                     every build. The inline display:none only covers the moment
+                     before that first runs. -->
+                <button type="button" id="spritesBtn" style="display:none;">✨ Sprites</button>
+                <button type="button" id="autoAimBtn" title="Aim automatically at the nearest enemy instead of aiming with the mouse or right stick. Always on for touch controls.">🎯 Auto-Aim: OFF</button>
+                <button type="button" id="reducedMotionBtn" title="Disable screen shake, kill-cam, confetti, and heavy motion">♿ Reduced Motion: OFF</button>
+                <button type="button" id="marvelToggleBtn" title="Play the Marvel menu and battle tracks instead of the Star Wars ones. Audio only — it does not gate any characters or arenas.">🎵 Marvel Music: OFF</button>
+                <button type="button" id="aurebeshToggleBtn" style="display:none;">🔤 Aurebesh: OFF</button>
+                <button type="button" id="downloadSaveBtn">💾 Download Save File</button>
+                <button type="button" id="loadSaveBtn">📂 Load Save File</button>
+                <input type="file" id="loadSaveFileInput" accept="application/json,.json" style="display:none;">
+            </div>
+            <div class="redeem-section">
+                <input type="text" id="redeemCodeInput" placeholder="Enter redeem code..." />
+                <button type="button" id="redeemCodeBtn">Redeem</button>
+            </div>
+            <div class="redeem-section" style="margin-top:6px;">
+                <input type="text" id="itchVerifyInput" placeholder="Verify itch.io username..." />
+                <button type="button" id="itchVerifyBtn">Verify</button>
+            </div>
+            <p id="itchVerifyStatus" class="dev-menu-hint" style="display:none;margin-top:4px;"></p>
+            <button type="button" id="clearDataBtn" style="background:rgba(255,50,50,0.1);border-color:#ff3333;color:#ff6666;">🗑️ Clear All Data</button>
+        </div>
+
+        </div>
+
+        <!-- MATCH HISTORY OVERLAY -->
+        <!-- Not a screen, for the same reason as #achievementsHome above: the
+             Dossier's History tab borrows these four and returns them here. -->
+        <div id="historyHome" hidden>
+                <div id="historyTableWrap" style="overflow-y:auto;flex:1;border-radius:6px;">
+                    <table id="historyTable" style="width:100%;border-collapse:collapse;font-size:0.75rem;font-family:'Orbitron',sans-serif;">
+                        <thead>
+                            <tr style="color:rgba(255,255,255,0.4);">
+                                <th style="padding:6px 8px;text-align:left;position:sticky;top:0;background:#0a0f1a;border-bottom:1px solid #334;">Date</th>
+                                <th style="padding:6px 8px;text-align:left;position:sticky;top:0;background:#0a0f1a;border-bottom:1px solid #334;">You</th>
+                                <th style="padding:6px 8px;text-align:left;position:sticky;top:0;background:#0a0f1a;border-bottom:1px solid #334;">vs</th>
+                                <th style="padding:6px 8px;text-align:center;position:sticky;top:0;background:#0a0f1a;border-bottom:1px solid #334;">Result</th>
+                                <th style="padding:6px 8px;text-align:center;position:sticky;top:0;background:#0a0f1a;border-bottom:1px solid #334;">Dmg</th>
+                                <th style="padding:6px 8px;text-align:center;position:sticky;top:0;background:#0a0f1a;border-bottom:1px solid #334;">Acc</th>
+                                <th style="padding:6px 8px;text-align:center;position:sticky;top:0;background:#0a0f1a;border-bottom:1px solid #334;">Diff</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="historyCount" style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.65rem;letter-spacing:1px;font-family:'Orbitron',sans-serif;"></div>
+                <div id="historyEmpty" style="display:none;text-align:center;color:rgba(255,255,255,0.3);font-size:0.8rem;padding:20px;">No matches yet. Fight someone!</div>
+                <button id="historyClearBtn" style="align-self:flex-end;background:none;border:1px solid #553;color:#aa8;border-radius:6px;padding:5px 14px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:1px;">Clear History</button>
+        </div>
+
+        <!-- SHOP OVERLAY -->
+        <div id="shopOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;align-items:center;justify-content:center;">
+            <div style="background:#0a0f1a;border:1px solid #334;border-radius:12px;padding:24px 20px;width:min(600px,95vw);max-height:80vh;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2 style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#ffd700;letter-spacing:2px;margin:0;">SHOP</h2>
+                    <button id="shopCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                </div>
+                <div style="background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);border-radius:8px;padding:12px;text-align:center;">
+                    <div style="font-family:'Orbitron',sans-serif;font-size:0.75rem;color:rgba(255,215,0,0.7);letter-spacing:1px;margin-bottom:4px;">YOUR CREDITS</div>
+                    <div id="shopCreditsDisplay" style="font-family:'Orbitron',sans-serif;font-size:1.8rem;color:#ffd700;letter-spacing:2px;">0</div>
+                </div>
+                <div id="shopItems" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding-right:4px;"></div>
+            </div>
+        </div>
+
+        <!-- CHARACTER CREATOR ─────────────────────────────────────────────
+             One screen, two doors: The Zero Point until the Snap retires it,
+             Kamino afterwards. openCreator() retitles #creatorTitle and
+             #creatorQuote to match whichever one the player came through. -->
+        <div id="creatorOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;align-items:center;justify-content:center;">
+            <div class="creator-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2 id="creatorTitle" style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#8fbcff;letter-spacing:2px;margin:0;">THE ZERO POINT</h2>
+                    <button id="creatorCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                </div>
+
+                <div class="creator-quote" id="creatorQuote">"In the beginning there was Nothing. Then, in a burst of pure creation, the Zero Point sprang into being."<br>It can fabricate new souls and new lifeforms. Tell it what to make.</div>
+
+                <div style="background:rgba(143,188,255,0.08);border:1px solid rgba(143,188,255,0.3);border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-family:'Orbitron',sans-serif;font-size:0.7rem;color:rgba(143,188,255,0.7);letter-spacing:1px;margin-bottom:2px;">YOUR CREDITS</div>
+                    <div id="creatorCreditsDisplay" style="font-family:'Orbitron',sans-serif;font-size:1.5rem;color:#8fbcff;letter-spacing:2px;">0</div>
+                </div>
+
+                <div class="creator-tabs">
+                    <button class="creator-tab active" data-tab="make">Create</button>
+                    <button class="creator-tab" data-tab="roster">Your Creations <span id="creatorRosterCount"></span></button>
+                    <!-- Hidden until there is somebody to customize;
+                         updateCustomizationTabVisibility() reveals it, and the two
+                         sub-buttons inside it, on every open of the panel. -->
+                    <button class="creator-tab" data-tab="custom" id="creatorCustomTabBtn" style="display:none;">Character Customization</button>
+                </div>
+
+                <!-- CREATE -->
+                <div id="creatorMakeTab" class="creator-tab-body">
+                    <div class="edit-banner" id="creatorEditBanner" style="display:none;"></div>
+                    <div class="creator-section-label">1 &middot; Name</div>
+                    <input type="text" id="creatorNameInput" class="creator-name-input" maxlength="22" placeholder="e.g. Vessel Nine">
+
+                    <div class="creator-section-label">2 &middot; Nature <span class="creator-hint">(what it is made out of)</span></div>
+                    <div id="creatorTypes" class="creator-choice-grid"></div>
+
+                    <div class="creator-section-label">3 &middot; Allegiance</div>
+                    <div id="creatorFactions" class="creator-choice-grid"></div>
+
+                    <div class="creator-section-label">4 &middot; Weapon</div>
+                    <div id="creatorWeapons" class="creator-choice-grid"></div>
+
+                    <div class="creator-section-label">5 &middot; Vitality <span class="creator-hint">(more health costs more)</span></div>
+                    <div class="creator-slider-row">
+                        <input type="range" id="creatorHpSlider" min="80" max="260" step="5" value="140">
+                        <span class="creator-hp-value" id="creatorHpValue">140 HP</span>
+                    </div>
+
+                    <div class="creator-section-label">6 &middot; Colour</div>
+                    <div class="creator-slider-row">
+                        <input type="color" id="creatorColorInput" class="creator-color-input" value="#8fbcff">
+                        <span class="creator-hint" id="creatorColorHint">Body and bolt colour</span>
+                    </div>
+
+                    <div class="creator-section-label">7 &middot; Bio <span class="creator-hint">(optional)</span></div>
+                    <textarea id="creatorBioInput" class="creator-bio-input" maxlength="200" rows="3"
+                        placeholder="Optional. Leave this blank and something will be written for them."></textarea>
+                    <div class="creator-bio-count" id="creatorBioCount">0 / 200</div>
+
+                    <div class="creator-section-label">Result</div>
+                    <div class="creator-preview" id="creatorPreview"></div>
+                </div>
+
+                <!-- ROSTER -->
+                <div id="creatorRosterTab" class="creator-tab-body" style="display:none;">
+                    <div id="creatorRoster" class="creator-roster"></div>
+                </div>
+
+                <!-- CHARACTER CUSTOMIZATION
+                     One tab, one sub-button per customizable fighter. Each button
+                     appears only while its fighter is on the roster, so a player who
+                     owns one of them never sees a panel for the other. -->
+                <div id="creatorCustomTab" class="creator-tab-body" style="display:none;">
+                    <div class="creator-subtabs">
+                        <button class="creator-subtab" data-subtab="wrixel" id="creatorWrixelSubBtn" style="display:none;">Wrixel Customization</button>
+                        <button class="creator-subtab" data-subtab="guardian" id="creatorGuardianSubBtn" style="display:none;">Guardian Customization</button>
+                    </div>
+
+                    <!-- WRIXEL -->
+                    <div id="creatorWrixelPanel" class="creator-subtab-body" style="display:none;">
+                        <div class="creator-quote">Be the blocks you wish to see in the world.<br>Nothing here made Wrixel &mdash; but this is still where he is repainted, as often as he likes.</div>
+                        <div class="creator-section-label">Colour
+                            <span class="creator-hint">(the only thing about him you can change &mdash; it does nothing to how he fights)</span>
+                        </div>
+                        <div class="creator-slider-row creator-color-row">
+                            <input type="color" id="wrixelColorInput" class="creator-color-input" value="#63c74d">
+                            <span class="creator-hint">Body and bolt colour</span>
+                            <button type="button" id="wrixelColorResetBtn" class="creator-subtab">Back to green</button>
+                        </div>
+                        <div class="creator-section-label">Result</div>
+                        <div class="creator-preview" id="wrixelColorPreview"></div>
+                    </div>
+
+                    <!-- THE GUARDIAN -->
+                    <div id="creatorGuardianPanel" class="creator-subtab-body" style="display:none;">
+                        <div class="creator-quote">One small Sprite. One big mech.<br>The Guardian cannot be made here &mdash; but this is where it is decided who flies it.</div>
+                        <div class="creator-section-label">Plating
+                            <span class="creator-hint">(any sprite you have ever carried, held or lost &mdash; cosmetic only, it grants nothing)</span>
+                        </div>
+                        <div id="guardianSkinChoices" class="creator-choice-grid"></div>
+                        <div class="creator-section-label">Result</div>
+                        <div class="creator-preview" id="guardianSkinPreview"></div>
+                    </div>
+                </div>
+
+                <div class="creator-make-row" id="creatorMakeRow">
+                    <div class="creator-cost" id="creatorCost">—</div>
+                    <div class="row-actions">
+                        <button id="creatorCancelEditBtn" class="cancel-edit-btn" style="display:none;">Cancel</button>
+                        <button id="creatorMakeBtn" class="creator-make-btn" disabled>Create</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ARMORY OVERLAY -->
+        <div id="armoryOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;align-items:center;justify-content:center;">
+            <div class="armory-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2 style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#ff8c42;letter-spacing:2px;margin:0;">THE ARMORY</h2>
+                    <button id="armoryCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                </div>
+
+                <div class="armory-quote" id="armoryQuote">"Bring me a pattern and I will strike it. What it gains, it pays for."</div>
+
+                <div style="background:rgba(255,140,66,0.08);border:1px solid rgba(255,140,66,0.3);border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-family:'Orbitron',sans-serif;font-size:0.7rem;color:rgba(255,140,66,0.7);letter-spacing:1px;margin-bottom:2px;">YOUR CREDITS</div>
+                    <div id="armoryCreditsDisplay" style="font-family:'Orbitron',sans-serif;font-size:1.5rem;color:#ff8c42;letter-spacing:2px;">0</div>
+                </div>
+
+                <div class="armory-tabs">
+                    <button class="armory-tab active" data-tab="forge">Commission</button>
+                    <button class="armory-tab" data-tab="rack">Your Weapons <span id="armoryRackCount"></span></button>
+                </div>
+
+                <!-- COMMISSION -->
+                <div id="armoryForgeTab" class="armory-tab-body">
+                    <div class="edit-banner" id="armoryEditBanner" style="display:none;"></div>
+                    <div class="armory-section-label">1 &middot; Choose a pattern</div>
+                    <div id="armoryPatterns" class="armory-pattern-grid"></div>
+
+                    <div class="armory-section-label">2 &middot; Choose modifications <span class="armory-hint">(up to 2 — every one gives and takes)</span></div>
+                    <div id="armoryMods" class="armory-mod-list"></div>
+
+                    <div class="armory-section-label">3 &middot; Name it</div>
+                    <input type="text" id="armoryNameInput" class="armory-name-input" maxlength="24" placeholder="e.g. Ashfall">
+
+                    <div class="armory-section-label">Result</div>
+                    <div class="armory-preview" id="armoryPreview"></div>
+                </div>
+
+                <!-- RACK -->
+                <div id="armoryRackTab" class="armory-tab-body" style="display:none;">
+                    <div id="armoryRack" class="armory-rack"></div>
+                </div>
+
+                <!-- Pinned outside the scrolling body, so the price and the Forge
+                     button stay put instead of scrolling over the stat readout. -->
+                <div class="armory-forge-row" id="armoryForgeRow">
+                    <div class="armory-cost" id="armoryCost">—</div>
+                    <div class="row-actions">
+                        <button id="armoryCancelEditBtn" class="cancel-edit-btn" style="display:none;">Cancel</button>
+                        <button id="armoryForgeBtn" class="armory-forge-btn" disabled>Forge</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CREDITS OVERLAY -->
+        <div id="creditsOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;align-items:center;justify-content:center;">
+            <div style="background:#0a0f1a;border:1px solid #334;border-radius:12px;padding:24px 20px;width:min(600px,95vw);max-height:80vh;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2 style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#ffd700;letter-spacing:2px;margin:0;">CREDITS</h2>
+                    <button id="creditsCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:16px;align-items:center;text-align:center;padding:20px;">
+                    <div style="font-family:'Orbitron',sans-serif;font-size:1.2rem;color:#fff;letter-spacing:1px;">Matthew</div>
+                    <div style="font-size:0.9rem;color:rgba(255,255,255,0.7);">Main Coder</div>
+                    <div style="font-family:'Orbitron',sans-serif;font-size:1.2rem;color:#fff;letter-spacing:1px;">Owen</div>
+                    <div style="font-size:0.9rem;color:rgba(255,255,255,0.7);">Main Ideas Artist</div>
+                    <a href="https://discord.gg/nhaq55CHCQ" target="_blank" style="margin-top:12px;background:#5865F2;border:none;border-radius:8px;padding:12px 24px;color:#fff;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Join our Discord Server</a>
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSezUH3bQBfpPDf0KlQe3VSIMAmDa5hk4VFMXFHfFDFG0esDVA/viewform?usp=sharing&amp;ouid=105678526086473416359" target="_blank" style="background:#00A4FF;border:none;border-radius:8px;padding:12px 24px;color:#fff;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Give Feedback</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACHIEVEMENTS OVERLAY -->
+        <!-- Not a screen. The Dossier's Achievements tab borrows #achievementsList
+             and hands it back here when it closes, so the list needs a stable home
+             while the Dossier is shut. Nothing renders this container. -->
+        <div id="achievementsHome" hidden>
+            <div id="achievementsList" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding-right:4px;"></div>
+        </div>
+
+        <!-- THE DOSSIER ─────────────────────────────────────────────────────
+             Daily contracts, per-fighter mastery, and the existing Achievements
+             and Match History as tabs. Those two tabs do not re-render anything:
+             the Dossier borrows the real #achievementsList / #historyTableWrap
+             nodes while its tab is open and puts them back on close, so the
+             Settings entries and the Dossier can never show different lists. -->
+        <div id="dossierOverlay">
+            <div class="dossier-panel">
+                <div class="dossier-head">
+                    <h2>📋 THE DOSSIER</h2>
+                    <div class="dossier-head-right">
+                        <span class="dossier-credits" id="dossierCredits">🪙 0</span>
+                        <button type="button" class="dossier-close" id="dossierCloseBtn">Close</button>
+                    </div>
+                </div>
+                <div class="creator-tabs" id="dossierTabs">
+                    <button type="button" class="creator-tab dossier-tab active" data-tab="contracts">Contracts</button>
+                    <button type="button" class="creator-tab dossier-tab" data-tab="mastery">Mastery</button>
+                    <button type="button" class="creator-tab dossier-tab" data-tab="achievements">Achievements</button>
+                    <button type="button" class="creator-tab dossier-tab" data-tab="history">History</button>
+                </div>
+                <div class="dossier-body" id="dossierBody"></div>
+            </div>
+        </div>
+
+        <!-- SPRITES OVERLAY ─────────────────────────────────────────────────
+             Where an owned sprite is equipped and, more importantly, unequipped.
+             Opened from Settings ▸ Sprites. The list itself is rendered by
+             renderSpritesOverlay(). -->
+        <div id="spritesOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;align-items:center;justify-content:center;">
+            <div style="background:#0a0f1a;border:1px solid #334;border-radius:12px;padding:24px 20px;width:min(600px,95vw);max-height:80vh;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2 style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#ff5bd1;letter-spacing:2px;margin:0;">✨ SPRITES</h2>
+                    <button id="spritesCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                </div>
+                <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);line-height:1.45;">
+                    One sprite may be equipped at a time.
+                    An equipped sprite stays with you until you unequip it or lose a match carrying it — one defeat is enough.
+                    Sprites are found as rare drops during battle, and your opponent will race you for them.
+                    Lose one and it is listed in the Shop until you buy it back.
+                </div>
+                <div id="spritesList" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding-right:4px;"></div>
+                <!-- Text is rewritten by renderSpritesOverlay(), which appends the
+                     "buy one back in the Shop" line only when a lost sprite is
+                     actually listed there. Sprites are never on general sale, so
+                     that advice would otherwise send a player who has never owned
+                     one to an empty listing. This static copy is just what shows
+                     before the first render. -->
+                <div id="spritesEmpty" style="display:none;text-align:center;color:rgba(255,255,255,0.3);font-size:0.8rem;padding:20px;">You own no sprites.</div>
+            </div>
+        </div>
+
+        <!-- CUSTOM CONFIRM DIALOG ──────────────────────────────────────────
+             In-game replacement for the browser-native confirm()/alert().
+             NOTE FOR FUTURE DEV: never call window.confirm(), window.alert(),
+             or window.prompt() directly in this game — they pop a native
+             browser dialog that breaks immersion and looks out of place in
+             fullscreen/kiosk mode. Use showConfirm(message, options) (defined
+             in game.js) for yes/no confirmations, and showAnnouncement(...)
+             for one-off notices. Both render inside the game's own UI. -->
+        <div id="confirmOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:3000;align-items:center;justify-content:center;">
+            <div id="confirmBox" style="background:#0a0f1a;border:1px solid #334;border-radius:12px;padding:22px 24px;width:min(420px,92vw);display:flex;flex-direction:column;gap:16px;box-shadow:0 0 30px rgba(0,164,255,0.15);">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span id="confirmIcon" style="font-size:1.1rem;">⚠️</span>
+                    <h2 id="confirmTitle" style="font-family:'Orbitron',sans-serif;font-size:0.85rem;color:#00cfff;letter-spacing:2px;margin:0;">CONFIRM</h2>
+                </div>
+                <div id="confirmMessage" style="font-size:0.85rem;color:rgba(255,255,255,0.85);line-height:1.45;"></div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                    <button type="button" id="confirmCancelBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:7px 18px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:1px;">Cancel</button>
+                    <button type="button" id="confirmOkBtn" style="background:rgba(0,164,255,0.15);border:1px solid #00A4FF;color:#00cfff;border-radius:6px;padding:7px 18px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:1px;">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEASON CARD ──────────────────────────────────────────────
+             Goes up once, at the tail of the Snap, off the snapintro:done cue —
+             which only fires from a sequence that actually played, so a save that
+             has already seen the intro never gets this again on load.
+
+             It is also where the soundtrack is chosen. That is not decoration:
+             the preference already exists in Settings and starts OFF, so without
+             a moment that asks, the Marvel tracks are something a player has to
+             go hunting for. This is the one point in the game where asking is
+             natural, because the menu has just changed under them.
+
+             The copy is deliberately short on specifics — it names what they
+             just watched leave and points at the gap, and lets them find the
+             rest. -->
+        <div id="seasonCardOverlay" class="season-overlay" style="display:none;">
+            <div class="season-card" role="dialog" aria-modal="true" aria-labelledby="seasonCardTitle">
+                <p class="season-card-eyebrow">After the Snap</p>
+                <h2 class="season-card-title" id="seasonCardTitle">Welcome to the Marvel Season</h2>
+                <div class="season-card-rule"></div>
+
+                <p class="season-card-lead">He came for the menu first.</p>
+                <ul class="season-card-list">
+                    <li>Two doors closed. You watched both of them go.</li>
+                    <li>Something landed in the gap they left behind.</li>
+                    <li>An arena went with them.</li>
+                </ul>
+                <p class="season-card-note">
+                    Nothing you owned was lost, and nothing new is locked behind anything.
+                    The rest of it you should find on your own.
+                </p>
+
+                <div class="season-card-choice">
+                    <p class="season-card-choice-label">One thing to settle — what plays from here?</p>
+                    <div class="season-card-actions">
+                        <button type="button" class="season-card-btn season-card-btn-sw" id="seasonCardStarWarsBtn">Star Wars Soundtrack</button>
+                        <button type="button" class="season-card-btn season-card-btn-mv" id="seasonCardMarvelBtn">Marvel Soundtrack</button>
+                    </div>
+                    <p class="season-card-footnote">Audio only — it gates no fighters and no arenas, and Settings can change it any time.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTROLS OVERLAY -->
+        <div id="controlsOverlay">
+            <div class="controls-box">
+                <h2>CONTROLS</h2>
+                <div class="controls-input-label" id="controlsInputLabel">Keyboard &amp; Mouse</div>
+                <div class="controls-grid" id="controlsGrid"></div>
+                <!-- Both new nodes start hidden. Coach mode (the first-fight card)
+                     is the only thing that reveals them, so opening this overlay
+                     from Settings ▸ Controls is exactly what it always was. -->
+                <div class="controls-actions">
+                    <button type="button" class="controls-close-btn" id="controlsSecondaryBtn" hidden>All controls</button>
+                    <!-- Shown only on the full keyboard list, where keys can be rebound. -->
+                    <button type="button" class="controls-close-btn" id="controlsResetBtn" hidden>Reset keys</button>
+                    <button class="controls-close-btn" id="controlsCloseBtn">Close</button>
+                </div>
+                <label class="controls-suppress" for="controlsSuppress" id="controlsSuppressRow" hidden>
+                    <input type="checkbox" id="controlsSuppress">
+                    Don't show this again
+                </label>
+            </div>
+        </div>
+
+        <button type="button" id="devMenuToggle" class="dev-menu-toggle" title="Developer menu" aria-label="Developer menu" aria-expanded="false" aria-controls="devMenuPanel">⚙</button>
+        <div id="devMenuPanel" class="dev-menu-panel" role="dialog" aria-label="Developer menu">
+            <h3>DEV MENU</h3>
+            <!-- The grants and toggles scroll, exactly as Settings' list does: they
+                 are the part of this menu that keeps growing, and the credits
+                 slider, the validator and its output below have to stay reachable
+                 without the whole panel sliding under the wheel. -->
+            <div class="dev-scroll-list" id="devScrollList">
+                <button type="button" id="devUnlockAchievements">Unlock all achievements</button>
+                <button type="button" id="devToggleInvincibility">Invincibility: OFF</button>
+                <!-- Not the Auto-Aim setting in Settings. That one points the shot at
+                     the target; this makes the shot itself chase — every projectile
+                     the player fires steers toward the nearest enemy for its whole
+                     flight, so where you were aiming stops mattering. -->
+                <button type="button" id="devToggleAimbot" title="Every shot you fire steers toward the nearest enemy in flight">Aimbot: OFF</button>
+                <button type="button" id="devToggleGatedOpponents">Allow unlocked gated opponents: OFF</button>
+                <button type="button" id="devUnlockAllSecrets">Unlock All Secrets</button>
+                <!-- Replays the Snap. It animates the splash tiles, so the handler
+                     returns to the splash first rather than playing into a screen
+                     that is not there. -->
+                <button type="button" id="devPlaySnap">🫥 Play Snap Cutscene</button>
+                <!-- Hands over a Mythic for free, so it stays hidden unless
+                     isLocalBuild() — a verified itch.io user gets the rest of the
+                     dev menu but never this. Sprites themselves ship on every
+                     build; this is the cheat, not the feature. -->
+                <button type="button" id="devGrantBoomBoom" style="display:none;">💥 Grant Boom Boom Sprite</button>
+                <!-- The dev menu is the only way in for either of these: the Kamino
+                     Sprite is a rare drop with a creation requirement, and the
+                     Shapeless Sprite is vaulted. grantSprite() writes ownership
+                     directly and asks nothing about the vault, which is deliberate —
+                     this is the tester's door. -->
+                <button type="button" id="devGrantZeroSprite" style="display:none;">🌀 Grant Kamino Sprite</button>
+                <button type="button" id="devGrantShapelessSprite" style="display:none;">🫥 Grant Shapeless Sprite (vaulted)</button>
+                <button type="button" id="devGrantFurySprite" style="display:none;">🕶️ Grant Fury Sprite</button>
+            </div>
+            <div style="margin-top:12px;">
+                <label for="devCreditsSlider" style="font-size:0.8rem;color:rgba(255,255,255,0.7);display:block;margin-bottom:4px;">Set Credits (0-100000)</label>
+                <input type="range" id="devCreditsSlider" min="0" max="100000" step="1" style="width:100%;">
+                <span id="devCreditsValue" style="font-size:0.8rem;color:#ffd700;">0</span>
+            </div>
+            <!-- The Mk is otherwise 84 claimed Stark contracts away, so testing what
+                 the fire phase does, or what the Mk 85 hits like, needs a way to skip
+                 straight there. Writes starkContractsClaimed, which is the real
+                 counter, so nothing about this is a special case downstream. -->
+            <div style="margin-top:12px;">
+                <label for="devMarkSlider" style="font-size:0.8rem;color:rgba(255,255,255,0.7);display:block;margin-bottom:4px;">Set Iron Man Mk (1-85)</label>
+                <input type="range" id="devMarkSlider" min="1" max="85" step="1" style="width:100%;">
+                <span id="devMarkValue" style="font-size:0.8rem;color:#f0a500;">Mk 1</span>
+            </div>
+            <!-- Same idea for Groot, and the same reason: the axe is four claimed
+                 orders away, and comparing a level 1 sapling against a level 5 one
+                 means being able to move between them without fighting through the
+                 board. Writes grootContractsClaimed, the real counter. -->
+            <div style="margin-top:12px;">
+                <label for="devGrootSlider" style="font-size:0.8rem;color:rgba(255,255,255,0.7);display:block;margin-bottom:4px;">Set Groot Level (1-5)</label>
+                <input type="range" id="devGrootSlider" min="1" max="5" step="1" style="width:100%;">
+                <span id="devGrootValue" style="font-size:0.8rem;color:#8fbf5e;">Lv 1</span>
+            </div>
+            <button type="button" id="devValidateRoster">🔍 Validate Roster Data</button>
+            <button type="button" id="devToggleFps">FPS Meter: OFF</button>
+            <button type="button" id="devToggleStrictErrors" title="Let game-loop exceptions throw instead of being logged and swallowed">Strict Errors: OFF</button>
+            <div id="devValidationOutput" class="dev-validation-output" style="display:none;"></div>
+        </div>
+        <div id="fpsMeter" class="fps-meter" aria-hidden="true" style="display:none;">-- FPS</div>
+    </div>
+
+
+    <script src="sprite-kit.js?v=17"></script>
+    <script src="game.js?v=78"></script>
+    <script src="snap-intro.js?v=2"></script>
+</body>
+</html>

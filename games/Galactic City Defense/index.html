@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galactic City Defense</title>
+  <link rel="stylesheet" href="src/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/three.module.js",
+        "three/addons/": "./vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui">
+    <!-- cinematic layer -->
+    <div id="cine"><div class="bar top"></div><div class="bar bottom"></div></div>
+    <div id="titleCard"></div>
+    <div id="subtitle"></div>
+    <div id="skipHint" class="hidden">SPACE — skip</div>
+
+    <!-- HUD (Battlefront II style: thin, white, minimal) -->
+    <div id="hud" class="hidden">
+      <div id="odTint"></div>
+      <div id="dmgVignette"></div>
+      <canvas id="radar" width="200" height="200"></canvas>
+      <div id="objective">
+        <div id="objLine"><span id="objPhase">WAVE 1</span><span class="sep">·</span><span id="objText">DEFEND THE TURBOLIFT TOWER</span></div>
+        <div id="objBarRow"><div id="objBar"><i id="objFill"></i></div><span id="objTimer">0:00</span></div>
+        <div id="objSub">HOSTILES 0</div>
+        <div id="objStatus" class="hidden"></div>
+      </div>
+      <div id="bossBar" class="hidden"><div class="boss-name"><span id="bossName">COUNT DOOKU</span><small id="bossTag">SITH LORD</small></div><i><em id="bossGhost"></em><span id="bossFill"></span></i></div>
+      <div id="feed"></div>
+      <div id="bpFeed"></div>
+      <div id="bpTotal"><b id="bpValue">0</b><span>BP</span></div>
+      <div id="tickets"><span>REPUBLIC REINFORCEMENTS</span><b id="ticketValue">30</b></div>
+      <div id="health">
+        <div id="hpName"><span id="hudName">CMDR CODY</span><span id="heroTag">HERO</span></div>
+        <div class="hp-row"><span id="hpText">100</span><div id="hpBar"><i id="hpGhost"></i><i id="hpFill"></i></div></div>
+        <div id="hudUnit"></div>
+      </div>
+      <div id="abilities">
+        <div class="ability" data-slot="0"><div class="ab-ring"><div class="ab-sweep"></div><div class="ab-icon"></div><span class="ab-time"></span></div><span class="ab-key"></span><span class="ab-count"></span></div>
+        <div class="ability" data-slot="1"><div class="ab-ring"><div class="ab-sweep"></div><div class="ab-icon"></div><span class="ab-time"></span></div><span class="ab-key"></span><span class="ab-count"></span></div>
+        <div class="ability" data-slot="2"><div class="ab-ring"><div class="ab-sweep"></div><div class="ab-icon"></div><span class="ab-time"></span></div><span class="ab-key"></span><span class="ab-count"></span></div>
+      </div>
+      <div id="weapon">
+        <div id="weaponIcon"></div>
+        <div id="weaponName">BLASTER</div>
+        <div id="heat"><i id="heatFill"></i><i id="heatZone"></i><i id="heatMark"></i></div>
+        <div class="weapon-row"><span id="heatLabel">HEAT</span><span id="grenades"></span></div>
+      </div>
+      <div id="dmgDirs"></div>
+      <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><b></b>
+        <svg id="heatArc" viewBox="0 0 100 100"><path class="track" d="M76 71.9A34 34 0 0 0 76 28.1" pathLength="100"/><path id="heatArcFill" d="M76 71.9A34 34 0 0 0 76 28.1" pathLength="100"/></svg>
+      </div>
+      <div id="aimName"></div>
+      <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+      <div id="ventPrompt">PRESS <kbd data-act="vent">R</kbd> IN THE ZONE TO VENT</div>
+      <div id="killcam" class="hidden"><small>ELIMINATED BY</small><b id="kcName"></b><i><span id="kcFill"></span></i></div>
+      <div id="banner"><div id="bannerTitle"></div><div id="bannerSub"></div></div>
+      <div id="toast"></div>
+    </div>
+
+    <!-- loading -->
+    <div id="loading" class="screen">
+      <canvas id="loadArt"></canvas>
+      <div class="logo">GALACTIC CITY <span>DEFENSE</span></div>
+      <div class="loadbar"><i id="loadbar"></i></div>
+      <div id="loadtext" class="tiny">Loading Blender rigs…</div>
+      <div id="loadTip"><b>TIP</b><span></span></div>
+    </div>
+
+    <!-- title / commander select -->
+    <div id="title" class="screen hidden">
+      <div class="title-top">
+        <div class="logo">GALACTIC CITY <span>DEFENSE</span></div>
+        <p class="tag">The Separatists have overrun Coruscant's upper levels. Droids, and a few rebel clones, are swarming the skyscrapers. Hold the tower.</p>
+      </div>
+      <div class="title-deploy">
+        <div id="gpuHint" class="hidden"><p></p><button class="ghost" id="gpuHintClose" aria-label="Dismiss">✕</button></div>
+        <div class="deploy-head"><span>SELECT COMMANDER</span><span id="best"></span></div>
+        <div class="cards">
+          <button class="card" data-key="cody">
+            <div class="card-art"><div class="emblem cody"></div></div>
+            <div class="card-body">
+              <h3>212th Attack Battalion</h3>
+              <h2>Commander Cody</h2>
+              <p>DC-15A blaster rifle: heavy, accurate shots.</p>
+              <div class="abil"><span><kbd data-act="ability1">Q</kbd>Battle Command</span><span><kbd data-act="ability2">G</kbd>Thermal detonator</span><span><kbd data-act="special">F</kbd>Gunship Barrage</span></div>
+            </div>
+          </button>
+          <button class="card" data-key="fox">
+            <div class="card-art"><div class="emblem fox"></div></div>
+            <div class="card-body">
+              <h3>Coruscant Guard</h3>
+              <h2>Commander Fox</h2>
+              <p>Twin DC-17 hand blasters: rapid alternating fire.</p>
+              <div class="abil"><span><kbd data-act="ability1">Q</kbd>Riot Charge</span><span><kbd data-act="ability2">G</kbd>Stun grenade</span><span><kbd data-act="special">F</kbd>Guard Overdrive</span></div>
+            </div>
+          </button>
+        </div>
+        <div class="deploy-row">
+          <button id="deploy" class="primary">DEPLOY</button>
+          <div class="deploy-links">
+            <button id="deploySkip" class="ghost">Deploy without the intro</button>
+            <button id="optToggle" class="ghost">Options &amp; controls</button>
+          </div>
+        </div>
+      </div>
+      <div id="optPanel" class="hidden">
+        <div class="deploy-head"><span>OPTIONS</span></div>
+        <div class="options">
+          <label><input type="checkbox" id="optVoice" checked> Voiced dialogue</label>
+          <label>Graphics <select id="optGfx"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+          <label><input type="checkbox" id="optFps"> Show FPS</label>
+          <label>Mouse <input id="optSens" type="range" min="0.3" max="2.5" step="0.05" value="1"></label>
+          <label>Volume <input id="optVol" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+          <label>Music <input id="optMusic" type="range" min="0" max="1" step="0.05" value="0.45"></label>
+        </div>
+        <div class="deploy-head"><span>CONTROLLER</span><span class="pad-status"></span></div>
+        <div class="options">
+          <label>Controller look <input id="optPadSens" type="range" min="0.3" max="2.5" step="0.05" value="1"></label>
+          <label>Button icons <select id="optGlyph"><option value="auto">Auto</option><option value="xbox">Xbox</option><option value="ps">PlayStation</option><option value="nintendo">Nintendo</option></select></label>
+          <label><input type="checkbox" id="optInvert"> Invert look</label>
+          <label><input type="checkbox" id="optAssist" checked> Aim assist</label>
+          <label><input type="checkbox" id="optRumble" checked> Vibration</label>
+          <label title="Turn on if your controller reports Nintendo labels, so that jump lands on the bottom button"><input type="checkbox" id="optSwap"> Swap A/B and X/Y</label>
+        </div>
+        <div class="deploy-head"><span>CONTROLS</span></div>
+        <div class="controls">
+          <span><kbd>WASD</kbd> move</span><span><kbd>Shift</kbd> sprint</span><span><kbd>Space</kbd> jump</span><span><kbd>C</kbd> combat roll</span>
+          <span><kbd>Ctrl</kbd> crouch (tap)</span><span><kbd>LMB</kbd> fire</span><span><kbd>RMB</kbd> aim</span><span><kbd>Tab</kbd> swap shoulder</span>
+          <span><kbd>Q</kbd> hero ability</span><span><kbd>G</kbd> grenade</span><span><kbd>F</kbd> commander special</span><span><kbd>E</kbd> spot / scan</span>
+          <span><kbd>R</kbd> vent heat</span><span><kbd>Esc</kbd> pause</span>
+        </div>
+        <div class="controls pad-controls"></div>
+      </div>
+    </div>
+
+    <div id="engage" class="screen hidden"><div class="engage-box">CLICK TO ENGAGE</div></div>
+
+    <div id="pause" class="screen hidden">
+      <div class="menu">
+        <div class="logo small">PAUSED</div>
+        <button id="resume" class="primary">RESUME</button>
+        <button id="restart">RESTART FROM WAVE 1</button>
+        <button id="quit">QUIT TO TITLE</button>
+        <div class="options">
+          <label><input type="checkbox" id="optVoice2" checked> Voiced dialogue</label>
+          <label>Graphics <select id="optGfx2"><option value="auto">Auto</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+          <label><input type="checkbox" id="optFps2"> Show FPS</label>
+          <label>Mouse <input id="optSens2" type="range" min="0.3" max="2.5" step="0.05" value="1"></label>
+          <label>Volume <input id="optVol2" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+          <label>Music <input id="optMusic2" type="range" min="0" max="1" step="0.05" value="0.45"></label>
+        </div>
+        <div class="pad-status tiny"></div>
+        <div class="options">
+          <label>Controller look <input id="optPadSens2" type="range" min="0.3" max="2.5" step="0.05" value="1"></label>
+          <label>Button icons <select id="optGlyph2"><option value="auto">Auto</option><option value="xbox">Xbox</option><option value="ps">PlayStation</option><option value="nintendo">Nintendo</option></select></label>
+          <label><input type="checkbox" id="optInvert2"> Invert look</label>
+          <label><input type="checkbox" id="optAssist2" checked> Aim assist</label>
+          <label><input type="checkbox" id="optRumble2" checked> Vibration</label>
+          <label title="Turn on if your controller reports Nintendo labels, so that jump lands on the bottom button"><input type="checkbox" id="optSwap2"> Swap A/B and X/Y</label>
+        </div>
+      </div>
+    </div>
+
+    <div id="gameover" class="screen hidden">
+      <div class="menu">
+        <div class="logo small">COMMANDER DOWN</div>
+        <div id="goStats"></div>
+        <div id="bpShop" class="hidden">
+          <div class="shopHead"><span>SPEND BATTLE POINTS</span><b id="shopBp">0 BP</b></div>
+          <div id="shopCards"></div>
+        </div>
+        <button id="respawnCp" class="primary">RESPAWN AT CHECKPOINT</button>
+        <button id="redeploy">RESTART FROM WAVE 1</button>
+        <button id="goTitle">TITLE SCREEN</button>
+      </div>
+    </div>
+
+    <div id="dev" class="screen hidden">
+      <div class="dev-panel">
+        <div class="dev-title">DEV MENU <span id="devHint">Ctrl+X to close</span></div>
+        <button id="devJump">Skip to the next cutscene</button>
+        <button id="devBefore">One droid before the next cutscene</button>
+        <button id="devGod">Invincibility: OFF</button>
+        <button id="devKill">Destroy all droids</button>
+        <button id="devNext">Skip to the next wave</button>
+        <button id="devSkies">Take to the skies</button>
+        <button id="devVoice">Voice test: hear the hard words (press again for the next line)</button>
+      </div>
+    </div>
+    <div id="devTag" class="hidden">DEV · INVINCIBLE</div>
+    <div id="fps" class="hidden"></div>
+    <div id="victory" class="screen hidden">
+      <div class="menu">
+        <div class="sum-head"><span>MATCH SUMMARY</span><span id="vicTime"></span></div>
+        <div class="logo small victory-title">REPUBLIC VICTORY</div>
+        <div id="vicScore"></div>
+        <div id="vicStats"></div>
+        <button id="vicContinue" class="primary">CONTINUE</button>
+        <button id="vicAgain">PLAY AGAIN</button>
+        <button id="vicTitle">TITLE SCREEN</button>
+      </div>
+    </div>
+
+    <div id="heroPick" class="screen hidden">
+      <div class="pick-wrap">
+        <div class="deploy-head"><span id="pickAct">ACT II · THE JEDI TEMPLE</span><span>CHOOSE WHO LEADS</span></div>
+        <div class="hcards">
+          <button class="hcard" data-key="yoda"><div class="hart yoda"><svg viewBox="0 0 64 64"><path d="M4 26 L22 30 Q32 18 42 30 L60 26 L44 36 Q32 50 20 36 Z" fill="#8c9c5a"/><circle cx="26" cy="32" r="2.2" fill="#2a1e12"/><circle cx="38" cy="32" r="2.2" fill="#2a1e12"/><rect x="31" y="40" width="2.4" height="22" fill="#9dff7a"/></svg></div>
+            <h3>Jedi Order</h3><h2>Master Yoda</h2><p>Lightsaber combos, deflects blaster fire while blocking.</p>
+            <div class="abil"><span><kbd data-act="ability1">Q</kbd>Force Push</span><span><kbd data-act="ability2">G</kbd>Saber Rush</span><span><kbd data-act="special">F</kbd>Force Wave</span></div></button>
+          <button class="hcard" data-key="gree"><div class="hart gree"><svg viewBox="0 0 64 64"><path d="M14 30 Q14 10 32 10 Q50 10 50 30 L50 44 Q50 54 40 56 L24 56 Q14 54 14 44 Z" fill="#eceae4"/><path d="M20 26 h24 v5 h-9 v14 h-6 v-14 h-9 z" fill="#0b0c0f"/><rect x="29" y="10" width="6" height="12" fill="#55703a"/><path d="M16 44 h8 v8 h-6 z M48 44 h-8 v8 h6 z" fill="#55703a"/></svg></div>
+            <h3>41st Elite Corps</h3><h2>Commander Gree</h2><p>DC-15S blaster carbine: fast, accurate fire.</p>
+            <div class="abil"><span><kbd data-act="ability1">Q</kbd>Battle Command</span><span><kbd data-act="ability2">G</kbd>Thermal detonator</span><span><kbd data-act="special">F</kbd>Elite Fusillade</span></div></button>
+          <button class="hcard" data-key="fox"><div class="hart fox"></div>
+            <h3>Coruscant Guard</h3><h2>Commander Fox</h2><p>Twin DC-17 hand blasters: rapid alternating fire.</p>
+            <div class="abil"><span><kbd data-act="ability1">Q</kbd>Riot Charge</span><span><kbd data-act="ability2">G</kbd>Stun grenade</span><span><kbd data-act="special">F</kbd>Guard Overdrive</span></div></button>
+          <button class="hcard" data-key="cody"><div class="hart cody"></div>
+            <h3>212th Attack Battalion</h3><h2>Commander Cody</h2><p>DC-15A blaster rifle: heavy, accurate shots.</p>
+            <div class="abil"><span><kbd data-act="ability1">Q</kbd>Battle Command</span><span><kbd data-act="ability2">G</kbd>Thermal detonator</span><span><kbd data-act="special">F</kbd>Gunship Barrage</span></div></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="padToast"></div>
+    <div id="fade"></div>
+  </div>
+
+  <noscript>This game needs JavaScript.</noscript>
+  <script>
+    // Served (Play.bat): load the ES modules directly. Opened from the folder (file://): browsers
+    // block ES modules and model loading there, so load the self-contained pack from tools/pack.js.
+    (function () {
+      var s = document.createElement('script');
+      if (location.protocol === 'file:' || /[?&]pack\b/.test(location.search)) {
+        s.src = 'dist/game.pack.js';
+        s.onerror = function () {
+          document.getElementById('loadtext').textContent = 'dist/game.pack.js is missing. Run Play.bat once (or: node tools/pack.js).';
+        };
+      } else {
+        s.type = 'module';
+        s.src = 'src/main.js';
+      }
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

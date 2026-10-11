@@ -1,0 +1,58 @@
+{
+  "generated": 1791724132868,
+  "site": {
+    "title": "CCStudios Arcade",
+    "tagline": "Games by Cousin Crew Studios"
+  },
+  "games": [
+    {
+      "slug": "galactic-legends",
+      "title": "Galactic Legends",
+      "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
+      "folder": "galactic legends",
+      "url": "games/galactic%20legends/index.html",
+      "cover": null,
+      "icon": "games/galactic%20legends/favicon.png",
+      "tags": [
+        "Fighting",
+        "Arena"
+      ],
+      "order": null,
+      "added": 0,
+      "updated": 1791675818428
+    },
+    {
+      "slug": "galactic-city-defense",
+      "title": "Galactic City Defense",
+      "description": "Third-person shooter across Coruscant rooftops, the Jedi Temple and Tatooine. Play as Commander Cody or Commander Fox. VR ready.",
+      "folder": "Galactic City Defense",
+      "url": "games/Galactic%20City%20Defense/index.html",
+      "cover": "covers/galactic-city-defense.jpg",
+      "icon": null,
+      "tags": [
+        "3D",
+        "Shooter",
+        "VR"
+      ],
+      "order": null,
+      "added": 0,
+      "updated": 1791669234756
+    },
+    {
+      "slug": "galactic-playground",
+      "title": "Galactic Playground",
+      "description": "2D physics sandbox full of Jedi, Sith, troopers, droids and starships. Build it, break it, blow it up.",
+      "folder": "Galactic-Playground",
+      "url": "games/Galactic-Playground/index.html",
+      "cover": "covers/galactic-playground.jpg",
+      "icon": null,
+      "tags": [
+        "Sandbox",
+        "Physics"
+      ],
+      "order": null,
+      "added": 0,
+      "updated": 1790533427422
+    }
+  ]
+}

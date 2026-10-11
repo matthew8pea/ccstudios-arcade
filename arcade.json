@@ -1,0 +1,20 @@
+{
+  "title": "CCStudios Arcade",
+  "tagline": "Games by Cousin Crew Studios",
+  "games": {
+    "Galactic City Defense": {
+      "description": "Third-person shooter across Coruscant rooftops, the Jedi Temple and Tatooine. Play as Commander Cody or Commander Fox. VR ready.",
+      "cover": "covers/galactic-city-defense.jpg",
+      "tags": ["3D", "Shooter", "VR"]
+    },
+    "galactic legends": {
+      "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
+      "tags": ["Fighting", "Arena"]
+    },
+    "Galactic-Playground": {
+      "description": "2D physics sandbox full of Jedi, Sith, troopers, droids and starships. Build it, break it, blow it up.",
+      "cover": "covers/galactic-playground.jpg",
+      "tags": ["Sandbox", "Physics"]
+    }
+  }
+}

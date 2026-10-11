@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galactic Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Exo+2:wght@400;600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui"></div>
+<noscript>Galactic Playground needs JavaScript enabled.</noscript>
+
+<script>
+/* Ordered script loader. When served over http it appends a cache-busting stamp so a refresh
+   always runs the newest code. Opening index.html directly from disk works the same way. */
+(function () {
+  var files = [
+    'js/core/gp.js',
+    'js/core/settings.js',
+    'js/physics/body.js',
+    'js/physics/collide.js',
+    'js/physics/joints.js',
+    'js/physics/world.js',
+    'js/physics/slice.js',
+    'js/render/draw.js',
+    'js/render/terrain.js',
+    'js/render/backdrop.js',
+    'js/effects/particles.js',
+    'js/audio/audio.js',
+    'js/entities/entity.js',
+    'js/damage/damage.js',
+    'js/entities/prop.js',
+    'js/characters/painter.js',
+    'js/characters/ai.js',
+    'js/characters/humanoid.js',
+    'js/weapons/item.js',
+    'js/weapons/projectiles.js',
+    'js/weapons/lightsaber.js',
+    'js/weapons/blaster.js',
+    'js/weapons/explosives.js',
+    'js/weapons/medical.js',
+    'js/force/force.js',
+    'js/systems/heat.js',
+    'js/systems/gore.js',
+    'js/systems/injury.js',
+    'js/systems/machines.js',
+    'js/systems/destruction.js',
+    'js/droids/droids.js',
+    'js/vehicles/vehicle.js',
+    'js/maps/maps.js',
+    'js/content/props.js',
+    'js/content/weapons.js',
+    'js/content/characters.js',
+    'js/content/droids.js',
+    'js/content/vehicles.js',
+    'js/content/structures.js',
+    'js/content/machines.js',
+    'js/systems/fluid-kernel.js',
+    'js/systems/fluid.js',
+    'js/systems/contraptions.js',
+    'js/systems/mods.js',
+    'js/render/renderer.js',
+    'js/game.js',
+    'js/tools/tools.js',
+    'js/save/save.js',
+    'js/save/share.js',
+    'js/ui/icons.js',
+    'js/ui/ui.js',
+    'js/ui/touch.js',
+    'js/main.js'
+  ];
+  var bust = location.protocol.indexOf('http') === 0 ? '?v=' + Date.now() : '';
+  document.querySelector('link[rel=stylesheet][href^="css/"]').href = 'css/style.css' + bust;
+  files.forEach(function (f) {
+    var s = document.createElement('script');
+    s.src = f + bust;
+    s.async = false;
+    s.onerror = function () { console.error('Failed to load ' + f); };
+    document.body.appendChild(s);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,3505 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Orbitron&display=swap');
+
+@font-face {
+    font-family: 'Aurebesh';
+    src: url('./aurebesh/Aurebesh.otf') format('opentype');
+    font-display: swap;
+    font-weight: 400;
+    font-style: normal;
+}
+
+/* ── AUREBESH MODE ── activated via the "AUREBESH" redeem code.
+   Overrides every font-family in the game (Inter/Orbitron and any inline
+   font-family styles) with the Aurebesh display font. */
+body.aurebesh-mode,
+body.aurebesh-mode * {
+    font-family: 'Aurebesh', 'Inter', sans-serif !important;
+    letter-spacing: 0.08em;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+    font-feature-settings: "kern" 1, "liga" 0;
+    font-synthesis: none;
+    line-height: 1.35;
+}
+
+body.aurebesh-mode input,
+body.aurebesh-mode textarea,
+body.aurebesh-mode select,
+body.aurebesh-mode button {
+    font-family: 'Aurebesh', 'Inter', sans-serif !important;
+}
+
+body.aurebesh-mode h1,
+body.aurebesh-mode h2,
+body.aurebesh-mode h3,
+body.aurebesh-mode h4,
+body.aurebesh-mode p,
+body.aurebesh-mode button,
+body.aurebesh-mode label,
+body.aurebesh-mode input,
+body.aurebesh-mode span,
+body.aurebesh-mode div,
+body.aurebesh-mode td,
+body.aurebesh-mode th {
+    text-transform: uppercase;
+}
+        
+        :root {
+            --dark-bg: #0a0a12;
+            --primary-blue: #081526;
+            --accent-pink: #e94560;
+            --light-text: #ffffff;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--dark-bg);
+            font-family: 'Inter', sans-serif;
+            color: var(--light-text);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -webkit-touch-callout: none;
+        }
+
+        .game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: calc(100vw - 20px);
+            height: calc(100vh - 20px);
+            max-width: calc(100vw - 20px);
+            max-height: calc(100vh - 20px);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            background-color: var(--primary-blue);
+            box-sizing: border-box;
+            border: 1px solid #222;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            background: radial-gradient(circle, #111827 0%, #030712 100%);
+            border-radius: 8px;
+            width: 100%;
+            height: 100%;
+            display: none;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 2px solid #1f2937;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* On-screen controls (touch / small screens during combat) */
+        #mobileControls {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 12;
+            pointer-events: none;
+            touch-action: none;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+            padding-left: env(safe-area-inset-left, 0);
+            padding-right: env(safe-area-inset-right, 0);
+        }
+
+        #mobileControls.visible {
+            display: block;
+        }
+
+        .mobile-controls {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .mobile-controls-inner {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .touch-stick-wrap {
+            position: absolute;
+            left: max(12px, env(safe-area-inset-left, 0px));
+            bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        .touch-stick-base {
+            width: 118px;
+            height: 118px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.38);
+            border: 2px solid rgba(255, 255, 255, 0.22);
+            position: relative;
+            touch-action: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+        }
+
+        .touch-stick-knob {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(0, 200, 255, 0.55), rgba(0, 100, 180, 0.45));
+            border: 2px solid rgba(0, 164, 255, 0.5);
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -23px;
+            margin-top: -23px;
+            transform: translate(0, 0);
+            pointer-events: none;
+            box-shadow: 0 0 12px rgba(0, 164, 255, 0.35);
+        }
+
+        .touch-fire-wrap {
+            position: absolute;
+            right: max(16px, env(safe-area-inset-right, 0px));
+            bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+            pointer-events: auto;
+            touch-action: none;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .touch-action-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .touch-action-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 164, 255, 0.45);
+            background: radial-gradient(circle at 35% 30%, rgba(90, 190, 255, 0.4), rgba(10, 60, 110, 0.6));
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+            transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.15s ease;
+        }
+
+        .touch-action-btn[hidden] {
+            display: none;
+        }
+
+        .touch-action-btn:active {
+            transform: scale(0.92);
+            box-shadow: 0 2px 8px rgba(0, 164, 255, 0.4);
+        }
+
+        /* Dodge is on a cooldown; game.js adds .on-cooldown while it is unavailable. */
+        .touch-action-btn.on-cooldown {
+            opacity: 0.35;
+        }
+
+        .touch-pause-wrap {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        .touch-pause-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(0, 0, 0, 0.5);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            transition: transform 0.08s ease;
+        }
+
+        .touch-pause-btn:active {
+            transform: scale(0.92);
+        }
+
+        .touch-fire-btn {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            border: 2px solid rgba(233, 69, 96, 0.55);
+            background: radial-gradient(circle at 35% 30%, rgba(255, 100, 120, 0.5), rgba(120, 20, 40, 0.65));
+            color: #fff;
+            font-size: 1.6rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            box-shadow: 0 4px 18px rgba(233, 69, 96, 0.25);
+            transition: transform 0.08s ease, box-shadow 0.08s ease;
+        }
+
+        .touch-fire-btn:active {
+            transform: scale(0.94);
+            box-shadow: 0 2px 10px rgba(233, 69, 96, 0.35);
+        }
+
+        /* Phones held in landscape have very little vertical room — the full-size
+           action cluster would otherwise reach up into the HUD. Must stay below the
+           rules it overrides: a media query adds no specificity of its own. */
+        @media (max-height: 480px) {
+            .touch-action-btn {
+                width: 46px;
+                height: 46px;
+                font-size: 1rem;
+            }
+
+            .touch-fire-btn {
+                width: 62px;
+                height: 62px;
+                font-size: 1.3rem;
+            }
+
+            .touch-fire-wrap,
+            .touch-action-stack {
+                gap: 8px;
+            }
+
+            .touch-stick-base {
+                width: 96px;
+                height: 96px;
+            }
+
+            .touch-stick-knob {
+                width: 38px;
+                height: 38px;
+                margin-left: -19px;
+                margin-top: -19px;
+            }
+
+            .touch-pause-btn {
+                width: 38px;
+                height: 38px;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Gamepad focus ring. Programmatic .focus() does not reliably match
+           :focus-visible, and many of these controls carry inline border/shadow
+           styles, so the pad marks its target with an explicit class instead. */
+        .gamepad-focus {
+            outline: 3px solid #00cfff !important;
+            outline-offset: 2px;
+            box-shadow: 0 0 16px rgba(0, 207, 255, 0.6) !important;
+            border-radius: 6px;
+        }
+
+        body.reduced-motion .gamepad-focus {
+            box-shadow: none !important;
+        }
+
+        .dev-menu-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 25;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(0, 0, 0, 0.45);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.4;
+            transition: opacity 0.15s ease;
+        }
+
+        .dev-menu-toggle.is-visible {
+            display: flex;
+        }
+
+        .dev-menu-toggle:hover {
+            opacity: 1;
+            color: #fff;
+            border-color: rgba(0, 200, 255, 0.4);
+        }
+
+        .dev-menu-panel {
+            /* Opened as flex (see the devMenuToggle handler) so .dev-scroll-list is
+               the only region that scrolls: it shrinks to whatever height is left
+               over instead of the whole panel sliding under the wheel. The same
+               arrangement Settings uses, for the same reason. */
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            top: 44px;
+            right: 10px;
+            z-index: 26;
+            min-width: 240px;
+            max-width: min(320px, calc(100vw - 24px));
+            max-height: min(70vh, 520px);
+            /* Last resort only — on a viewport too short for even the fixed rows
+               this keeps the validator output reachable. Inert otherwise. */
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: rgba(8, 12, 22, 0.97);
+            border: 1px solid #334;
+            border-radius: 10px;
+            padding: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            font-size: 0.8rem;
+            overscroll-behavior: contain;
+        }
+
+        /* Every row keeps its natural height; only the list gives space up. */
+        .dev-menu-panel > * {
+            flex: 0 0 auto;
+        }
+
+        .dev-scroll-list {
+            /* Absorbs the panel's leftover height: caps at 196px when there is
+               room, shrinks (never past 64px) when the window is short. */
+            flex: 1 1 auto;
+            min-height: 64px;
+            max-height: 196px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            padding-right: 4px;
+            /* A rule under the list, so a button clipped at the boundary reads as
+               "there is more of this" rather than as something drawn wrong. */
+            padding-bottom: 10px;
+            border-bottom: 1px solid #223047;
+        }
+
+        /* The first button in the list sits directly under the heading, so it does
+           not need the gap the others put above themselves. */
+        .dev-scroll-list > button:first-child {
+            margin-top: 0;
+        }
+
+        .dev-menu-panel h3 {
+            margin: 0 0 10px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            color: #ff6600;
+        }
+
+        .dev-menu-panel button {
+            display: block;
+            width: 100%;
+            margin-top: 8px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: rgba(255, 255, 255, 0.06);
+            color: #e8e8e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .dev-menu-panel button:hover {
+            background: rgba(0, 164, 255, 0.15);
+            border-color: #00A4FF;
+        }
+
+        .dev-menu-hint {
+            margin: 10px 0 0 0;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.35);
+            line-height: 1.35;
+        }
+
+        .dev-validation-output {
+            margin-top: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid #334;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-family: 'Inter', monospace;
+            font-size: 0.7rem;
+            line-height: 1.5;
+            color: #ccc;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .dev-validation-output .dv-ok    { color: #44dd88; }
+        .dev-validation-output .dv-warn  { color: #ffcc55; }
+        .dev-validation-output .dv-error { color: #ff6666; }
+        .dev-validation-output .dv-heading {
+            color: #00cfff;
+            font-weight: bold;
+            display: block;
+            margin: 6px 0 2px 0;
+        }
+        .dev-validation-output .dv-heading:first-child { margin-top: 0; }
+
+        .settings-panel {
+            /* Opened as flex (see setSettingsOpen) so .settings-scroll-list is the
+               only region that scrolls: it shrinks to whatever height is left over
+               instead of the whole panel sliding under the wheel. */
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            bottom: 54px;
+            left: 10px;
+            z-index: 25;
+            min-width: 260px;
+            max-width: min(320px, calc(100vw - 24px));
+            max-height: min(70vh, 520px);
+            /* Last resort only — on viewports too short for even the fixed rows
+               this keeps Clear All Data reachable. It stays inert otherwise. */
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: rgba(8, 12, 22, 0.97);
+            border: 1px solid #334;
+            border-radius: 10px;
+            padding: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            font-size: 0.8rem;
+            overscroll-behavior: contain;
+        }
+
+        /* Every row keeps its natural height; only the list below gives space up. */
+        .settings-panel > * {
+            flex: 0 0 auto;
+        }
+
+        .settings-panel h3 {
+            margin: 0 0 10px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            color: #00cfff;
+        }
+
+        .settings-panel button {
+            display: block;
+            width: 100%;
+            margin-top: 8px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: rgba(255, 255, 255, 0.06);
+            color: #e8e8e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.4;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .settings-panel button:hover {
+            background: rgba(0, 164, 255, 0.15);
+            border-color: #00A4FF;
+        }
+
+        .settings-panel button:focus-visible,
+        .perf-btn:focus-visible,
+        #settingsBtn:focus-visible,
+        #fullscreenBtn:focus-visible,
+        .splash-btn:focus-visible,
+        .game-button:focus-visible {
+            outline: 2px solid #00cfff;
+            outline-offset: 2px;
+        }
+
+        .settings-scroll-list {
+            /* Absorbs the panel's leftover height: caps at 152px when there is
+               room, shrinks (never past 56px) when the window is short. */
+            flex: 1 1 auto;
+            min-height: 56px;
+            max-height: 152px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            padding-right: 4px;
+            margin-top: 8px;
+        }
+
+        .settings-scroll-list button {
+            margin-top: 8px;
+        }
+
+        .settings-scroll-list button:first-child {
+            margin-top: 0;
+        }
+
+        .settings-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .settings-slider-row label {
+            font-size: 0.78rem;
+            color: #e8e8e8;
+            white-space: nowrap;
+            min-width: 58px;
+            user-select: none;
+        }
+
+        .settings-slider-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.12);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .settings-slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #00A4FF;
+            border: 2px solid #00cfff;
+            box-shadow: 0 0 6px rgba(0, 164, 255, 0.5);
+            cursor: pointer;
+            margin-top: -5px; /* center thumb on 4px track: -(14-4)/2 */
+        }
+
+        .settings-slider-row input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #00A4FF;
+            border: 2px solid #00cfff;
+            box-shadow: 0 0 6px rgba(0, 164, 255, 0.5);
+            cursor: pointer;
+        }
+
+        .settings-slider-row input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .settings-slider-row input[type="range"]::-moz-range-track {
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .settings-perf-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .settings-perf-label {
+            font-size: 0.78rem;
+            color: #e8e8e8;
+            white-space: nowrap;
+            min-width: 58px;
+            user-select: none;
+        }
+
+        .settings-perf-btns {
+            display: flex;
+            flex: 1;
+            gap: 4px;
+        }
+
+        .perf-btn {
+            flex: 1;
+            margin: 0 !important;
+            padding: 6px 4px !important;
+            font-size: 0.68rem !important;
+            border-radius: 5px !important;
+            border: 1px solid #444 !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: rgba(255, 255, 255, 0.55) !important;
+            cursor: pointer;
+            text-align: center !important;
+            line-height: 1.2 !important;
+            width: auto !important;
+        }
+
+        .perf-btn:hover {
+            border-color: #00A4FF !important;
+            color: #fff !important;
+        }
+
+        .perf-btn.selected {
+            background: rgba(0, 164, 255, 0.2) !important;
+            border-color: #00A4FF !important;
+            color: #00cfff !important;
+            font-weight: bold;
+        }
+
+        .fps-meter {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 30;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+            color: #44ff88;
+            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(68, 255, 136, 0.35);
+            border-radius: 6px;
+            padding: 4px 10px;
+            pointer-events: none;
+            text-shadow: 0 0 8px rgba(68, 255, 136, 0.4);
+        }
+
+        .fps-meter.fps-warn { color: #ffcc44; border-color: rgba(255, 204, 68, 0.4); }
+        .fps-meter.fps-bad  { color: #ff5555; border-color: rgba(255, 85, 85, 0.4); }
+
+        /* Reduced-motion: cut CSS animations that are purely decorative */
+        body.reduced-motion .splash-star,
+        body.reduced-motion .confetti-piece,
+        body.reduced-motion #announcementBanner .ann-inner {
+            animation: none !important;
+        }
+
+        body.reduced-motion #hudTimer.sudden-death {
+            animation: none !important;
+        }
+
+        .redeem-section {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .redeem-section input {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: rgba(255, 255, 255, 0.06);
+            color: #e8e8e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            min-height: 32px;
+            box-sizing: border-box;
+        }
+
+        .redeem-section input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .redeem-section button {
+            margin: 0;
+            padding: 8px 12px;
+            white-space: nowrap;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 15px;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            padding: 20px 20px 16px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 5px;
+            flex-shrink: 0;
+        }
+
+        /* EQUAL GRID LAYOUT FOR FACTIONS */
+        .faction-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px;
+            width: 100%;
+            flex-grow: 1;
+            min-height: 0; 
+        }
+
+        /* Secret row: never fixed height — was clipping buttons when multiple unlocks */
+        #secret-faction-wrapper.faction-wrapper {
+            flex-grow: 0;
+            flex-shrink: 0;
+        }
+
+        #secret-faction-wrapper .faction-section {
+            overflow: visible;
+            min-height: min-content;
+        }
+
+        .secret-collapse-wrapper {
+            display: grid;
+            grid-template-rows: 1fr;
+            transition: grid-template-rows 0.4s ease-out, opacity 0.3s ease;
+            opacity: 1;
+            max-height: 130px;
+            overflow-y: auto;
+        }
+
+        .secret-collapse-wrapper.collapsed {
+            grid-template-rows: 0fr;
+            opacity: 0;
+        }
+
+        .secret-collapse-wrapper > * {
+            overflow: hidden;
+        }
+
+        .faction-section {
+            display: flex;
+            flex-direction: column;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #333;
+            overflow: hidden; 
+        }
+
+        .faction-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            margin: 0 0 15px 0;
+            letter-spacing: 1px;
+            padding-bottom: 10px;
+            flex-shrink: 0;
+            text-align: center;
+            /* Flex rather than inline so the season pill and the secret row's chevron
+               sit beside a heading that may wrap to two lines — 'Imagined Order &
+               Last Reality' does, in the narrow column. */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .hero-faction { color: #00A4FF; border-bottom: 2px solid #00A4FF; }
+        .villain-faction { color: #FF3333; border-bottom: 2px solid #FF3333; }
+        .secret-faction { color: #ff00ff; border-bottom: 2px solid #ff00ff; }
+
+        /* Season switch in the two faction headings. Pack purple in both
+           columns on purpose: it is one switch shown twice, not a blue one and a
+           red one, and it should not read as part of the faction it sits on. */
+        .pack-faction-toggle,
+        .marvel-faction-toggle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.5rem;
+            letter-spacing: 1.5px;
+            white-space: nowrap;
+            padding: 4px 9px;
+            border-radius: 999px;
+            cursor: pointer;
+            color: #b98cff;
+            background: rgba(145, 70, 255, 0.12);
+            border: 1px solid rgba(145, 70, 255, 0.45);
+            transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .pack-faction-toggle:hover {
+            color: #e2d2ff;
+            background: rgba(145, 70, 255, 0.3);
+            border-color: #9146ff;
+        }
+
+        .pack-faction-toggle.active {
+            color: #ffffff;
+            background: #9146ff;
+            border-color: #9146ff;
+            box-shadow: 0 0 10px rgba(145, 70, 255, 0.55);
+        }
+
+        /* The Marvel season's toggle. Same control as the pack one in every
+           respect but colour, so it inherits the whole shape and restates only the
+           palette — red rather than the pack purple, matching the season card
+           and the Marvel announcements. */
+        .marvel-faction-toggle {
+            color: #ff6b6b;
+            background: rgba(226, 54, 54, 0.12);
+            border-color: rgba(226, 54, 54, 0.45);
+        }
+        .marvel-faction-toggle:hover {
+            color: #ffe0e0;
+            background: rgba(226, 54, 54, 0.3);
+            border-color: #e23636;
+        }
+        .marvel-faction-toggle.active {
+            color: #ffffff;
+            background: #e23636;
+            border-color: #e23636;
+            box-shadow: 0 0 10px rgba(226, 54, 54, 0.55);
+        }
+
+        /* EQUAL ROWS AND COLUMNS FOR BUTTONS */
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px;
+            overflow-y: auto;
+            padding-right: 5px;
+            padding-bottom: 10px;
+            align-content: start;
+            flex-grow: 1;
+        }
+
+        /* ── THEMED SCROLLBARS ───────────────────────────────────── */
+        /* Firefox - universal */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 164, 255, 0.35) rgba(255, 255, 255, 0.03);
+        }
+
+        /* Webkit (Chrome, Safari, Edge) - universal */
+        *::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: rgba(0, 164, 255, 0.35);
+            border-radius: 4px;
+            border: 1px solid rgba(0, 164, 255, 0.15);
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 164, 255, 0.6);
+            border-color: rgba(0, 164, 255, 0.4);
+        }
+
+        button:focus {
+            outline: none; /* Hide default browser blue ring */
+        }
+
+        .game-button {
+            padding: 12px 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--light-text);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 100%; 
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px; 
+        }
+
+        .hero-button { background: linear-gradient(135deg, #003355 0%, #001133 100%); }
+        .hero-button:hover { border-color: #00A4FF; filter: brightness(1.3); }
+        
+        .villain-button { background: linear-gradient(135deg, #4a0404 0%, #220202 100%); }
+        .villain-button:hover { border-color: #FF3333; filter: brightness(1.3); }
+
+        .secret-button { background: linear-gradient(145deg, #4a004a 0%, #2a002a 100%); }
+        .secret-button:hover { border-color: #ff00ff; filter: brightness(1.3); }
+
+        /* Star button for favorites */
+        .game-button {
+            position: relative;
+        }
+
+        .star-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.4;
+            transition: opacity 0.15s, transform 0.15s;
+            z-index: 2;
+        }
+
+        .star-btn:hover {
+            opacity: 1;
+            transform: translateY(-50%) scale(1.2);
+        }
+
+        .star-btn.favorited {
+            opacity: 1;
+            color: #ffd700;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+        }
+
+        /* Search bar */
+        /*  A row now: the search field and the season switch sit side by side.
+            The field takes whatever is left so the button keeps its own width at
+            every breakpoint rather than being squeezed by a long placeholder. */
+        .search-container {
+            width: 100%;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+        }
+
+        /*  Standing on its own beside the field rather than tucked into a heading,
+            so it takes the field’s height and a size that reads as a button. The
+            colours and the .active state are inherited from the rule further down
+            — this only restates what changes out here. */
+        .search-container .marvel-faction-toggle {
+            font-size: 0.62rem;
+            padding: 0 16px;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            box-sizing: border-box;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #00A4FF;
+            box-shadow: 0 0 12px rgba(0, 164, 255, 0.3);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .hud {
+            display: none;
+            width: calc(100% - 60px);
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            right: 30px;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .hud-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        #playerLabel, #enemyLabel { font-family: 'Orbitron', sans-serif; font-weight: bold; letter-spacing: 1px; }
+        #playerLabel { color: #00A4FF; }
+        #enemyLabel { color: #FF3333; }
+        
+        .health-bar-container {
+            width: 200px;
+            height: 18px;
+            background-color: #111;
+            border-radius: 9px;
+            overflow: hidden;
+            border: 2px solid #444;
+            margin-top: 8px;
+        }
+        
+        .health-bar {
+            height: 100%;
+            background-color: #00A4FF;
+            transition: width 0.2s ease-out;
+        }
+        .health-bar.enemy { background-color: #FF3333; }
+        
+        .sub-bars-container {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            height: 6px;
+            width: 200px;
+            justify-content: center;
+        }
+
+        .health-text { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; margin-top: 5px; color: #ccc; }
+
+        .combo-counter {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 8;
+            letter-spacing: 4px;
+        }
+
+        .combo-counter.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .combo-counter .combo-label {
+            font-size: 1rem;
+            display: block;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .message-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.85);
+            text-align: center;
+            z-index: 10;
+            border-radius: 12px;
+        }
+
+        .message-box {
+            background: rgba(10, 20, 35, 0.95);
+            padding: 40px;
+            border-radius: 12px;
+            border: 2px solid #00A4FF;
+            box-shadow: 0 0 30px rgba(0, 164, 255, 0.3);
+            transform: scale(0.8);
+            animation: bounceIn 0.4s forwards;
+        }
+
+        .message-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+        }
+
+        #restartButton {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            background: #ffffff;
+            color: #000;
+            border: none;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        #restartButton:hover { background: #00A4FF; color: #fff; transform: scale(1.05); }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        /* Opponent Selection Screen */
+        #opponentMenu {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 14px;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            box-sizing: border-box;
+            padding: 20px 20px 16px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .vs-banner {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            padding: 10px 20px;
+            border: 1px solid #333;
+            width: 90%;
+            box-sizing: border-box;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .vs-player-name { font-family: 'Orbitron', sans-serif; font-size: 1rem; letter-spacing: 1px; }
+        .vs-label { font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: rgba(255,255,255,0.4); font-weight: bold; }
+        .vs-question { font-family: 'Orbitron', sans-serif; font-size: 1rem; color: rgba(255,255,255,0.35); letter-spacing: 2px; }
+
+        .opponent-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .surprise-button {
+            padding: 10px 22px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            color: #000;
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .surprise-button:hover { transform: scale(1.05); box-shadow: 0 0 12px rgba(255, 200, 0, 0.6); }
+
+        .back-button {
+            padding: 10px 18px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .back-button:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+        .opponent-subtitle {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.4);
+            flex-shrink: 0;
+            margin: 0;
+        }
+
+        .opp-char-button {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--light-text);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            min-height: 52px; 
+        }
+        .opp-char-button .char-hp { font-size: 0.65rem; opacity: 0.55; font-family: 'Orbitron', sans-serif; margin-top: 3px; }
+        .opp-char-button.is-self { outline: 2px dashed rgba(255,255,255,0.3); }
+
+        .opp-hero-btn { background: linear-gradient(135deg, #004466 0%, #4a0404 100%); }
+        .opp-hero-btn:hover { border-color: #00A4FF; filter: brightness(1.3); }
+        .opp-villain-btn { background: linear-gradient(135deg, #4a0404 0%, #0a0a12 100%); }
+        .opp-villain-btn:hover { border-color: #FF3333; filter: brightness(1.3); }
+
+        #settingsBtn {
+            position: absolute;
+            left: 12px;
+            bottom: 12px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.9);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            z-index: 5;
+        }
+        #settingsBtn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
+
+
+        /* STAT PREVIEW CARD */
+        #statCard {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            background: rgba(5,12,25,0.97);
+            border: 1px solid #334;
+            border-radius: 10px;
+            padding: 14px 18px;
+            width: 220px;
+            max-width: 220px;
+            pointer-events: none;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+        }
+        #statCard .sc-name { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; margin-bottom: 8px; }
+        #statCard .sc-row { display: flex; justify-content: space-between; font-size: 0.78rem; color: rgba(255,255,255,0.7); margin: 3px 0; }
+        #statCard .sc-row span:last-child { color: #fff; font-weight: bold; }
+        #statCard .sc-bar-wrap { height: 4px; background: #222; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+        #statCard .sc-bar-fill { height: 100%; border-radius: 2px; transition: width 0.2s; }
+        #statCard .sc-bio { font-size: 0.65rem; color: rgba(255,255,255,0.40); font-style: italic; margin-top: 7px; line-height: 1.3; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 5px; word-wrap: break-word; overflow-wrap: break-word; }
+
+        /* ARENA SELECTOR */
+        .arena-row { display: flex; gap: 10px; justify-content: center; flex-shrink: 0; flex-wrap: wrap; }
+        .arena-btn {
+            padding: 7px 14px; font-size: 0.72rem; font-weight: bold; font-family: 'Orbitron', sans-serif;
+            border-radius: 6px; cursor: pointer; border: 2px solid transparent;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.15s;
+            background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.55);
+        }
+        .arena-btn.selected { filter: brightness(1.4); border-color: currentColor; color: inherit; }
+
+        /* DIFFICULTY SELECTOR */
+        .diff-row { display: flex; gap: 10px; justify-content: center; flex-shrink: 0; margin-bottom: 4px; }
+        .diff-btn {
+            padding: 8px 20px; font-size: 0.8rem; font-weight: bold; font-family: 'Orbitron', sans-serif;
+            border-radius: 6px; cursor: pointer; border: 2px solid transparent; text-transform: uppercase;
+            letter-spacing: 1px; transition: all 0.15s;
+        }
+        .diff-btn.easy  { background: rgba(0,180,80,0.15);  color: #00cc55; border-color: #00441a; }
+        .diff-btn.normal{ background: rgba(0,120,255,0.15); color: #4ab0ff; border-color: #003388; }
+        .diff-btn.legend{ background: rgba(170,0,255,0.15); color: #d59cff; border-color: #4b0064; }
+        .diff-btn.hard  { background: rgba(220,30,30,0.15); color: #ff5555; border-color: #660000; }
+        .diff-btn.selected { filter: brightness(1.5); border-color: currentColor; }
+
+        /* HUD TIMER */
+        #hudTimer {
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+            font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: #fff;
+            background: rgba(0,0,0,0.6); padding: 6px 18px; border-radius: 8px;
+            border: 1px solid #333; pointer-events: none; z-index: 5; display: none;
+            letter-spacing: 2px;
+        }
+        #hudTimer.sudden-death { color: #ff4444; border-color: #ff4444; animation: timerPulse 0.6s infinite; }
+
+        
+
+        
+        
+        @keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+        /* PORTRAIT CARDS IN HUD */
+        .portrait-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+        .portrait-ring {
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.15rem; background: rgba(0,0,0,0.45);
+            flex-shrink: 0; position: relative; transition: box-shadow 0.1s;
+        }
+        @keyframes hitFlash {
+            0%   { box-shadow: 0 0 0 0 rgba(255,80,80,0); background: rgba(0,0,0,0.45); }
+            35%  { box-shadow: 0 0 18px 7px rgba(255,80,80,0.9); background: rgba(255,80,80,0.25); }
+            100% { box-shadow: 0 0 0 0 rgba(255,80,80,0); background: rgba(0,0,0,0.45); }
+        }
+        .portrait-ring.hit-flash { animation: hitFlash 0.22s ease-out forwards; }
+        .portrait-info { display: flex; flex-direction: column; gap: 2px; }
+        .portrait-name { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: bold; letter-spacing: 0.5px; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+        .portrait-weapon { font-size: 0.6rem; color: rgba(255,255,255,0.42); letter-spacing: 0.5px; }
+
+        /* ACHIEVEMENT ITEMS */
+        .achievement-item {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #334;
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.15s;
+        }
+        .achievement-item.unlocked {
+            background: rgba(255,215,0,0.08);
+            border-color: rgba(255,215,0,0.3);
+        }
+        .achievement-item:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .achievement-item.unlocked:hover {
+            background: rgba(255,215,0,0.12);
+        }
+        .achievement-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border: 1px solid #444;
+            flex-shrink: 0;
+        }
+        .achievement-item.unlocked .achievement-icon {
+            background: rgba(255,215,0,0.15);
+            border-color: rgba(255,215,0,0.4);
+            color: #ffd700;
+        }
+        .achievement-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .achievement-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 3px;
+        }
+        .achievement-item.unlocked .achievement-name {
+            color: #ffd700;
+        }
+        .achievement-desc {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.3;
+        }
+        .achievement-status {
+            font-size: 0.65rem;
+            font-family: 'Orbitron', sans-serif;
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: rgba(0,0,0,0.3);
+            color: rgba(255,255,255,0.4);
+            flex-shrink: 0;
+        }
+        .achievement-item.unlocked .achievement-status {
+            background: rgba(255,215,0,0.15);
+            border-color: rgba(255,215,0,0.4);
+            color: #ffd700;
+        }
+
+        /* ROUND PIPS */
+        .round-pips { display: flex; gap: 6px; margin-top: 5px; justify-content: center; }
+        .round-pip {
+            width: 10px; height: 10px; border-radius: 50%;
+            border: 1.5px solid rgba(255,255,255,0.25);
+            background: transparent; transition: background 0.25s, box-shadow 0.25s;
+        }
+        .round-pip.won { background: currentColor; box-shadow: 0 0 7px currentColor; border-color: currentColor; }
+
+        /* ── IN-GAME ANNOUNCEMENT BANNER ──────────────────────── */
+        /* Up to two announcements at once (see showAnnouncement). The
+           newest is prepended, on top; a third pushes the oldest off. */
+        #announcementBanner {
+            position: absolute;
+            /* Tucked under the match timer, which ends at 66px. It used to sit at
+               88px, leaving 22px of dead space that pushed every announcement
+               further down the arena than it needed to be. */
+            top: 74px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 22;
+            pointer-events: none;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            max-width: 88%;
+            text-align: center;
+        }
+        #announcementBanner.has-items {
+            display: flex;
+        }
+        #announcementBanner .ann-inner {
+            display: inline-block;
+            background: rgba(5, 10, 22, 0.94);
+            border: 1.5px solid currentColor;
+            border-radius: 10px;
+            padding: 10px 22px 12px;
+            box-shadow: 0 0 24px rgba(0,0,0,0.7), 0 0 16px currentColor;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            animation: annSlideIn 0.3s ease-out;
+            transition: opacity 0.25s ease-in, transform 0.25s ease-in;
+        }
+        #announcementBanner .ann-inner.ann-leaving {
+            opacity: 0;
+            transform: translateY(-6px);
+        }
+        .ann-title {
+            font-size: 0.55rem;
+            letter-spacing: 3px;
+            opacity: 0.65;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .ann-msg {
+            font-size: 0.82rem;
+            line-height: 1.45;
+            white-space: normal;
+            max-width: 520px;
+        }
+        @keyframes annSlideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        
+        
+        
+
+        /* WIN STREAK BANNER */
+        #streakBanner {
+            position: absolute; bottom: 62px; left: 50%; transform: translateX(-50%);
+            font-family: 'Orbitron', sans-serif; font-size: 0.75rem; letter-spacing: 2px;
+            color: #ffd700; background: rgba(0,0,0,0.75); padding: 6px 16px;
+            border-radius: 6px; border: 1px solid #ffd700;
+            pointer-events: none; z-index: 20; display: none; white-space: nowrap;
+            animation: streakPop 0.3s ease-out;
+        }
+        @keyframes streakPop { from { transform: translateX(-50%) scale(0.7); opacity:0; } to { transform: translateX(-50%) scale(1); opacity:1; } }
+
+        /* SERIES VICTORY CONFETTI */
+        #confettiLayer {
+            position: fixed; inset: 0; pointer-events: none; z-index: 500; overflow: hidden;
+        }
+        .confetti-piece {
+            position: absolute; top: -20px; will-change: transform, opacity;
+            animation: confettiFall linear forwards;
+        }
+        @keyframes confettiFall {
+            0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0.85; }
+        }
+
+        /* CINEMATIC END SCREEN */
+        .end-stats { display: flex; gap: 20px; justify-content: center; margin-bottom: 24px; }
+        .end-stat-box { text-align: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px 18px; border: 1px solid #333; }
+        .end-stat-label { font-size: 0.7rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
+        .end-stat-val { font-family: 'Orbitron', sans-serif; font-size: 1.3rem; margin-top: 4px; }
+
+        /* ── SPLASH / MAIN MENU ─────────────────────────────────── */
+        /* html/body are overflow:hidden and .game-container clips, so anything
+           that does not fit inside this box is not merely off-screen — it is
+           unreachable. On a phone held sideways (and on 320x568 handsets) the
+           menu is taller than the frame, and it used to lose the eyebrow and the
+           top of the title off the top while the Zero Event tile ran off the
+           bottom, with nothing to scroll.
+
+           Three things keep that from happening:
+
+           `overflow-y: auto` gives the overflow somewhere to go.
+
+           `safe center` is the reason the *top* was being lost. Plain centring
+           overflows a too-tall child equally at both ends, and the start edge of
+           a scroll container cannot be scrolled back to — so the first thing off
+           the top is gone for good. `safe` keeps the centring while there is
+           room and falls back to flex-start exactly when there is not. The plain
+           `center` above it is the fallback for engines that do not know the
+           keyword; they drop the second declaration and keep the old behaviour.
+
+           The padding is breathing room at the scroll extremes so the first and
+           last tile do not sit flush against the frame. It is symmetric, so the
+           centred look on a normal screen is unchanged — centring happens inside
+           the content box. Keeping the tiles clear of the corner buttons is the
+           stacking breakpoint's job, not this padding's; see .splash-buttons. */
+        #splashMenu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            justify-content: safe center;
+            width: 100%;
+            height: 100%;
+            gap: 0;
+            position: relative;
+            box-sizing: border-box;
+            padding: 24px 12px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .splash-stars {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        .splash-star {
+            position: absolute;
+            border-radius: 50%;
+            background: #fff;
+            animation: twinkle-anim var(--dur) ease-in-out infinite;
+            opacity: 0;
+        }
+
+        @keyframes twinkle-anim {
+            0%, 100% { opacity: 0; }
+            50% { opacity: var(--max-opacity); }
+        }
+
+        .splash-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 54px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .splash-eyebrow {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 6px;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        .splash-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.4rem, 3.2vw, 2.4rem);
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-align: center;
+            line-height: 1.25;
+            background: linear-gradient(135deg, #ffffff 30%, #00A4FF 70%, #e94560 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            margin: 0;
+            padding: 0 20px;
+        }
+
+        .splash-divider {
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00A4FF, #e94560, transparent);
+            margin-top: 20px;
+            border-radius: 2px;
+        }
+
+        /* ── LOADING SCREEN ─────────────────────────────────────── */
+        #loadingScreen {
+            position: absolute;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--primary-blue);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Warp-out: the starfield rushes past, the card lifts away, the whole
+           screen dissolves into the splash behind it. */
+        #loadingScreen.loading-done {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #loadingScreen.loading-done .loading-content {
+            opacity: 0;
+            transform: scale(1.09) translateY(-8px);
+            transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #loadingScreen.loading-done .loading-stars {
+            opacity: 0;
+            transform: scale(1.6);
+            transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Slow nebula drift so the background is never quite still. */
+        .loading-glow {
+            position: absolute;
+            inset: -25%;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 32% 34%, rgba(0,164,255,0.20), transparent 55%),
+                radial-gradient(circle at 70% 68%, rgba(233,69,96,0.15), transparent 55%);
+            filter: blur(6px);
+            animation: loading-drift 16s ease-in-out infinite alternate;
+        }
+
+        @keyframes loading-drift {
+            from { transform: translate3d(-2%, -1%, 0) scale(1); }
+            to   { transform: translate3d(2%, 2%, 0) scale(1.14); }
+        }
+
+        .loading-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            padding: 0 24px;
+        }
+
+        /* Shared entrance: rise out of a blur. Each element sets its own
+           --reveal-delay in the markup so the card assembles piece by piece. */
+        .loading-reveal {
+            opacity: 0;
+            animation: loading-rise 0.9s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+            animation-delay: var(--reveal-delay, 0s);
+        }
+
+        @keyframes loading-rise {
+            from { opacity: 0; transform: translateY(18px); filter: blur(9px); }
+            to   { opacity: 1; transform: none;             filter: blur(0); }
+        }
+
+        .loading-eyebrow {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 6px;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            margin: 0 0 18px 0;
+        }
+
+        .loading-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.4rem, 3.2vw, 2.4rem);
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-align: center;
+            line-height: 1.25;
+            /* Both ends are white so the tiled gradient has no visible seam as
+               the sheen sweeps across. Start position matches the sheen's first
+               frame, so nothing jumps when the animation kicks in. */
+            background: linear-gradient(115deg, #ffffff 18%, #00A4FF 42%, #e94560 58%, #ffffff 82%);
+            background-size: 240% 100%;
+            background-position: 130% 50%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+
+        /* Rise in, then let the gradient drift across the letters forever. */
+        .loading-title.loading-reveal {
+            animation-name: loading-rise, loading-sheen;
+            animation-duration: 0.9s, 7s;
+            animation-timing-function: cubic-bezier(0.16, 0.84, 0.44, 1), linear;
+            animation-iteration-count: 1, infinite;
+            animation-fill-mode: forwards, none;
+            animation-delay: var(--reveal-delay, 0s), calc(var(--reveal-delay, 0s) + 0.6s);
+        }
+
+        @keyframes loading-sheen {
+            from { background-position: 130% 50%; }
+            to   { background-position: -30% 50%; }
+        }
+
+        .loading-divider {
+            width: 140px;
+            height: 2px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, transparent, #00A4FF, #e94560, transparent);
+            margin: 18px 0 4px 0;
+        }
+
+        /* The divider draws itself outward instead of rising. */
+        .loading-divider.loading-reveal {
+            animation-name: loading-expand;
+        }
+
+        @keyframes loading-expand {
+            from { opacity: 0; transform: scaleX(0.05); }
+            to   { opacity: 1; transform: scaleX(1); }
+        }
+
+        /* ── PROGRESS RING ── */
+        .loading-ring {
+            position: relative;
+            width: 132px;
+            height: 132px;
+            margin-top: 26px;
+            display: grid;
+            place-items: center;
+        }
+
+        .loading-ring-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg); /* start the sweep at 12 o'clock */
+            overflow: visible;
+        }
+
+        .loading-ring-track {
+            fill: none;
+            stroke: rgba(255,255,255,0.09);
+            stroke-width: 3;
+        }
+
+        .loading-ring-fill {
+            fill: none;
+            stroke: url(#loadingRingGradient);
+            stroke-width: 4;
+            stroke-linecap: round;
+            filter: drop-shadow(0 0 6px rgba(0,207,255,0.55));
+            /* dasharray/dashoffset are set from JS, which eases them per frame */
+        }
+
+        .loading-ring-readout {
+            position: relative;
+            z-index: 1;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #eaf6ff;
+            text-shadow: 0 0 14px rgba(0,207,255,0.45);
+        }
+
+        .loading-ring-unit {
+            font-size: 0.75rem;
+            color: #00cfff;
+            margin-left: 3px;
+        }
+
+        /* A last flare when the ring closes. */
+        .loading-ring.is-complete .loading-ring-fill {
+            filter: drop-shadow(0 0 14px rgba(0,207,255,0.9));
+        }
+
+        .loading-ring.is-complete .loading-ring-readout {
+            color: #ffffff;
+            text-shadow: 0 0 22px rgba(0,207,255,0.85);
+        }
+
+        /* ── SYSTEMS MANIFEST ── */
+        .loading-manifest {
+            list-style: none;
+            margin: 24px 0 0 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 240px;
+            max-width: 70vw;
+        }
+
+        .loading-manifest-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.25);
+            transition: color 0.45s ease, transform 0.45s ease;
+        }
+
+        .loading-manifest-line::before {
+            content: '';
+            flex: none;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.16);
+            transition: background 0.45s ease, box-shadow 0.45s ease, transform 0.45s ease;
+        }
+
+        .loading-manifest-line.is-active {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .loading-manifest-line.is-active::before {
+            background: rgba(0,207,255,0.55);
+            animation: loading-pulse 1.2s ease-in-out infinite;
+        }
+
+        .loading-manifest-line.is-done {
+            color: rgba(255,255,255,0.75);
+            transform: translateX(2px);
+        }
+
+        .loading-manifest-line.is-done::before {
+            background: #00cfff;
+            box-shadow: 0 0 10px 2px rgba(0,207,255,0.55);
+            transform: scale(1.3);
+            animation: none;
+        }
+
+        @keyframes loading-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0,207,255,0.30); }
+            50%      { box-shadow: 0 0 10px 3px rgba(0,207,255,0.55); }
+        }
+
+        /* Wrapper exists so the hint can fade between tips on its own opacity
+           without fighting the entrance animation's fill-mode. */
+        .loading-tip-slot {
+            margin-top: 22px;
+        }
+
+        .loading-tip {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.35);
+            text-align: center;
+            max-width: 320px;
+            min-height: 1.4em;
+            transition: opacity 0.2s ease;
+        }
+
+        .loading-tip.loading-tip-fade {
+            opacity: 0;
+        }
+
+        /* Landscape phones: keep the whole card on screen. */
+        @media (max-height: 560px) {
+            .loading-divider { margin: 12px 0 2px 0; }
+            .loading-ring { width: 92px; height: 92px; margin-top: 14px; }
+            .loading-ring-readout { font-size: 1.15rem; }
+            .loading-ring-unit { font-size: 0.65rem; }
+            .loading-manifest { margin-top: 14px; gap: 5px; }
+            .loading-manifest-line { font-size: 0.66rem; }
+            .loading-tip-slot { margin-top: 12px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .loading-reveal,
+            .loading-title.loading-reveal,
+            .loading-divider.loading-reveal {
+                animation: none;
+                opacity: 1;
+            }
+            .loading-glow,
+            .loading-manifest-line.is-active::before {
+                animation: none;
+            }
+            #loadingScreen.loading-done .loading-content,
+            #loadingScreen.loading-done .loading-stars {
+                transform: none;
+            }
+        }
+
+        /* 2x2. Columns are sized to the tiles rather than to the container, so
+           each keeps the 280px width .splash-btn already sets — the grid only
+           decides the arrangement, never the size.
+
+           The tracks are stated as 280px rather than `auto` because `auto` is not
+           "whatever .splash-btn is": it is max-content, and the two full-width
+           tiles are grid items too. Zero Event's row (label + sub-line + state
+           pill) wants more than 574px, and an auto track grows to fit a spanning
+           item, so the pair stretched to ~290px each. The 280px tiles do not
+           stretch with them — they have a fixed width — so Armory and Dossier
+           stopped short of the right edge while Freeplay, Continue and Zero Event
+           still ran the full widened width. That is the overhang: not a tile that
+           is too long, but two columns that got too wide underneath it. Whether it
+           showed up depended on how wide Orbitron happened to render, which is why
+           it appeared in the browser and not in a headless screenshot. */
+        .splash-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 280px);
+            gap: 14px;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+        /* Two 280px tiles plus the gap need ~590px; below that they stack. */
+        @media (max-width: 620px) {
+            .splash-buttons { grid-template-columns: 280px; }
+        }
+
+        /* Landscape phones: keep the whole menu on screen — the same treatment
+           the loading card already gets at this height. #splashMenu can scroll
+           now, but scrolling a six-tile menu is a worse first screen than a
+           tighter header, so the space comes out of the gaps before it comes out
+           of the player's thumb. The 54px under the title is the bulk of it. */
+        @media (max-height: 560px) {
+            .splash-top { margin-bottom: 20px; }
+            .splash-eyebrow { margin-bottom: 10px; letter-spacing: 4px; }
+            .splash-divider { margin-top: 12px; }
+            .splash-buttons { gap: 10px; }
+            .splash-btn { padding: 11px 0; }
+            #splashMenu { padding: 14px 12px; }
+        }
+
+        .splash-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 16px 0;
+            width: 280px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.15);
+            transition: all 0.18s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .splash-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+            transform: translateX(-100%);
+            transition: transform 0.4s ease;
+        }
+
+        .splash-btn:not(:disabled):hover::before {
+            transform: translateX(100%);
+        }
+
+        .splash-btn-freeplay {
+            /* Full width, like the Zero Event tile and like the Continue tile this
+               becomes once the save has a loadout — so the row it sits on does not
+               change shape underneath the player. It also squares the grid up: with
+               Freeplay spanning, the four middle tiles are a clean 2x2 instead of
+               leaving the fifth stranded on a row of its own.
+
+               "Full width" only lines up with the tiles below because
+               .splash-buttons pins its tracks to 280px. While they were `auto` this
+               tile ran past the right-hand column: see the note there. */
+            grid-column: 1 / -1;
+            width: 100%;
+            /* letter-spacing is trailing space — the 3px lands after the final Y,
+               so a centred single word sits 1.5px left of true centre. Same
+               correction the Continue tile used to make from the other side. */
+            padding-left: 3px;
+            background: linear-gradient(135deg, #003d66 0%, #001a33 100%);
+            color: #00cfff;
+            border-color: rgba(0, 164, 255, 0.4);
+            box-shadow: 0 0 18px rgba(0, 164, 255, 0.12);
+        }
+        .splash-btn-freeplay:hover {
+            border-color: #00A4FF;
+            box-shadow: 0 0 28px rgba(0, 164, 255, 0.35);
+            transform: translateY(-2px);
+        }
+
+        .splash-btn-shop {
+            background: linear-gradient(135deg, #4d3d00 0%, #2a1a00 100%);
+            color: #ffd700;
+            border-color: rgba(255, 215, 0, 0.4);
+            box-shadow: 0 0 18px rgba(255, 215, 0, 0.12);
+        }
+        .splash-btn-shop:hover {
+            border-color: #ffd700;
+            box-shadow: 0 0 28px rgba(255, 215, 0, 0.35);
+            transform: translateY(-2px);
+        }
+
+        /* The Zero Point: the wiki describes a glowing orb, blue with a starfield
+           inside it, going darker and more purple through Chapter 2. That blue →
+           violet gradient is what this tile is quoting. */
+        .splash-btn-creator {
+            background: linear-gradient(135deg, #17306b 0%, #2a1150 100%);
+            color: #8fbcff;
+            border-color: rgba(143, 188, 255, 0.4);
+            box-shadow: 0 0 18px rgba(143, 188, 255, 0.14);
+        }
+        .splash-btn-creator:hover {
+            border-color: #8fbcff;
+            box-shadow: 0 0 28px rgba(143, 188, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* The Zero Event: the same orb the creator tile quotes, but after it has
+           come apart. The creator's blue → violet reads as something contained;
+           this one drops the blue entirely and sits on the near-black of the
+           zeropoint arena itself, so the two tiles are recognisably the same
+           place at two different points in its life. */
+        
+
+        .splash-btn-armory {
+            background: linear-gradient(135deg, #4d2600 0%, #2a1400 100%);
+            color: #ff8c42;
+            border-color: rgba(255, 140, 66, 0.4);
+            box-shadow: 0 0 18px rgba(255, 140, 66, 0.12);
+        }
+        .splash-btn-armory:hover {
+            border-color: #ff8c42;
+            box-shadow: 0 0 28px rgba(255, 140, 66, 0.35);
+            transform: translateY(-2px);
+        }
+
+        .splash-btn-coming {
+            background: rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.07);
+            cursor: not-allowed;
+        }
+
+        .splash-coming-tag {
+            display: block;
+            font-size: 0.55rem;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.18);
+            margin-top: 5px;
+            font-weight: 400;
+        }
+
+        /* ── SPLASH STATE (3.0) ───────────────────────────────
+           The same five tiles, each carrying something the save already knows.
+           Nothing here restyles a tile's colour — only its layout, so a tile
+           can hold a second line. */
+
+        /* Status strip, top-right of the splash. */
+        .splash-status {
+            position: absolute; top: 16px; right: 16px; z-index: 2;
+            display: flex; align-items: center; gap: 10px;
+        }
+        /* The dev-menu toggle sits at top:10 right:10 and would sit on top of the
+           record chip. Only a dev build shows it, so only a dev build is shifted. */
+        body.has-dev-toggle .splash-status { right: 52px; }
+        .splash-chip {
+            display: flex; align-items: center; gap: 7px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 6px; padding: 6px 12px;
+            font-family: 'Orbitron', sans-serif; font-size: 0.7rem; letter-spacing: 1px;
+            color: #8fd6ff;
+        }
+        .splash-chip-label {
+            font-size: 0.55rem; letter-spacing: 2px; color: rgba(255,255,255,0.45);
+        }
+        .splash-chip-credits {
+            background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.35); color: #ffd700;
+            font-size: 0.8rem; letter-spacing: 2px;
+        }
+
+        /* A tile with a state line under its label: left-aligned, two rows. */
+        .splash-btn.has-sub {
+            display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+            text-align: left; padding: 12px 15px; letter-spacing: 3px; font-size: 0.85rem;
+        }
+        .splash-btn-sub {
+            font-family: 'Inter', sans-serif; font-size: 0.62rem; font-weight: 400;
+            letter-spacing: 0.5px; text-transform: none; color: rgba(255,255,255,0.45);
+        }
+        /*  The pill used to fill itself with `background: currentColor` and then set
+            its own `color` to a near-black on the same element. currentColor is the
+            element's OWN computed colour, so both resolved to that near-black and the
+            pill rendered as a dark box with dark text inside it — invisible, which is
+            what "2 READY" had always looked like.
+
+            The fill and the text are stated separately now. Each tile names both,
+            because the pill's fill is the tile's LABEL colour while its text is the
+            tile's BACKGROUND colour, and nothing on the element can infer the pair. */
+        .splash-btn-tag {
+            font-family: 'Inter', sans-serif; font-size: 0.55rem; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+            padding: 1px 5px; border-radius: 3px; margin-left: 8px;
+            background: #7fe3ff;                      /* both overridden per tile below */
+            color: #0a0710;
+        }
+        .splash-btn-shop .splash-btn-tag    { background: #ffd700; color: #2a1a00; }
+        .splash-btn-dossier .splash-btn-tag { background: #7fe3ff; color: #04161f; }
+
+        
+        
+                
+
+        /* The Dossier tile — 3.0's new destination. Cyan, to sit apart from the four
+           spending screens without inventing a colour: it is #00cfff's own tint. */
+        .splash-btn-dossier {
+            background: linear-gradient(135deg, #062b3d 0%, #04161f 100%);
+            color: #7fe3ff; border-color: rgba(0,207,255,0.3); box-shadow: 0 0 18px rgba(0,207,255,0.1);
+        }
+        .splash-btn-dossier:hover { border-color: #7fe3ff; box-shadow: 0 0 28px rgba(0,207,255,0.3); transform: translateY(-2px); }
+
+        
+        
+        
+
+        /* Until the Snap has happened the tiles do not go anywhere — but nothing here
+           enforces that, and nothing here should. The gate is a single capture-phase
+           click listener in snap-intro.js.
+
+           pointer-events:none was the obvious CSS answer and is the wrong one: it
+           takes the hover sheen and the lift away with it, and a menu whose tiles
+           stop answering the cursor reads as broken rather than as waiting. Same
+           reason there is no cursor override — .splash-btn's own pointer is what the
+           tiles should show. So the splash looks and behaves exactly as it always
+           does right up until he walks on; the only thing that changes is where the
+           click goes. .snap-pending is left as a state hook for anything that needs
+           to ask, and the tiles carry aria-disabled for screen readers. */
+
+        
+
+        /* ── PAUSE MENU ──────────────────────────────────────── */
+        #pauseOverlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 18;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            flex-direction: column;
+        }
+        #pauseOverlay.active { display: flex; }
+
+        .pause-box {
+            background: rgba(5, 12, 26, 0.97);
+            border: 1.5px solid rgba(0, 164, 255, 0.45);
+            border-radius: 14px;
+            padding: 36px 48px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 0 40px rgba(0, 164, 255, 0.15), 0 8px 40px rgba(0,0,0,0.7);
+            min-width: 260px;
+            animation: bounceIn 0.22s ease-out;
+        }
+
+        .pause-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            letter-spacing: 6px;
+            color: #fff;
+            text-shadow: 0 0 18px rgba(0,164,255,0.5);
+            margin-bottom: 6px;
+        }
+
+        .pause-divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,164,255,0.4), transparent);
+            margin-bottom: 4px;
+        }
+
+        .pause-btn {
+            width: 100%;
+            padding: 13px 0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-radius: 7px;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: all 0.15s ease;
+        }
+
+        .pause-btn-resume {
+            background: linear-gradient(135deg, #003d66, #001a33);
+            color: #00cfff;
+            border-color: rgba(0,164,255,0.5);
+            box-shadow: 0 0 14px rgba(0,164,255,0.1);
+        }
+        .pause-btn-resume:hover { border-color: #00A4FF; box-shadow: 0 0 22px rgba(0,164,255,0.35); transform: translateY(-1px); }
+
+        .pause-btn-quit {
+            background: rgba(233, 69, 96, 0.1);
+            color: #e94560;
+            border-color: rgba(233, 69, 96, 0.3);
+        }
+        .pause-btn-quit:hover { background: rgba(233,69,96,0.2); border-color: #e94560; transform: translateY(-1px); }
+
+        .pause-btn-backup {
+            background: linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,100,0,0.08));
+            color: #ffaa44;
+            border-color: rgba(255,140,0,0.35);
+            font-size: 0.75rem;
+        }
+        .pause-btn-backup:hover { background: rgba(255,140,0,0.2); border-color: #ffaa44; transform: translateY(-1px); }
+
+        .pause-hint {
+            font-size: 0.58rem;
+            color: rgba(255,255,255,0.25);
+            letter-spacing: 2px;
+            font-family: 'Orbitron', sans-serif;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 700px) {
+            .pause-box { padding: 28px 28px 24px; min-width: 200px; }
+        }
+
+        @media (max-width: 700px) {
+            .faction-wrapper { grid-template-columns: 1fr; }
+            .faction-section { width: 100%; height: auto; min-height: 200px; }
+            .button-group { grid-template-columns: 1fr; }
+            .game-button { min-height: 56px; padding: 14px 12px; font-size: 0.95rem; }
+            .game-button:hover { border-color: rgba(255,255,255,0.1); filter: none; }
+            .opp-char-button { min-height: 60px; padding: 10px 12px; font-size: 0.85rem; }
+            .opp-char-button:hover { border-color: rgba(255,255,255,0.1); filter: none; }
+            .opp-char-button .char-hp { font-size: 0.7rem; }
+            .hud { flex-direction: column; gap: 15px; }
+            .health-bar-container { width: 150px; }
+        }
+
+        /* FULLSCREEN BUTTON */
+        #fullscreenBtn {
+            position: absolute;
+            left: 56px;
+            bottom: 12px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.9);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            z-index: 5;
+        }
+        #fullscreenBtn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
+
+        /* CONTROLS OVERLAY */
+        #controlsOverlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+            background: rgba(0,0,0,0.72);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+        }
+        #controlsOverlay.open { display: flex; }
+        /* The one overlay panel that had no height cap. Every other one — ze,
+           creator, armory, dossier, season card, shop — caps at 80-88vh and
+           scrolls inside; this listed a dozen control rows at full height and
+           the overlay centred it, so on a phone in landscape the first rows were
+           clipped off the TOP with nothing to scroll (html/body are
+           overflow:hidden). Same cap and the same inner scroll as the rest.
+
+           border-box matters here rather than being tidiness: this panel carries
+           52px of vertical padding, and on a content-box the 86vh caps only the
+           content, so the border box still came out 54px taller than the cap and
+           went on overhanging both edges of a 360px-tall window. */
+        .controls-box {
+            background: rgba(6, 12, 24, 0.98);
+            border: 1px solid #334;
+            border-radius: 14px;
+            padding: 28px 32px 24px;
+            min-width: 320px;
+            max-width: 480px;
+            width: 90%;
+            box-sizing: border-box;
+            max-height: 86vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+            position: relative;
+        }
+        .controls-box h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            color: #00cfff;
+            margin: 0 0 18px;
+            text-align: center;
+        }
+        .controls-input-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.35);
+            text-align: center;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 20px;
+            margin-bottom: 20px;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-key {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            padding: 4px 9px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            color: #fff;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 38px;
+            text-align: center;
+        }
+        .control-key.wide { min-width: 64px; }
+        /* A key chip the player can click to rebind (keyboard list only). */
+        .control-rebind { cursor: pointer; font: inherit; font-family: 'Orbitron', sans-serif; font-size: 0.68rem; }
+        .control-rebind:hover { border-color: #00A4FF; background: rgba(0,164,255,0.15); }
+        .control-rebind.is-listening {
+            border-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.12);
+            animation: rebindPulse 1s ease-in-out infinite;
+        }
+        @keyframes rebindPulse { 50% { opacity: 0.55; } }
+        @media (prefers-reduced-motion: reduce) { .control-rebind.is-listening { animation: none; } }
+        /* Section divider inside the two-column controls grid. */
+        .control-section {
+            grid-column: 1 / -1;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #00cfff;
+            border-bottom: 1px solid rgba(0, 207, 255, 0.25);
+            padding-bottom: 4px;
+            margin-top: 4px;
+        }
+        .control-desc {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+        }
+        .controls-close-btn {
+            display: block;
+            width: 100%;
+            margin-top: 4px;
+            padding: 10px;
+            border-radius: 7px;
+            border: 1px solid #444;
+            background: rgba(255,255,255,0.06);
+            color: #e8e8e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            cursor: pointer;
+        }
+        .controls-close-btn:hover { background: rgba(0,164,255,0.15); border-color: #00A4FF; }
+        /* display:block above beats the [hidden] attribute, which left "All
+           controls" showing on the plain Controls screen where it does nothing. */
+        .controls-close-btn[hidden] { display: none; }
+
+        /* ── Coach mode — the first-fight card ─────────────────────────────
+           The card IS this overlay, so everything above is reused as-is. These
+           four rules are the whole of what it adds: two actions side by side, an
+           accent on the primary, a full-width prose row, and the suppress line. */
+        .controls-actions { display: flex; gap: 10px; }
+        .controls-actions .controls-close-btn { margin-top: 4px; }
+        /* Takes the accent border/fill already used by #confirmOkBtn. */
+        .controls-close-btn.is-primary {
+            border-color: #00A4FF;
+            background: rgba(0,164,255,0.15);
+            color: #00cfff;
+        }
+        .controls-close-btn.is-primary:hover { background: rgba(0,164,255,0.25); }
+        /* Full-width prose row inside .controls-grid — a { note } entry. */
+        .control-note {
+            grid-column: 1 / -1;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.5;
+        }
+        .controls-suppress {
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            margin-top: 12px; font-size: 0.7rem; color: rgba(255,255,255,0.35);
+            cursor: pointer;
+        }
+        .controls-suppress input { width: 12px; height: 12px; accent-color: #00A4FF; margin: 0; }
+
+        /* ── Editing affordances, shared by the Armory and the Zero Point ── */
+        .edit-banner {
+            background: rgba(255, 196, 0, 0.1);
+            border: 1px solid rgba(255, 196, 0, 0.35);
+            border-radius: 7px;
+            padding: 8px 10px;
+            font-size: 0.74rem;
+            color: #ffc400;
+            line-height: 1.5;
+        }
+        .row-actions { display: flex; gap: 8px; align-items: center; }
+        .cancel-edit-btn {
+            background: none;
+            border: 1px solid #444;
+            color: #aaa;
+            border-radius: 7px;
+            padding: 10px 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+        .cancel-edit-btn:hover { background: rgba(255,255,255,0.06); border-color: #666; color: #ddd; }
+        .edit-btn {
+            background: none;
+            border: 1px solid #33506b;
+            color: #7fb2e0;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.73rem;
+            cursor: pointer;
+        }
+        .edit-btn:hover { background: rgba(127,178,224,0.12); border-color: #7fb2e0; }
+
+        /* ══════════════ THE ZERO POINT (character creator) ══════════════ */
+        .creator-panel {
+            background: #070b16;
+            border: 1px solid #1e2a4a;
+            border-radius: 12px;
+            padding: 22px 20px;
+            width: min(680px, 95vw);
+            box-sizing: border-box;
+            max-height: 86vh;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .creator-quote {
+            font-size: 0.76rem;
+            font-style: italic;
+            color: rgba(143, 188, 255, 0.6);
+            border-left: 2px solid rgba(143, 188, 255, 0.35);
+            padding-left: 10px;
+            line-height: 1.55;
+        }
+
+        .creator-tabs { display: flex; gap: 6px; flex-shrink: 0; }
+        .creator-tab {
+            flex: 1;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #263042;
+            color: rgba(255,255,255,0.55);
+            border-radius: 7px;
+            padding: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .creator-tab:hover { color: #fff; border-color: #44506b; }
+        .creator-tab.active {
+            background: rgba(143,188,255,0.12);
+            border-color: rgba(143,188,255,0.5);
+            color: #8fbcff;
+        }
+
+        /* Sub-tabs inside Character Customization. Deliberately quieter than the
+           tabs above them — smaller, flatter, and left-aligned rather than stretched
+           — so the two rows read as a hierarchy instead of competing. The rule under
+           them separates the choice of fighter from that fighter's panel. */
+        .creator-subtabs {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #1b2233;
+        }
+        .creator-subtab {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid #222b3a;
+            color: rgba(255,255,255,0.45);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.63rem;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .creator-subtab:hover { color: #fff; border-color: #3a4560; }
+        .creator-subtab.active {
+            background: rgba(143,188,255,0.10);
+            border-color: rgba(143,188,255,0.4);
+            color: #8fbcff;
+        }
+
+        /* One fighter's customization panel.
+           This is the rule the panels were missing entirely. setCreatorSubTab()
+           shows them with `display: flex`, and a flex container with no direction
+           is a ROW — so the quote, the section labels, the controls and the result
+           card were laid out side by side in four squeezed columns, every one of
+           them too narrow for its own text. The stat rows inside the result card
+           are label-left / value-right with a nowrap value, so at that width the
+           two collided and printed on top of each other. */
+        .creator-subtab-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            /* The parent .creator-tab-body already scrolls; a second scroller
+               nested inside it would trap the wheel over half the panel. */
+            min-height: 0;
+            min-width: 0;
+        }
+
+        /* The colour well, its label and the reset button. The button goes to the
+           far end so the two controls sit at opposite sides of the row rather than
+           crowding each other in the middle. */
+        .creator-color-row { align-items: center; }
+        .creator-color-row .creator-hint { display: inline; }
+        .creator-color-row .creator-subtab { margin-left: auto; }
+
+        .creator-tab-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-gutter: stable;
+            padding-right: 4px;
+            min-height: 0;
+            min-width: 0;
+        }
+        .creator-tab-body > *,
+        .creator-roster > *,
+        .creator-made > * { flex-shrink: 0; }
+
+        .creator-section-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 6px;
+        }
+        .creator-hint {
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0;
+            text-transform: none;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.7rem;
+        }
+
+        .creator-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 6px;
+        }
+        .creator-choice {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #263042;
+            border-radius: 7px;
+            padding: 8px 10px;
+            cursor: pointer;
+            text-align: left;
+            color: #ddd;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.15s ease;
+        }
+        .creator-choice:hover:not(:disabled) { border-color: #44506b; background: rgba(255,255,255,0.07); }
+        .creator-choice.selected {
+            border-color: #8fbcff;
+            background: rgba(143,188,255,0.14);
+            box-shadow: 0 0 12px rgba(143,188,255,0.18);
+        }
+        .creator-choice:disabled { opacity: 0.35; cursor: not-allowed; }
+        .creator-choice .cc-name { font-size: 0.8rem; display: block; margin-bottom: 2px; }
+        .creator-choice .cc-desc { font-size: 0.68rem; color: rgba(255,255,255,0.45); line-height: 1.4; }
+        .creator-choice .cc-cost { font-size: 0.7rem; color: #8fbcff; }
+
+        .creator-name-input {
+            width: 100%;
+            padding: 9px 11px;
+            border-radius: 7px;
+            border: 1px solid #2c3648;
+            background: rgba(255,255,255,0.06);
+            color: #e8e8e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+        }
+        .creator-name-input:focus { outline: none; border-color: #8fbcff; }
+
+        .creator-bio-input {
+            width: 100%;
+            padding: 9px 11px;
+            border-radius: 7px;
+            border: 1px solid #2c3648;
+            background: rgba(255,255,255,0.06);
+            color: #e8e8e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 62px;
+        }
+        .creator-bio-input:focus { outline: none; border-color: #8fbcff; }
+        .creator-bio-count {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.3);
+            text-align: right;
+            margin-top: -4px;
+        }
+        .creator-preview .cc-bio,
+        .creator-made .cc-bio {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.74rem;
+            font-style: italic;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.55;
+        }
+
+        .creator-slider-row { display: flex; align-items: center; gap: 12px; }
+        .creator-slider-row input[type="range"] { flex: 1; min-width: 0; accent-color: #8fbcff; }
+        .creator-hp-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78rem;
+            color: #8fbcff;
+            white-space: nowrap;
+            min-width: 72px;
+            text-align: right;
+        }
+        .creator-color-input {
+            width: 54px; height: 30px; padding: 0;
+            border: 1px solid #2c3648; border-radius: 6px;
+            background: none; cursor: pointer;
+        }
+
+        .creator-preview {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid #1b2233;
+            border-radius: 7px;
+            padding: 10px 12px;
+            min-height: 34px;
+        }
+        .creator-placeholder { font-size: 0.74rem; color: rgba(255,255,255,0.35); }
+
+        .creator-make-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding-top: 10px;
+            margin-top: 2px;
+            border-top: 1px solid #1b2233;
+            flex-shrink: 0;
+        }
+        .creator-cost {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: #8fbcff;
+            letter-spacing: 1px;
+        }
+        .creator-cost.unaffordable { color: #ff6b6b; }
+        .creator-make-btn {
+            background: #6c8cff;
+            color: #050a18;
+            border: none;
+            border-radius: 7px;
+            padding: 10px 26px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .creator-make-btn:hover:not(:disabled) { background: #8fa6ff; box-shadow: 0 0 18px rgba(143,188,255,0.4); }
+        .creator-make-btn:disabled { background: #333a48; color: #777; cursor: not-allowed; }
+
+        .creator-roster { display: flex; flex-direction: column; gap: 8px; }
+        .creator-made {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #263042;
+            border-left: 3px solid #8fbcff;
+            border-radius: 7px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .creator-made-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .creator-made-name { font-size: 0.88rem; color: #fff; }
+        .creator-made-sub { font-size: 0.7rem; color: rgba(255,255,255,0.4); }
+        .creator-made-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .creator-unmake-btn {
+            background: none;
+            border: 1px solid #663333;
+            color: #cc7777;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.73rem;
+            cursor: pointer;
+        }
+        .creator-unmake-btn:hover { background: rgba(204,119,119,0.12); border-color: #cc7777; }
+
+        @media (max-width: 700px) {
+            .creator-panel { padding: 16px 14px; max-height: 92vh; }
+            .creator-choice-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+        }
+
+        /* ══════════════ THE ARMORY ══════════════ */
+        .armory-panel {
+            background: #0a0f1a;
+            border: 1px solid #3a2a1a;
+            border-radius: 12px;
+            padding: 22px 20px;
+            width: min(680px, 95vw);
+            box-sizing: border-box;
+            max-height: 86vh;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .armory-quote {
+            font-size: 0.78rem;
+            font-style: italic;
+            color: rgba(255, 140, 66, 0.65);
+            border-left: 2px solid rgba(255, 140, 66, 0.35);
+            padding-left: 10px;
+            line-height: 1.5;
+        }
+
+        .armory-tabs { display: flex; gap: 6px; flex-shrink: 0; }
+        .armory-tab {
+            flex: 1;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #333;
+            color: rgba(255,255,255,0.55);
+            border-radius: 7px;
+            padding: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .armory-tab:hover { color: #fff; border-color: #555; }
+        .armory-tab.active {
+            background: rgba(255,140,66,0.12);
+            border-color: rgba(255,140,66,0.5);
+            color: #ff8c42;
+        }
+
+        .armory-tab-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            /* Takes the space the pinned header and footer leave, and scrolls
+               inside it — so the panel itself never grows past its max-height. */
+            flex: 1 1 auto;
+            overflow-y: auto;
+            /* Explicit, not incidental. A box with overflow-y:auto and the
+               default overflow-x:visible has its overflow-x computed to auto,
+               so any single over-wide child raises a horizontal scrollbar
+               across the whole panel. Nothing here should ever scroll
+               sideways — it wraps or it truncates. */
+            overflow-x: hidden;
+            scrollbar-gutter: stable;
+            padding-right: 4px;
+            min-height: 0;
+            min-width: 0;
+        }
+        /* Nothing inside the scroll region may be squeezed. As flex items these
+           all default to flex-shrink:1, so when the panel ran short of room the
+           browser compressed the boxes rather than scrolling them — and since a
+           compressed box doesn't clip, its rows drew straight through its own
+           bottom border. Holding their natural height is what hands the overflow
+           to the scroll container, which is the thing equipped to deal with it. */
+        /* Every column-direction flex container in the panel, for the same
+           reason. Deliberately not applied to the row-direction ones
+           (.armory-mod, .armory-weapon-head, .armory-forge-row) — there
+           flex-shrink governs width, and their text is supposed to narrow
+           rather than overhang. */
+        .armory-tab-body > *,
+        .armory-mod-list > *,
+        .armory-rack > *,
+        .armory-weapon > * { flex-shrink: 0; }
+
+        .armory-section-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 6px;
+        }
+        .armory-hint {
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0;
+            text-transform: none;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.7rem;
+        }
+
+        .armory-pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 6px;
+        }
+        .armory-pattern {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #333;
+            border-radius: 7px;
+            padding: 8px 10px;
+            cursor: pointer;
+            text-align: left;
+            color: #ddd;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.15s ease;
+        }
+        .armory-pattern:hover:not(:disabled) { border-color: #666; background: rgba(255,255,255,0.07); }
+        .armory-pattern.selected {
+            border-color: #ff8c42;
+            background: rgba(255,140,66,0.14);
+            box-shadow: 0 0 12px rgba(255,140,66,0.18);
+        }
+        .armory-pattern:disabled { opacity: 0.35; cursor: not-allowed; }
+        .armory-pattern .ap-name { font-size: 0.8rem; display: block; margin-bottom: 2px; }
+        .armory-pattern .ap-cost { font-size: 0.7rem; color: #ff8c42; }
+        .armory-pattern .ap-lock { font-size: 0.66rem; color: rgba(255,255,255,0.35); }
+        /* Only ever seen on the pattern of a weapon being reworked — vaulted tiles
+           are otherwise filtered off the board. A shade brighter than .ap-lock and
+           faintly warm, so it reads as deliberate rather than as something greyed
+           out for want of credits. */
+        .armory-pattern .ap-vault { color: rgba(255, 190, 120, 0.55); }
+        /* Slightly less faded than :disabled leaves it: nothing is missing here, so
+           it should not look like a gap in the board. */
+        .armory-pattern.vaulted:disabled { opacity: 0.5; }
+
+        .armory-mod-list { display: flex; flex-direction: column; gap: 5px; }
+        .armory-mod {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #333;
+            border-radius: 7px;
+            padding: 8px 10px;
+            cursor: pointer;
+            text-align: left;
+            color: #ddd;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.15s ease;
+        }
+        .armory-mod:hover:not(:disabled) { border-color: #666; }
+        .armory-mod.selected { border-color: #ff8c42; background: rgba(255,140,66,0.12); }
+        .armory-mod:disabled { opacity: 0.3; cursor: not-allowed; }
+        .armory-mod .am-name { font-size: 0.8rem; }
+        .armory-mod .am-desc { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
+        .armory-mod .am-cost { font-size: 0.75rem; color: #ff8c42; white-space: nowrap; }
+        .armory-empty { font-size: 0.75rem; color: rgba(255,255,255,0.3); padding: 8px 2px; }
+
+        .armory-name-input {
+            width: 100%;
+            padding: 9px 11px;
+            border-radius: 7px;
+            border: 1px solid #444;
+            background: rgba(255,255,255,0.06);
+            color: #e8e8e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+        }
+        .armory-name-input:focus { outline: none; border-color: #ff8c42; }
+
+        .armory-preview {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid #2a2a2a;
+            border-radius: 7px;
+            padding: 10px 12px;
+            min-height: 34px;
+        }
+        .armory-placeholder { font-size: 0.74rem; color: rgba(255,255,255,0.35); }
+
+        /* Four columns so the numbers line up down the panel regardless of how
+           long the stat's name is: name | before | arrow | after. Unchanged
+           stats leave the first two blank and print in the "after" column, so
+           every value in the readout shares one right edge. */
+        .apv-row {
+            display: grid;
+            grid-template-columns: 1fr auto 0.9rem auto;
+            align-items: baseline;
+            gap: 0 6px;
+            font-size: 0.74rem;
+            line-height: 1.85;
+            font-variant-numeric: tabular-nums;
+        }
+        .apv-label { color: rgba(255,255,255,0.55); min-width: 0; }
+        .apv-from  { color: rgba(255,255,255,0.35); text-align: right; }
+        .apv-arrow { color: rgba(255,255,255,0.25); text-align: center; }
+        .apv-to    { text-align: right; white-space: nowrap; }
+        .apv-up    { color: #5ee27a; }
+        .apv-down  { color: #ff6b6b; }
+        .apv-same  { color: rgba(255,255,255,0.45); }
+
+        .armory-forge-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding-top: 10px;
+            margin-top: 2px;
+            border-top: 1px solid #262626;
+            flex-shrink: 0;
+        }
+        .armory-cost {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: #ff8c42;
+            letter-spacing: 1px;
+        }
+        .armory-cost.unaffordable { color: #ff6b6b; }
+        .armory-forge-btn {
+            background: #ff8c42;
+            color: #1a0d00;
+            border: none;
+            border-radius: 7px;
+            padding: 10px 26px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .armory-forge-btn:hover:not(:disabled) { background: #ffa563; box-shadow: 0 0 18px rgba(255,140,66,0.4); }
+        .armory-forge-btn:disabled { background: #444; color: #777; cursor: not-allowed; }
+
+        .armory-rack { display: flex; flex-direction: column; gap: 8px; }
+        .armory-weapon {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #333;
+            border-left: 3px solid #ff8c42;
+            border-radius: 7px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .armory-weapon-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .armory-weapon-name { font-size: 0.88rem; color: #fff; }
+        .armory-weapon-base { font-size: 0.7rem; color: rgba(255,255,255,0.4); }
+        .armory-weapon-stats { min-width: 0; }
+        .armory-weapon-mods { font-size: 0.7rem; color: #ff8c42; }
+        .armory-weapon-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .armory-equip-select {
+            flex: 1;
+            min-width: 140px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #10131a;
+            color: #ddd;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .armory-scrap-btn {
+            background: none;
+            border: 1px solid #663333;
+            color: #cc7777;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.73rem;
+            cursor: pointer;
+        }
+        .armory-scrap-btn:hover { background: rgba(204,119,119,0.12); border-color: #cc7777; }
+        .armory-equipped-tag {
+            font-size: 0.66rem;
+            color: #5ee27a;
+            border: 1px solid rgba(94,226,122,0.4);
+            border-radius: 4px;
+            padding: 2px 6px;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 700px) {
+            .armory-panel { padding: 16px 14px; max-height: 92vh; }
+            .armory-pattern-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .armory-mod { flex-direction: column; align-items: flex-start; gap: 3px; }
+        }
+        /* ── THE DOSSIER (3.0) ────────────────────────────────
+           Contracts, mastery, and the existing achievements and history folded
+           in as tabs. The panel shell, the tabs, the section labels and the row
+           are all existing grammar — .achievement-item IS the contract row, and
+           .creator-tab IS the tab. Only the cyan tint and the mastery card are
+           new here; everything else is reused so the two can never drift. */
+        #dossierOverlay {
+            display: none;                       /* 'flex' when opened */
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000;
+            align-items: center; justify-content: center;
+        }
+        .dossier-panel {
+            background: #0a0f1a; border: 1px solid #334; border-radius: 12px;
+            padding: 24px 20px; width: min(680px, 95vw); max-height: 84vh; box-sizing: border-box;
+            display: flex; flex-direction: column; gap: 12px; overflow: hidden;
+        }
+        .dossier-head { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .dossier-head h2 {
+            font-family: 'Orbitron', sans-serif; font-size: 1rem; letter-spacing: 2px;
+            margin: 0; color: #7fe3ff;            /* the tile's cyan */
+        }
+        .dossier-head-right { display: flex; align-items: center; gap: 10px; }
+        .dossier-close {                          /* the close-button pattern every overlay header carries */
+            background: none; border: 1px solid #444; color: #aaa; border-radius: 6px;
+            padding: 4px 12px; cursor: pointer; font-size: 0.85rem;
+        }
+        .dossier-close:hover { color: #fff; border-color: #666; }
+        .dossier-credits {
+            font-family: 'Orbitron', sans-serif; font-size: 0.75rem; letter-spacing: 2px; color: #ffd700;
+        }
+        /* Cyan variant of .creator-tab.active — the tab shape itself is reused. */
+        .dossier-tab.active {
+            background: rgba(127,227,255,0.12); border-color: rgba(127,227,255,0.5); color: #7fe3ff;
+        }
+        .dossier-body { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+        .dossier-empty {
+            text-align: center; color: rgba(255,255,255,0.3); font-size: 0.8rem; padding: 20px;
+        }
+
+        /* A contract row: .achievement-item plus a progress bar and a claim slot. */
+        .contract-bar {
+            height: 5px; background: #111; border-radius: 3px; overflow: hidden; margin-top: 6px;
+        }
+        .contract-bar > div { height: 100%; background: #7fe3ff; border-radius: 3px; transition: width 0.25s; }
+        .contract-reward {
+            font-family: 'Orbitron', sans-serif; font-size: 0.7rem; letter-spacing: 1px;
+            color: #ffd700; flex-shrink: 0;
+        }
+        .achievement-item.is-ready {
+            background: rgba(0,204,85,0.07); border-color: rgba(0,204,85,0.35);
+        }
+        .achievement-item.is-ready .achievement-name { color: #7ff0a8; }
+        .contract-claim {                         /* shape from #confirmOkBtn, green */
+            background: rgba(0,204,85,0.15); border: 1px solid #00cc55; color: #7ff0a8;
+            border-radius: 6px; padding: 6px 13px; cursor: pointer;
+            font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px;
+            flex-shrink: 0;
+        }
+        .contract-claim:hover { background: rgba(0,204,85,0.25); }
+        .achievement-item.is-claimed { opacity: 0.45; }
+
+        /* Mastery: three cards, same card grammar as .achievement-item. */
+        .mastery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+        .mastery-card {
+            background: rgba(255,255,255,0.04); border: 1px solid #334; border-radius: 8px;
+            padding: 11px 12px; display: flex; flex-direction: column; gap: 7px;
+        }
+        .mastery-head { display: flex; align-items: center; gap: 8px; }
+        .mastery-portrait {                       /* .portrait-ring at 26px */
+            width: 26px; height: 26px; border-radius: 50%; border: 2px solid currentColor;
+            display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
+            background: rgba(0,0,0,0.4); flex-shrink: 0;
+        }
+        .mastery-name {
+            font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 1px;
+            color: #dfe9f3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .mastery-level { margin-left: auto; font-family: 'Orbitron', sans-serif; font-size: 0.62rem; }
+        .mastery-bar { height: 4px; background: #111; border-radius: 2px; overflow: hidden; }
+        .mastery-bar > div { height: 100%; border-radius: 2px; transition: width 0.25s; }
+        .mastery-next { font-size: 0.55rem; color: rgba(255,255,255,0.4); line-height: 1.4; }
+
+        @media (max-width: 560px) { .mastery-grid { grid-template-columns: 1fr; } }
+        /* A claim is a target, not a label — keep it thumb-sized on touch. */
+        @media (pointer: coarse) {
+            .contract-claim { min-height: 44px; min-width: 44px; }
+        }
+        /* The bars are the only thing in here that animates. */
+        body.reduced-motion .contract-bar > div,
+        body.reduced-motion .mastery-bar > div { transition: none; }
+
+/*  THE SNAP — append to styles.css (v-bump the stylesheet query string).
+    Nothing here restyles an existing tile; it adds one tile, four keyframes
+    and the overlay layers the intro draws into.                            */
+
+/* ── the new Kamino tile ───────────────────────────────────────────────── */
+/* The Zero Point's grid cell becomes the frame Kamino lands in. */
+.splash-kamino-slot { position: relative; }
+
+.splash-btn-kamino {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+    padding: 12px 15px;
+    background: linear-gradient(135deg, #17415c 0%, #0a1a2a 100%);
+    color: #a8d8ff;
+    border-color: rgba(168, 216, 255, 0.4);
+    box-shadow: 0 0 18px rgba(168, 216, 255, 0.14);
+    transform-origin: 50% 100%;
+}
+/*  Parked above the screen until the drop. Scoped to :not(.is-landed) rather than
+    undone by a `transform: none` on .is-landed, because the two rules have equal
+    specificity and .is-landed is written later — so it beat the :hover rule below
+    and flattened the lift. The intro's start state belongs to the intro; the
+    resting tile's `transform` has to stay free for hover, the same as every other
+    tile's. */
+.splash-btn-kamino:not(.is-landed) {
+    transform: translateY(-360px);
+    opacity: 0;
+    pointer-events: none;
+}
+/* The same three moves every other splash tile makes on hover: border to full
+   strength, glow up, 2px lift. */
+.splash-btn-kamino:hover {
+    border-color: #a8d8ff;
+    box-shadow: 0 0 28px rgba(168, 216, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+
+/* ── overlay layers, all inside #splashMenu (which is already position:relative) ── */
+.snap-layer-dust   { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.snap-layer-shade  { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+                     transition: opacity 1200ms ease;
+                     background: linear-gradient(270deg, rgba(24,6,46,0.78) 0%, rgba(10,7,16,0.42) 36%, rgba(0,0,0,0) 70%); }
+.snap-layer-canvas { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+.snap-layer-flash  { position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+                     background: radial-gradient(circle at 78% 66%, rgba(255,255,255,0.92) 0%, rgba(255,214,120,0.6) 20%, rgba(190,120,255,0.4) 38%, rgba(42,17,80,0) 66%); }
+
+/* ── keyframes ─────────────────────────────────────────────────────────── */
+@keyframes gl-erode {
+    0%   { clip-path: inset(0 0 0 0); filter: none; }
+    100% { clip-path: inset(0 100% 0 0); filter: brightness(1.6); }
+}
+@keyframes gl-dust {
+    0%   { opacity: .95; transform: translate(0,0) rotate(0deg); }
+    70%  { opacity: .55; }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); }
+}
+@keyframes gl-shake {
+    0%,100% { transform: translate(0,0); }
+    12% { transform: translate(-7px,3px); }
+    26% { transform: translate(6px,-4px); }
+    41% { transform: translate(-5px,-2px); }
+    58% { transform: translate(4px,3px); }
+    75% { transform: translate(-2px,-1px); }
+    88% { transform: translate(1px,1px); }
+}
+@keyframes gl-slam {
+    0%,100% { transform: translate(0,0); }
+    18% { transform: translate(0,6px); }
+    44% { transform: translate(0,-4px); }
+    72% { transform: translate(0,2px); }
+}
+
+/* Reduced motion already gates the intro in JS; this is the belt-and-braces. */
+body.reduced-motion .snap-layer-canvas,
+body.reduced-motion .snap-layer-flash,
+body.reduced-motion .snap-layer-shade { display: none; }
+
+/* ── the state the snap leaves behind, held permanently ─────────────────────
+   Applied by snap-intro.js (settleAftermath) at the end of the sequence and
+   again on every later load, so the menu a returning player sees is the same
+   object the animation produced rather than a re-creation of it. */
+
+/* Keeps its layout box — it is what gives .splash-kamino-slot its height, and
+   Kamino is absolute inside that slot. visibility also takes it out of
+   hit-testing and out of checkVisibility(), so the pad cannot reach it. */
+/* transition:none is load-bearing. .splash-btn carries `transition: all 0.18s`,
+   and visibility transitions discretely — it flips at the END of the window. So
+   without this the retired tile stays visible, clickable and reachable by the
+   gamepad for 180ms after the state is applied. */
+.splash-btn-creator.is-snapped { visibility: hidden; transition: none; }
+
+
+/*  Deliberately thin. It does not restore `transform`, `opacity` or the
+    transition, because the landed tile is not a special state — it is an ordinary
+    splash tile, and it has to keep .splash-btn's own `transition: all 0.18s` so
+    hover eases in like the others rather than snapping.
+
+    The instant-restore this block used to buy with `transition: none` is bought in
+    settleAftermath() instead, which suppresses transitions for the one frame the
+    class is added. Held here, it also suppressed them for the rest of the session. */
+.splash-btn-kamino.is-landed {
+    pointer-events: auto;
+}
+
+
+/* ── SEASON CARD ──────────────────────────────────────────────────
+   What goes up at the tail of the Snap. It sits in the same visual family as the
+   splash it is covering — Orbitron caps, #0a0f1a panel, one hairline rule — so it
+   reads as the menu speaking rather than as a dialog the game borrowed.
+
+   The two exits are the whole point of the layout, which is why they get equal
+   weight and matching boxes: this is a choice between two soundtracks, not a
+   primary action with a way out. Neither is styled as the default. */
+.season-overlay {
+    position: fixed;
+    inset: 0;
+    /* Above the content overlays (2000) and the pause layer (2200), below
+       confirmOverlay (3000). Matches this card's slot in UI_LAYER_IDS, so what is
+       painted on top and what owns the gamepad can never disagree. */
+    z-index: 2600;
+    display: flex;             /* toggled to none/flex by openSeasonCard() */
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: radial-gradient(circle at 50% 40%, rgba(20,6,30,0.82) 0%, rgba(0,0,0,0.93) 70%);
+    animation: season-fade 420ms ease both;
+}
+@keyframes season-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.season-card {
+    width: min(540px, 100%);
+    max-height: 88vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    /* A flex item defaults to min-width:auto, i.e. min-content — which here is set
+       by the two-column button grid below. Without this the card would refuse to
+       shrink past that and hang off the side of a narrow screen instead of
+       honouring its own width. */
+    min-width: 0;
+    background: linear-gradient(160deg, #12101f 0%, #0a0f1a 55%, #0a0f1a 100%);
+    border: 1px solid rgba(226, 54, 54, 0.35);
+    border-radius: 12px;
+    padding: 26px 26px 22px;
+    box-shadow: 0 0 44px rgba(226, 54, 54, 0.14), 0 20px 60px rgba(0, 0, 0, 0.6);
+    animation: season-rise 520ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes season-rise {
+    from { opacity: 0; transform: translateY(16px) scale(0.985); }
+    to   { opacity: 1; transform: none; }
+}
+
+.season-card-eyebrow {
+    margin: 0 0 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.32);
+}
+.season-card-title {
+    margin: 0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.15rem;
+    line-height: 1.25;
+    letter-spacing: 2px;
+    color: #ff6b6b;
+}
+/* Short and left-aligned rather than a full-width divider: it ties off the title
+   block instead of cutting the card in half. */
+.season-card-rule {
+    width: 64px;
+    height: 2px;
+    margin: 12px 0 16px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #e23636 0%, #00A4FF 100%);
+}
+
+.season-card-lead {
+    margin: 0 0 12px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.92);
+}
+.season-card-list {
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+/* The marker is drawn rather than a list-style bullet so it can carry the season
+   colour and sit on the text's first line at any wrap. */
+.season-card-list li {
+    position: relative;
+    padding-left: 18px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.78);
+}
+.season-card-list li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.55em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #e23636;
+}
+.season-card-note {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.season-card-choice {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+.season-card-choice-label {
+    margin: 0 0 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+}
+/* Equal columns, so neither soundtrack reads as the recommended one. */
+.season-card-actions {
+    display: grid;
+    /* minmax(0, 1fr), not 1fr: a plain 1fr floors at the column's min-content, so
+       the longer soundtrack name would push the grid wider than the card rather
+       than wrapping inside its own button. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.season-card-btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 13px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.18s ease;
+}
+.season-card-btn-sw {
+    background: linear-gradient(135deg, #003d66 0%, #001a33 100%);
+    color: #00cfff;
+    border-color: rgba(0, 164, 255, 0.45);
+}
+.season-card-btn-sw:hover {
+    border-color: #00A4FF;
+    box-shadow: 0 0 24px rgba(0, 164, 255, 0.35);
+    transform: translateY(-2px);
+}
+.season-card-btn-mv {
+    background: linear-gradient(135deg, #5c1414 0%, #2a0808 100%);
+    color: #ff6b6b;
+    border-color: rgba(226, 54, 54, 0.45);
+}
+.season-card-btn-mv:hover {
+    border-color: #e23636;
+    box-shadow: 0 0 24px rgba(226, 54, 54, 0.35);
+    transform: translateY(-2px);
+}
+.season-card-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+.season-card-footnote {
+    margin: 11px 0 0;
+    font-size: 0.68rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.32);
+}
+
+/* Below this the two soundtrack names stop fitting side by side and start
+   hyphenating; stacked they keep their equal weight. */
+@media (max-width: 460px) {
+    .season-card { padding: 20px 18px 18px; }
+    .season-card-title { font-size: 1rem; }
+    .season-card-actions { grid-template-columns: 1fr; }
+}
+
+/* The card is a moment, not an animation. Reduced motion keeps the card and
+   drops the entrance. */
+@media (prefers-reduced-motion: reduce) {
+    .season-overlay, .season-card { animation: none; }
+}
