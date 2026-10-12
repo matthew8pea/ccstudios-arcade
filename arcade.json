@@ -46,6 +46,9 @@
         "Story",
         "Quick Play"
       ]
+    },
+    "Atlas (dont load)": {
+      "hidden": true
     }
   }
 }
