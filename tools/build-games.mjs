@@ -56,7 +56,7 @@ function loadExcludes() {
   for (let line of text.split(/\r?\n/)) {
     line = line.trim().replace(/[\\/]+$/, '');
     if (!line || line.startsWith('#')) continue;
-    if (/[\\/]/.test(line)) paths.push(path.normalize(path.join(ROOT, line)).toLowerCase());
+    if (/[\\/]/.test(line)) paths.push(path.normalize(path.join(ROOT, ...line.split(/[\\/]+/))).toLowerCase());
     else names.push(new RegExp('^' + line.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'));
   }
   return { names, paths };
@@ -171,6 +171,9 @@ function build() {
       slug, title, description, folder,
       url: urlPath('games', folder, entry),
       cover, icon,
+      // Credit for games made by someone else. authorUrl must be a plain web link.
+      author: typeof o.author === 'string' && o.author.trim() ? o.author.trim() : null,
+      authorUrl: typeof o.authorUrl === 'string' && /^https?:\/\//i.test(o.authorUrl) ? o.authorUrl : null,
       tags: Array.isArray(o.tags) ? o.tags : [],
       order: typeof o.order === 'number' ? o.order : null,
       added, updated,

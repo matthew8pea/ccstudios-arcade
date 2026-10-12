@@ -1,25 +1,28 @@
 {
-  "generated": 1791740053936,
+  "generated": 1791828616510,
   "site": {
     "title": "CCStudios Arcade",
-    "tagline": "Games by Cousin Crew Studios"
+    "tagline": ""
   },
   "games": [
     {
-      "slug": "galactic-tower-defense",
-      "title": "Galactic Tower Defense",
-      "description": "Hold the line across three sectors. Build and upgrade 10 units, fire off Legendary Protocols, and survive the Hollow Sovereign.",
-      "folder": "galactic-tower-defense",
-      "url": "games/galactic-tower-defense/index.html",
-      "cover": "covers/galactic-tower-defense.jpg",
+      "slug": "meteor-60-seconds",
+      "title": "Meteor 60 Seconds",
+      "description": "A meteor hits Earth in 60 seconds. Spend them however you like, and hunt down every strange ending. A fan tribute to AvoCavo's game.",
+      "folder": "meteor-60-seconds",
+      "url": "games/meteor-60-seconds/index.html",
+      "cover": "covers/meteor-60-seconds.jpg",
       "icon": null,
+      "author": "@sleep",
+      "authorUrl": "https://app.myagora.live/u/sleep",
       "tags": [
-        "Strategy",
-        "Tower Defense"
+        "Fan Tribute",
+        "Story",
+        "Quick Play"
       ],
       "order": null,
-      "added": 1791739000466,
-      "updated": 1791727520881
+      "added": 1791828616510,
+      "updated": 1791828500841
     },
     {
       "slug": "galactic-legends",
@@ -29,13 +32,33 @@
       "url": "games/galactic%20legends/index.html",
       "cover": null,
       "icon": "games/galactic%20legends/favicon.png",
+      "author": null,
+      "authorUrl": null,
       "tags": [
         "Fighting",
         "Arena"
       ],
       "order": null,
       "added": 0,
-      "updated": 1791675818428
+      "updated": 1791828142552
+    },
+    {
+      "slug": "galactic-tower-defense",
+      "title": "Galactic Tower Defense",
+      "description": "Hold the line across three sectors. Build and upgrade 10 units, fire off Legendary Protocols, and survive the Hollow Sovereign.",
+      "folder": "galactic-tower-defense",
+      "url": "games/galactic-tower-defense/index.html",
+      "cover": "covers/galactic-tower-defense.jpg",
+      "icon": null,
+      "author": null,
+      "authorUrl": null,
+      "tags": [
+        "Strategy",
+        "Tower Defense"
+      ],
+      "order": null,
+      "added": 1791739000466,
+      "updated": 1791727520881
     },
     {
       "slug": "galactic-city-defense",
@@ -45,6 +68,8 @@
       "url": "games/Galactic%20City%20Defense/index.html",
       "cover": "covers/galactic-city-defense.jpg",
       "icon": null,
+      "author": null,
+      "authorUrl": null,
       "tags": [
         "3D",
         "Shooter",
@@ -62,6 +87,8 @@
       "url": "games/Galactic-Playground/index.html",
       "cover": "covers/galactic-playground.jpg",
       "icon": null,
+      "author": null,
+      "authorUrl": null,
       "tags": [
         "Sandbox",
         "Physics"

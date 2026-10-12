@@ -1033,6 +1033,15 @@ body.aurebesh-mode th {
             flex-shrink: 0;
         }
 
+        /*  The way back to the splash. Same row and height as the field and the
+            season switch, so it adds nothing to the screen's height on a phone. */
+        .search-container .roster-base-btn {
+            font-size: 0.62rem;
+            padding: 0 14px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
         .search-input {
             flex: 1 1 auto;
             min-width: 0;

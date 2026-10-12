@@ -6,7 +6,7 @@
     <!-- itch.io / static host: re-upload this file to ship updates; if players see a stale build, bump ?v= on the page or embed URL. -->
     <title>Galactic Legends</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="styles.css?v=14">
+    <link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
     <div id="statCard"></div>
@@ -105,6 +105,10 @@
                  button. Both copies carry .marvel-faction-toggle, which is
                  what paintToggle() and the click wiring select on. -->
             <div class="search-container">
+                <!-- The only way back from here to the splash (Shop, Armory, Kamino,
+                     Dossier). Without it a keyboard or touch player who pressed
+                     Freeplay had to reload the page; only a gamepad's B got out. -->
+                <button type="button" id="rosterBaseBtn" class="back-button roster-base-btn" title="Back to the main menu">← Base</button>
                 <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search characters...">
                 <button type="button" id="marvelToggleMain" class="marvel-faction-toggle" aria-pressed="false">🦸 Marvel</button>
             </div>
@@ -342,7 +346,7 @@
                 <button type="button" id="redeemCodeBtn">Redeem</button>
             </div>
             <div class="redeem-section" style="margin-top:6px;">
-                <input type="text" id="itchVerifyInput" placeholder="Verify itch.io username..." />
+                <input type="text" id="itchVerifyInput" placeholder="Enter tester code..." autocomplete="off" spellcheck="false" />
                 <button type="button" id="itchVerifyBtn">Verify</button>
             </div>
             <p id="itchVerifyStatus" class="dev-menu-hint" style="display:none;margin-top:4px;"></p>
@@ -745,7 +749,7 @@
                      that is not there. -->
                 <button type="button" id="devPlaySnap">🫥 Play Snap Cutscene</button>
                 <!-- Hands over a Mythic for free, so it stays hidden unless
-                     isLocalBuild() — a verified itch.io user gets the rest of the
+                     isLocalBuild() — a verified tester gets the rest of the
                      dev menu but never this. Sprites themselves ship on every
                      build; this is the cheat, not the feature. -->
                 <button type="button" id="devGrantBoomBoom" style="display:none;">💥 Grant Boom Boom Sprite</button>
@@ -791,7 +795,7 @@
 
 
     <script src="sprite-kit.js?v=17"></script>
-    <script src="game.js?v=78"></script>
+    <script src="game.js?v=80"></script>
     <script src="snap-intro.js?v=2"></script>
 </body>
 </html>

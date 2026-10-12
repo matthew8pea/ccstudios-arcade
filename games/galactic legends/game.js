@@ -42,8 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // ── LOCAL BUILD DETECTION ───────────────────────────────────
             // "Is this a developer's own copy?" — true only for localhost and
             // file://, and never for a hosted build. Deliberately narrower than
-            // isDevMenuHost(), which also returns true for a verified itch.io
-            // username: that unlocks the dev menu for trusted players on the
+            // isDevMenuHost(), which also returns true for a valid tester
+            // code: that unlocks the dev menu for trusted players on the
             // shipped build, which is exactly who must NOT see unfinished
             // prototypes. Anything gated on this is invisible and inert in the
             // shipped game, whatever a save file happens to claim.
@@ -52,6 +52,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (h.endsWith('itch.io') || h.endsWith('itch.zone')) return false;
                 return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '' ||
                     location.protocol === 'file:';
+            }
+
+            // ── BATTLE CLOCK ────────────────────────────────────────────
+            // Every combat timer — cooldowns, stuns, freezes, chokes, burns, reloads,
+            // shields, the Snap's charge, Jabba's guards — is an absolute time
+            // compared against "now". They used to read the wall clock
+            // (Date.now()), which keeps running under the pause menu and in a
+            // hidden tab: pause as Thanos for 25 seconds and the Snap came back
+            // charged, a pause ended your stun, finished your reload, threw away
+            // the rest of a Force Choke and burned Giant-Man's fifteen seconds.
+            //
+            // gameNow() is the wall clock minus every millisecond spent paused,
+            // and it stands still while a pause is open. Because every in-battle
+            // timer is set AND checked against it, pausing shifts them all together
+            // and nothing has to be walked and adjusted on resume. Menus, contracts,
+            // saves and history keep the real clock — they are about real days.
+            // Anything that decides a fight must use gameNow() (or frameNow, which
+            // the loop stamps from it), never Date.now().
+            let battleClockPausedMs = 0;   // total wall-clock time spent paused
+            let battleClockPausedAt = 0;   // wall-clock time the open pause began, 0 if none
+            function gameNow() {
+                return (battleClockPausedAt || Date.now()) - battleClockPausedMs;
+            }
+            function freezeBattleClock() {
+                if (!battleClockPausedAt) battleClockPausedAt = Date.now();
+            }
+            function resumeBattleClock() {
+                if (!battleClockPausedAt) return;
+                battleClockPausedMs += Date.now() - battleClockPausedAt;
+                battleClockPausedAt = 0;
             }
 
             // ── SAVE DATA SCHEMA VERSIONING & MIGRATION ─────────────────
@@ -153,6 +183,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (e) {}
             }
 
+            // A save is plain JSON that players edit by hand and pass around as
+            // files, so a number read from one is checked before it is used:
+            // finite, and inside the range the game itself would ever write.
+            function savedNumber(v, min, max, fallback) {
+                return (typeof v === 'number' && Number.isFinite(v)) ? Math.min(max, Math.max(min, v)) : fallback;
+            }
+
+            // Runs one start-up step so that a throw inside it costs that step and
+            // nothing else. All of boot is one DOMContentLoaded handler, so a single
+            // bad value in a save used to leave a dead page that reloading could
+            // never fix. A warning rather than an error: the game carries on, and
+            // smoke.js fails a run on console errors.
+            function bootStep(fn) {
+                try { fn(); } catch (e) { console.warn('Galactic Legends: a start-up step failed and was skipped.', e); }
+            }
+
             const mobileControls = document.getElementById('mobileControls');
             const touchStickBase = document.getElementById('touchStickBase');
             const touchStickKnob = document.getElementById('touchStickKnob');
@@ -224,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // — that press does something, so it must not look greyed out.
                 const canSnap = !!(p && findNeckSnapTarget(p));
                 const interactReady = !!(p && (canSnap || interactAbilityReady(p)));
-                const dodgeReady = !!(p && Date.now() > p.dodgeCooldown);
+                const dodgeReady = !!(p && gameNow() > p.dodgeCooldown);
                 // The secondary button covers two things: throwing a melee blade,
                 // and firing a droid's sidearm. Throw is greyed while the blade is
                 // already out or its cooldown has not elapsed; the sidearm greys
@@ -235,8 +281,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const antGrow = canAntManResize(p);
                 const canThrow = !!(p && p.isAlive && ((p.weaponConfig && p.weaponConfig.melee && !p.weaponConfig.noThrow) || hasSidearm || antGrow));
                 const throwReady = !!(canThrow && (antGrow ? p.antForm !== 'giant' : hasSidearm
-                    ? Date.now() - p.lastSidearmShotTime > getSidearmConfig(p).cooldown
-                    : Date.now() >= (p.throwReadyAt || 0) && !hasBladeInFlight(p)));
+                    ? gameNow() - p.lastSidearmShotTime > getSidearmConfig(p).cooldown
+                    : gameNow() >= (p.throwReadyAt || 0) && !hasBladeInFlight(p)));
 
                 const stateKey = `${canDodge}|${canReload}|${canInteract}|${interactReady}|${canSnap}|${dodgeReady}|${canThrow}|${throwReady}|${hasSidearm}|${antGrow}`;
                 if (stateKey === lastTouchActionState) return;
@@ -862,7 +908,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!saved || typeof saved !== 'object') return out;
                 for (const action of Object.keys(DEFAULT_KEY_BINDINGS)) {
                     const k = saved[action];
-                    if (typeof k === 'string' && k && !RESERVED_KEYS.has(k)) out[action] = k;
+                    // A real key: one printable character, or a key name such as
+                    // Shift or F1. The label is drawn into the controls list.
+                    const looksLikeKey = typeof k === 'string' &&
+                        (/^[^\x00-\x1f\x7f]$/u.test(k) || /^[A-Za-z][A-Za-z0-9]{1,24}$/.test(k));
+                    if (looksLikeKey && !RESERVED_KEYS.has(k)) out[action] = k;
                 }
                 const seen = new Set();
                 for (const action of Object.keys(out)) {
@@ -1216,7 +1266,14 @@ document.addEventListener('DOMContentLoaded', () => {
             let matchSpecialsUsed = 0;
             let playerShotsFired = 0;
             let playerHitsLanded = 0;
-            /** Round clock counts down with game simulation time (same rAF as gameplay), not wall-clock setInterval — avoids “frozen canvas, running timer” when the tab is throttled or the main thread stalls. */
+            /** Round clock counts down with game simulation time (same rAF as gameplay), not wall-clock setInterval — avoids “frozen canvas, running timer” when the tab is throttled or the main thread stalls.
+             *  Despite the name it is a ROUND clock: every round gets the full three
+             *  minutes. It used to be one clock for the whole series, set only when a
+             *  series began, and that was an exploit — once it reached 0:00 every
+             *  later round started already expired and was decided on its first frame,
+             *  both fighters at full health, and a tie went to the player. Free series
+             *  wins, Speed Demon, flawless contracts and win streaks for doing nothing.
+             *  The name stays because the HUD and the results code read it. */
             let seriesTimeRemaining = 180;
             const SERIES_SECONDS = 180;
 
@@ -3202,19 +3259,24 @@ document.addEventListener('DOMContentLoaded', () => {
             function loadAchievements() {
                 try {
                     const saved = loadVersioned('galacticDuelAchievements', {});
-                    Object.keys(saved).forEach(id => { if (achievements[id]) achievements[id].done = true; });
-                    // Restore persistent progress counters
-                    saberWinCount  = saved._saberWinCount  || 0;
-                    saberWinCount2 = saved._saberWinCount2 || 0;
-                    blasterWinCount= saved._blasterWinCount|| 0;
-                    spaceWinCount  = saved._spaceWinCount  || 0;
-                    totalWins      = saved._totalWins      || 0;
-                    hanWinCount    = saved._hanWinCount    || 0;
-                    arenasWonIn    = new Set(saved._arenasWonIn || []);
-                    villainsDefeated = new Set(saved._villainsDefeated || []);
-                    villainWinCount = saved._villainWinCount || 0;
-                    vaderConsecutiveWins = saved._vaderConsecutiveWins || 0;
-                    lastPlayedCharacterId = saved._lastPlayedCharacterId || null;
+                    Object.keys(saved).forEach(id => {
+                        if (Object.prototype.hasOwnProperty.call(achievements, id)) achievements[id].done = true;
+                    });
+                    // Restore persistent progress counters. Checked the way every
+                    // other save field is, since a save file is editable JSON.
+                    const count = v => Math.floor(savedNumber(v, 0, Number.MAX_SAFE_INTEGER, 0));
+                    const ids = v => Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+                    saberWinCount  = count(saved._saberWinCount);
+                    saberWinCount2 = count(saved._saberWinCount2);
+                    blasterWinCount= count(saved._blasterWinCount);
+                    spaceWinCount  = count(saved._spaceWinCount);
+                    totalWins      = count(saved._totalWins);
+                    hanWinCount    = count(saved._hanWinCount);
+                    arenasWonIn    = new Set(ids(saved._arenasWonIn));
+                    villainsDefeated = new Set(ids(saved._villainsDefeated));
+                    villainWinCount = count(saved._villainWinCount);
+                    vaderConsecutiveWins = count(saved._vaderConsecutiveWins);
+                    lastPlayedCharacterId = typeof saved._lastPlayedCharacterId === 'string' ? saved._lastPlayedCharacterId : null;
                 } catch(e) {}
             }
             loadAchievements();
@@ -3406,15 +3468,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 // rematch or a trip back to the menu.
                 resetPauseBackupBudget();
             }
-            function resetAchievementCounters() {
-                saberWinCount = 0;
-                saberWinCount2 = 0;
-                blasterWinCount = 0;
-                spaceWinCount = 0;
-                hanWinCount = 0;
-                vaderConsecutiveWins = 0;
-                lastPlayedCharacterId = null;
-            }
+            // resetAchievementCounters() used to sit here and was called by Return
+            // to Base, Rematch and Quit. It zeroed the saber, blaster, Deep Space,
+            // Han and Vader win counts in memory, and the next round won saved those
+            // zeros over the real totals. A series pays at most three round wins, so
+            // Blaster Master, Saber Master II, Space Specialist (5 each) and Dark
+            // Lord's Reign (10, Darth Vader (Elite)) could only be earned by
+            // reloading the page between series. The counts are lifetime totals and
+            // nothing resets them now. The one count that is meant to break — Vader's
+            // consecutive wins — breaks on a loss, in endGame.
 
             // ── SERIES VICTORY CONFETTI ─────────────────────────────────
             const CONFETTI_COLORS = ['#00cfff', '#ffd700', '#ff6666', '#cc99ff', '#66ff99', '#ff9d7a'];
@@ -4451,7 +4513,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? `+${gained} Credits Earned!`
                     : `Credits full — ${CREDIT_CAP.toLocaleString()} is the cap`;
             }
-            let devVerifiedUsername = '';
+            // The tester code this browser unlocked the dev menu with, kept so it can
+            // be checked again on every load. devCodeVerified is the answer to that
+            // check; it starts false and turns true once the fingerprint matches.
+            let devAccessCode = '';
+            let devCodeVerified = false;
             // Systems/tech settings
             let performanceMode = 'high'; // 'low' | 'balanced' | 'high'
             let reducedMotion = false;
@@ -4469,12 +4535,53 @@ document.addEventListener('DOMContentLoaded', () => {
             let MAX_CLASH_PARTICLES = 120;
             const MAX_BULLETS = 200;
 
-            // itch.io usernames that have been vetted (via Discord) and get dev
-            // menu access on any host, including itch.io, once verified in-game.
-            const DEV_MENU_ITCH_WHITELIST = ['cousincrewstudios', 'commanderfox77'];
+            // ── TESTER CODES ───────────────────────────────────────────
+            // Players vetted over Discord are sent a personal code, and entering it
+            // in Settings opens the dev menu on any host, itch.io included.
+            //
+            // The codes themselves are not in this file. Each entry is a PBKDF2
+            // fingerprint of one code (SHA-256, the salt below, 100,000 rounds), so
+            // reading the source gives nothing to type in, and the rounds make
+            // guessing slow. It used to be a list of itch.io usernames in plain
+            // text, one of them the studio's own public account name.
+            //
+            // To add a tester, make a fingerprint of their code (upper case,
+            // letters and digits only) with the same settings and add a row. To
+            // take someone's access away, delete their row: their saved code
+            // stops matching on the next load.
+            const DEV_TESTER_CODES = [
+                { who: 'commanderfox77', fingerprint: '392b5f86ab8636795a291fa8dea75999f20b330cbd185a8b45309af3aa917a51' },
+                { who: 'Cousin Crew Studios', fingerprint: 'c8536951789ee9ec04204b59a90ba90c2e66e6142a9d49a7f3c5cfc9f0537c99' },
+            ];
+            const DEV_CODE_SALT = 'galactic-legends/dev-menu/v1';
+            const DEV_CODE_ROUNDS = 100000;
+
+            /** Case, spaces and dashes are ignored: "ab-12 " and "AB12" are one code. */
+            function normalizeDevCode(raw) {
+                return String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 64);
+            }
+
+            /** Resolves true when the code's fingerprint is on the list. Async because
+             *  the browser's own crypto is; it needs a secure page (https, which
+             *  itch.io is, or localhost), and anywhere else no code is accepted. */
+            async function isValidDevCode(raw) {
+                const code = normalizeDevCode(raw);
+                if (!code || !(window.crypto && crypto.subtle)) return false;
+                try {
+                    const enc = new TextEncoder();
+                    const key = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveBits']);
+                    const bits = await crypto.subtle.deriveBits(
+                        { name: 'PBKDF2', salt: enc.encode(DEV_CODE_SALT), iterations: DEV_CODE_ROUNDS, hash: 'SHA-256' },
+                        key, 256);
+                    const fingerprint = [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
+                    return DEV_TESTER_CODES.some(t => t.fingerprint === fingerprint);
+                } catch (e) {
+                    return false;
+                }
+            }
 
             function isDevMenuVerifiedUser() {
-                return !!devVerifiedUsername && DEV_MENU_ITCH_WHITELIST.includes(devVerifiedUsername.toLowerCase());
+                return devCodeVerified;
             }
 
             function isItchHost() {
@@ -4673,10 +4780,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     // menu half of the post-event soundtrack and nothing else — so a
                     // save carrying those two keys is read past and stops writing
                     // them on the next saveGameSettings().
-                    musicVolume = typeof saved.musicVolume === 'number' ? saved.musicVolume : musicVolume;
-                    sfxVolume   = typeof saved.sfxVolume   === 'number' ? saved.sfxVolume   : sfxVolume;
-                    credits = typeof saved.credits === 'number' ? saved.credits : 0;
-                    devVerifiedUsername = typeof saved.devVerifiedUsername === 'string' ? saved.devVerifiedUsername : '';
+                    // Clamped, not just type-checked: an audio element throws on a
+                    // volume outside 0–1, and that happens after this try, so a save
+                    // holding 50 used to stop the game from booting at all.
+                    musicVolume = savedNumber(saved.musicVolume, 0, 1, musicVolume);
+                    sfxVolume   = savedNumber(saved.sfxVolume,   0, 1, sfxVolume);
+                    credits = savedNumber(saved.credits, 0, Number.MAX_SAFE_INTEGER, 0);
+                    // Checked against the fingerprints after boot, by recheckDevCode().
+                    // An old save's devVerifiedUsername is a username, not a code, so
+                    // it is read past and dropped on the next save.
+                    devAccessCode = normalizeDevCode(saved.devAccessCode);
                     if (saved.performanceMode === 'low' || saved.performanceMode === 'balanced' || saved.performanceMode === 'high') {
                         performanceMode = saved.performanceMode;
                     } else {
@@ -4697,7 +4810,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     seenFirstFightCard = !!saved.seenFirstFightCard;
                     keyBindings = sanitizeKeyBindings(saved.keyBindings);
                     hasWonSeries = !!saved.hasWonSeries;
-                    shopSeenIds = Array.isArray(saved.shopSeenIds) ? saved.shopSeenIds : [];
+                    shopSeenIds = Array.isArray(saved.shopSeenIds) ? saved.shopSeenIds.filter(id => typeof id === 'string') : [];
                     // Sprites — kept verbatim rather than filtered by build, so a
                     // save round-tripped through the shipped game comes back to a
                     // local build with its collection intact. isSpriteEquipped()
@@ -4718,10 +4831,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             // The stored value is kept rather than flattened to true:
                             // loseSprite() writes the arena there, which is what lets
                             // the Shop tile say where it went. Older saves hold `true`.
-                            if (saved.lostSprites[s.id] && !ownedSprites[s.id]) lostSprites[s.id] = saved.lostSprites[s.id];
+                            // Anything that does not look like an arena key reads as the
+                            // older `true`: the value goes into a selector and a label.
+                            const where = saved.lostSprites[s.id];
+                            if (where && !ownedSprites[s.id]) {
+                                lostSprites[s.id] = (typeof where === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(where)) ? where : true;
+                            }
                         });
                     }
-                    equippedSpriteId = ownedSprites[saved.equippedSpriteId] ? saved.equippedSpriteId : null;
+                    equippedSpriteId = (typeof saved.equippedSpriteId === 'string' &&
+                        Object.prototype.hasOwnProperty.call(ownedSprites, saved.equippedSpriteId)) ? saved.equippedSpriteId : null;
                     // Checked against the catalog rather than against the inventory:
                     // a skin outlives losing the sprite it came from (see
                     // spriteEverOwned), so only an id that no longer exists at all is
@@ -4759,7 +4878,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     musicVolume,
                     sfxVolume,
                     credits,
-                    devVerifiedUsername,
+                    devAccessCode,
                     performanceMode,
                     reducedMotion,
                     showFpsMeter,
@@ -5385,7 +5504,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             function loadContracts() {
                 const s = loadVersioned('galacticDuelContracts', null);
-                contractState = (s && Array.isArray(s.list)) ? s : { day: '', list: [] };
+                // Each row is checked against the pool rather than taken as saved:
+                // a null or an unknown id in a hand-edited save used to throw from
+                // the splash's ready count and stop the game booting. An empty list
+                // just rolls a fresh day.
+                const list = (s && Array.isArray(s.list)) ? s.list.map(c => {
+                    const p = c && typeof c === 'object' && CONTRACT_POOL.find(x => x.id === c.id);
+                    if (!p) return null;
+                    return { id: p.id,
+                             target: savedNumber(c.target, 1, Number.MAX_SAFE_INTEGER, p.target),
+                             progress: savedNumber(c.progress, 0, Number.MAX_SAFE_INTEGER, 0),
+                             reward: savedNumber(c.reward, 0, Number.MAX_SAFE_INTEGER, p.reward),
+                             claimed: c.claimed === true };
+                }).filter(Boolean) : [];
+                contractState = { day: (s && typeof s.day === 'string') ? s.day : '', list };
                 rollContractsIfNewDay();
             }
 
@@ -5593,7 +5725,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cantinaBandAudio.loop = true;
             mustafar_music.volume = musicVolume;
             deathstar_music.volume = musicVolume;
-            loadGameSettings();
+            bootStep(loadGameSettings);
             updateMarvelMusicButton();
             updateAurebeshToggleVisibility();
 
@@ -6013,8 +6145,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // stuttering illusion so the hints below had time to be read — which
                 // meant players sat waiting on a timer rather than on the game. Hints
                 // still cycle; they just show for however long the load really takes.
+                // There was a tip here telling every player to verify an itch.io
+                // username for the dev menu. That box is for players vetted over
+                // Discord, so it is not advertised.
                 const LOADING_HINTS = [
-                    'Tip: Verify your itch.io username in Settings to unlock the dev menu.',
                     'Tip: Higher difficulty and tougher opponents earn you more credits.'
                 ];
                 let hintIndex = 0;
@@ -6799,6 +6933,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Don't steal Escape from an open confirm dialog
                     const confirmEl = document.getElementById('confirmOverlay');
                     if (confirmEl && confirmEl.style.display === 'flex') return;
+                    // Marked handled so the window-level Escape (which steps back a
+                    // screen from fighter select) does not also act on this press.
+                    e.preventDefault();
                     setSettingsOpen(false);
                 }
             });
@@ -6875,7 +7012,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         danger: true
                     }).then(confirmed => {
                         if (confirmed) {
-                            localStorage.clear();
+                            // Only this game's own keys. itch.io serves every HTML
+                            // game from one shared origin, so localStorage.clear()
+                            // also wiped the saves of every other game the player
+                            // had run there.
+                            try {
+                                Object.keys(localStorage)
+                                    .filter(k => k.startsWith('galacticDuel') || k === 'gl-snap-intro')
+                                    .forEach(k => localStorage.removeItem(k));
+                            } catch (err) {}
                             location.reload();
                         }
                     });
@@ -6975,7 +7120,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             showAnnouncement('That file isn\'t a valid save file.', '#ff6666', 3500, '❌ LOAD FAILED');
                             return;
                         }
-                        const incomingKeys = Object.keys(incoming).filter(k => k.startsWith('galacticDuel'));
+                        // Only this game's keys, each holding a string that parses,
+                        // which is what every value in an export is. Anything else is
+                        // left out here rather than written into storage to fail later.
+                        const incomingKeys = Object.keys(incoming).filter(k => {
+                            if (!k.startsWith('galacticDuel') || typeof incoming[k] !== 'string') return false;
+                            try { JSON.parse(incoming[k]); return true; } catch (err) { return false; }
+                        });
                         if (incomingKeys.length === 0) {
                             showAnnouncement('Save file contains no Galactic Legends data.', '#ff6666', 3500, '❌ LOAD FAILED');
                             return;
@@ -6992,17 +7143,30 @@ document.addEventListener('DOMContentLoaded', () => {
                             danger: true
                         }).then(confirmed => {
                             if (!confirmed) return;
+                            // The current save is copied aside first and put back if
+                            // the write fails part-way (a full storage quota, most
+                            // likely). This used to delete first and write second, so
+                            // a write that failed left the player with no save at all.
+                            const ownKeys = () => Object.keys(localStorage).filter(k => k.startsWith('galacticDuel'));
+                            const backup = {};
                             try {
-                                Object.keys(localStorage).forEach(key => {
-                                    if (key.startsWith('galacticDuel')) localStorage.removeItem(key);
-                                });
-                                Object.entries(incoming).forEach(([key, value]) => {
-                                    if (key.startsWith('galacticDuel') && typeof value === 'string') localStorage.setItem(key, value);
-                                });
-                                location.reload();
+                                ownKeys().forEach(k => { backup[k] = localStorage.getItem(k); });
                             } catch (err) {
                                 showAnnouncement('Could not load that save file.', '#ff6666', 3500, '❌ LOAD FAILED');
+                                return;
                             }
+                            try {
+                                ownKeys().forEach(k => localStorage.removeItem(k));
+                                incomingKeys.forEach(k => localStorage.setItem(k, incoming[k]));
+                            } catch (err) {
+                                try {
+                                    ownKeys().forEach(k => localStorage.removeItem(k));
+                                    Object.keys(backup).forEach(k => localStorage.setItem(k, backup[k]));
+                                } catch (restoreErr) {}
+                                showAnnouncement('Could not load that save file. Your progress was kept.', '#ff6666', 3500, '❌ LOAD FAILED');
+                                return;
+                            }
+                            location.reload();
                         });
                     };
                     reader.onerror = () => {
@@ -7100,10 +7264,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // ── ITCH.IO DEV MENU VERIFICATION ──────────────────────────
-            // Players verify their itch.io username with us over Discord; once
-            // whitelisted (see DEV_MENU_ITCH_WHITELIST above), entering that
-            // username here unlocks the dev menu on this browser, even on itch.io.
+            // ── TESTER CODE ENTRY ──────────────────────────────────────
+            // A vetted tester enters the code they were sent over Discord (see
+            // DEV_TESTER_CODES above); a match unlocks the dev menu on this
+            // browser, even on itch.io. The element ids still say itch from when
+            // this box took an itch.io username.
             const itchVerifyInput = document.getElementById('itchVerifyInput');
             const itchVerifyBtn = document.getElementById('itchVerifyBtn');
             const itchVerifyStatus = document.getElementById('itchVerifyStatus');
@@ -7111,7 +7276,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function updateItchVerifyStatus() {
                 if (!itchVerifyStatus) return;
                 if (isDevMenuVerifiedUser()) {
-                    itchVerifyStatus.textContent = `Verified as "${devVerifiedUsername}" — dev menu unlocked.`;
+                    itchVerifyStatus.textContent = 'Tester code accepted — dev menu unlocked.';
                     itchVerifyStatus.style.display = 'block';
                     itchVerifyStatus.style.color = '#8affc1';
                 } else {
@@ -7123,18 +7288,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if (itchVerifyBtn) {
                 itchVerifyBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const name = (itchVerifyInput.value || '').trim();
-                    if (!name) return;
-                    if (DEV_MENU_ITCH_WHITELIST.includes(name.toLowerCase())) {
-                        devVerifiedUsername = name.toLowerCase();
-                        saveGameSettings();
-                        refreshDevMenuVisibility();
-                        updateItchVerifyStatus();
-                        showAnnouncement(`itch.io username "${name}" verified. Dev menu unlocked.`, '#8affc1', 4000, '🔓 VERIFIED');
-                    } else {
-                        showAnnouncement(`"${name}" isn't on the verified list yet. Make sure you enter the exact username you posted in Discord.`, '#ff6666', 4000, '❌ NOT VERIFIED');
-                    }
+                    const code = normalizeDevCode(itchVerifyInput.value);
+                    if (!code || itchVerifyBtn.disabled) return;
                     itchVerifyInput.value = '';
+                    // The check takes a moment (that is the point of the rounds), so
+                    // the button sits out a second press until it answers.
+                    itchVerifyBtn.disabled = true;
+                    isValidDevCode(code).then(ok => {
+                        itchVerifyBtn.disabled = false;
+                        if (ok) {
+                            devAccessCode = code;
+                            devCodeVerified = true;
+                            saveGameSettings();
+                            refreshDevMenuVisibility();
+                            updateItchVerifyStatus();
+                            showAnnouncement('Tester code accepted. Dev menu unlocked.', '#8affc1', 4000, '🔓 VERIFIED');
+                        } else {
+                            showAnnouncement("That code isn't valid. Enter the exact code you were sent on Discord.", '#ff6666', 4000, '❌ NOT VERIFIED');
+                        }
+                    });
                 });
             }
 
@@ -7266,7 +7438,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     { key: boundKeyLabel('reload'), wide: false, desc: 'Reload' },
                     { key: 'Esc',         wide: false, desc: 'Pause' },
                     { header: 'How a match works' },
-                    { note: 'Win three rounds to take the series — three minutes on the clock. Series wins pay credits; spend them in the Shop, the Armory, or on a fighter of your own.' }
+                    { note: 'Win three rounds to take the series — three minutes on the clock each round. Series wins pay credits; spend them in the Shop, the Armory, or on a fighter of your own.' }
                 ]; },
                 touch: [
                     { key: 'Joystick', wide: true,  desc: 'Move' },
@@ -7275,7 +7447,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     { key: '🔄',       wide: false, desc: 'Reload — appears for magazine weapons' },
                     { key: '⏸',       wide: false, desc: 'Pause' },
                     { header: 'How a match works' },
-                    { note: 'Win three rounds to take the series — three minutes on the clock. Series wins pay credits; spend them in the Shop, the Armory, or on a fighter of your own.' }
+                    { note: 'Win three rounds to take the series — three minutes on the clock each round. Series wins pay credits; spend them in the Shop, the Armory, or on a fighter of your own.' }
                 ],
                 gamepad: [
                     { key: 'Left Stick / D-Pad', wide: true,  desc: 'Move' },
@@ -7285,7 +7457,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     { key: 'X',                  wide: false, desc: 'Reload' },
                     { key: 'Start',              wide: false, desc: 'Pause / Resume' },
                     { header: 'How a match works' },
-                    { note: 'Win three rounds to take the series — three minutes on the clock. Series wins pay credits; spend them in the Shop, the Armory, or on a fighter of your own.' }
+                    { note: 'Win three rounds to take the series — three minutes on the clock each round. Series wins pay credits; spend them in the Shop, the Armory, or on a fighter of your own.' }
                 ]
             };
 
@@ -7339,7 +7511,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         d.textContent = desc;
                         row.append(btn, d);
                     } else {
-                        row.innerHTML = `<span class="control-key${wide ? ' wide' : ''}">${key}</span><span class="control-desc">${desc}</span>`;
+                        row.innerHTML = `<span class="control-key${wide ? ' wide' : ''}">${escapeHtmlText(key)}</span><span class="control-desc">${desc}</span>`;
                     }
                     controlsGrid.appendChild(row);
                 });
@@ -7510,6 +7682,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         historyTable.style.display = 'table';
                         const fragment = document.createDocumentFragment();
                         history.forEach((m, i) => {
+                            if (!m || typeof m !== 'object') return;
                             const tr = document.createElement('tr');
                             tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
                             tr.style.background = (i % 2 === 1) ? 'rgba(255,255,255,0.025)' : 'transparent';
@@ -7518,13 +7691,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             const dmg  = typeof m.damage   === 'number' ? m.damage   : '—';
                             const acc  = typeof m.accuracy === 'number' ? m.accuracy + '%' : '—';
                             tr.innerHTML = `
-                                <td style="padding:6px 8px;color:rgba(255,255,255,0.45);">${m.date||'—'}</td>
-                                <td style="padding:6px 8px;color:#e8e8e8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.player}</td>
-                                <td style="padding:6px 8px;color:rgba(255,255,255,0.5);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.enemy}</td>
+                                <td style="padding:6px 8px;color:rgba(255,255,255,0.45);">${escapeHtmlText(m.date||'—')}</td>
+                                <td style="padding:6px 8px;color:#e8e8e8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtmlText(m.player)}</td>
+                                <td style="padding:6px 8px;color:rgba(255,255,255,0.5);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtmlText(m.enemy)}</td>
                                 <td style="padding:6px 8px;text-align:center;color:${resultColor};font-weight:bold;">${win ? '✓ WIN' : '✗ LOSS'}</td>
                                 <td style="padding:6px 8px;text-align:center;color:#e8e8e8;">${dmg}</td>
                                 <td style="padding:6px 8px;text-align:center;color:#e8e8e8;">${acc}</td>
-                                <td style="padding:6px 8px;text-align:center;color:rgba(255,255,255,0.4);text-transform:capitalize;">${m.difficulty||'—'}</td>
+                                <td style="padding:6px 8px;text-align:center;color:rgba(255,255,255,0.4);text-transform:capitalize;">${escapeHtmlText(m.difficulty||'—')}</td>
                             `;
                             fragment.appendChild(tr);
                         });
@@ -7567,6 +7740,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 achievementsList.innerHTML = '';
                 const achievementIds = Object.keys(achievements).sort();
                 let unlockedCount = 0;
+                // The win-streak rows used to read playerWins, which is this series'
+                // round count and never more than 3, so "On Fire" could not show
+                // past 3/5. The real streak is the run of W at the top of the match
+                // history — the same count endGame unlocks them from.
+                let historyStreak = 0;
+                try {
+                    for (const h of loadVersioned('galacticDuelHistory', [])) {
+                        if (h && h.result === 'W') historyStreak++; else break;
+                    }
+                } catch (e) {}
 
                 achievementIds.forEach(id => {
                     const a = achievements[id];
@@ -7587,16 +7770,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 progressPercent = (saberWinCount / 3) * 100;
                                 break;
                             case 'winStreak3':
-                                progressText = `${Math.min(playerWins, 3)}/3`;
-                                progressPercent = (playerWins / 3) * 100;
+                                progressText = `${Math.min(historyStreak, 3)}/3`;
+                                progressPercent = (historyStreak / 3) * 100;
                                 break;
                             case 'winStreak5':
-                                progressText = `${Math.min(playerWins, 5)}/5`;
-                                progressPercent = (playerWins / 5) * 100;
+                                progressText = `${Math.min(historyStreak, 5)}/5`;
+                                progressPercent = (historyStreak / 5) * 100;
                                 break;
                             case 'winStreak10':
-                                progressText = `${Math.min(playerWins, 10)}/10`;
-                                progressPercent = (playerWins / 10) * 100;
+                                progressText = `${Math.min(historyStreak, 10)}/10`;
+                                progressPercent = (historyStreak / 10) * 100;
                                 break;
                             case 'blasterMaster':
                                 progressText = `${Math.min(blasterWinCount, 5)}/5`;
@@ -8901,12 +9084,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 return weaponEmojiFor(getEquippedWeaponKey(char.id, char.weapon));
             }
 
+            // A forged weapon as read from a save, or null. Its name lands in
+            // innerHTML (the rack, the HUD label) and its mods are walked when it
+            // is compiled at boot, so a hand-edited or shared save is held to what
+            // the forge itself writes, the same way creations are.
+            function sanitizeForgedRecord(r) {
+                if (!r || typeof r !== 'object') return null;
+                if (typeof r.id !== 'string' || !/^[A-Za-z0-9_-]{1,48}$/.test(r.id)) return null;
+                if (typeof r.baseKey !== 'string' || r.baseKey.startsWith('forged:') ||
+                    !Object.prototype.hasOwnProperty.call(WEAPON_LIBRARY, r.baseKey)) return null;
+                return { ...r, name: sanitizeForgeName(r.name) || armoryPatternLabel(r.baseKey),
+                         mods: Array.isArray(r.mods) ? r.mods.filter(m => typeof m === 'string') : [],
+                         cost: savedNumber(r.cost, 0, Number.MAX_SAFE_INTEGER, 0) };
+            }
+
             function loadArmory() {
                 const saved = loadVersioned('galacticDuelArmory', null);
                 if (saved && typeof saved === 'object') {
-                    forgedWeapons = Array.isArray(saved.forged) ? saved.forged.filter(r =>
-                        r && typeof r.id === 'string' && WEAPON_LIBRARY[r.baseKey]) : [];
-                    equippedForged = (saved.equipped && typeof saved.equipped === 'object') ? saved.equipped : {};
+                    forgedWeapons = Array.isArray(saved.forged) ? saved.forged.map(sanitizeForgedRecord).filter(Boolean) : [];
+                    equippedForged = (saved.equipped && typeof saved.equipped === 'object' && !Array.isArray(saved.equipped))
+                        ? saved.equipped : {};
                 }
                 registerForgedWeapons();
                 // Drop equips pointing at weapons that no longer exist (a save
@@ -9552,11 +9749,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            // A creation as read from a save, or null if it cannot be one. Save
+            // files are plain JSON that players edit and share, and a creation's
+            // name and colour reach innerHTML and inline styles across the roster,
+            // so a shared save could carry a script in a name. Every field is held
+            // to what the fabricator itself writes.
+            const CREATOR_MAX_HP = 260;   // the HP slider's max in index.html
+            function sanitizeCreationRecord(r) {
+                if (!r || typeof r !== 'object') return null;
+                if (typeof r.id !== 'string' || !/^[A-Za-z0-9_-]{1,48}$/.test(r.id)) return null;
+                const name = sanitizeCharName(r.name);
+                if (!name) return null;
+                const isHex = v => typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v);
+                const type = CREATOR_TYPES.find(t => t.id === r.type) || CREATOR_TYPES[0];
+                const color = isHex(r.color) ? r.color : '#8fbcff';
+                const weapon = (typeof r.weapon === 'string' && !r.weapon.startsWith('forged:') &&
+                    Object.prototype.hasOwnProperty.call(WEAPON_LIBRARY, r.weapon)) ? r.weapon : (type.weapon || 'blaster');
+                return { ...r, id: r.id, name, bio: sanitizeCharBio(r.bio), type: type.id,
+                         faction: r.faction === 'villains' ? 'villains' : 'heroes',
+                         weapon, hp: Math.round(savedNumber(r.hp, CREATOR_BASE_HP, CREATOR_MAX_HP, 140)),
+                         color, saberColor: isHex(r.saberColor) ? r.saberColor : color,
+                         cost: savedNumber(r.cost, 0, Number.MAX_SAFE_INTEGER, 0) };
+            }
+
             function loadCreatedCharacters() {
                 const saved = loadVersioned('galacticDuelCreations', null);
                 if (Array.isArray(saved)) {
-                    createdCharacters = saved.filter(r =>
-                        r && typeof r.id === 'string' && typeof r.name === 'string');
+                    createdCharacters = saved.map(sanitizeCreationRecord).filter(Boolean);
                 }
                 applyCreatedCharacters();
             }
@@ -11642,8 +11861,8 @@ document.addEventListener('DOMContentLoaded', () => {
             function loadFavorites() {
                 try {
                     const saved = loadVersioned('galacticDuelFavorites', null);
-                    if (saved) {
-                        favorites = new Set(saved);
+                    if (Array.isArray(saved)) {
+                        favorites = new Set(saved.filter(id => typeof id === 'string'));
                     }
                 } catch(err) {}
             }
@@ -11941,15 +12160,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const secretContainer = document.getElementById('secret-roster');
 
-            loadGalacticUnlocks();
+            bootStep(loadGalacticUnlocks);
             // Creations first: they splice themselves into characters.heroes /
             // characters.villains, and loadArmory() below needs that roster in
             // place to tell whether an equip points at a creation or at someone
             // no longer allowed to carry a forged weapon.
-            loadCreatedCharacters();
+            bootStep(loadCreatedCharacters);
             // After the unlocks (forge patterns are gated on them) and after the
             // WEAPON_LIBRARY literal above, which the recipes compile against.
-            loadArmory();
+            bootStep(loadArmory);
             // The Guardian's plating is restored with the settings but painted onto
             // the roster entry here: loadGameSettings() runs long before the
             // `characters` table exists, and the colour has to be on the entry before
@@ -11993,6 +12212,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             refreshDevMenuVisibility();
+
+            // A saved tester code is checked again on every load, so deleting its
+            // row from DEV_TESTER_CODES takes the menu away on the next visit. The
+            // answer arrives after boot; until then the menu shows only where it
+            // always would (a local copy).
+            function recheckDevCode() {
+                if (!devAccessCode) return;
+                isValidDevCode(devAccessCode).then(ok => {
+                    devCodeVerified = ok;
+                    refreshDevMenuVisibility();
+                    updateItchVerifyStatus();
+                });
+            }
+            bootStep(recheckDevCode);
 
             devMenuToggle.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -12120,7 +12353,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Straight-up cheat: hands over a Mythic that is otherwise earned by
             // finding it in battle. Deliberately gated on isLocalBuild() rather than
-            // isDevMenuHost(), so a verified itch.io player with the rest of the dev
+            // isDevMenuHost(), so a verified tester with the rest of the dev
             // menu still cannot hand themselves one. Grants and equips in one press,
             // since the point of the button is to get straight into a fight with it.
             const devGrantBoomBoom = document.getElementById('devGrantBoomBoom');
@@ -12376,7 +12609,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // frame, including once per entity inside the main sweep. A single stamp
             // is also more correct: every timer in a frame now resolves against the
             // same instant rather than drifting by however long the frame took.
-            let frameNow = Date.now();
+            let frameNow = gameNow();
 
             // Reused across frames so the alive-entity sweeps stop allocating a fresh
             // array every tick. Compacted in place — never hand one of these to code
@@ -13742,7 +13975,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (this.clobberinUntil) drawClobberin(this);
                     if (this.zeroShockUntil) drawZeroShock(this);
 
-                    const now = Date.now();
+                    const now = gameNow();
                     if (now < this.chokedUntil) {
                         // A choke is a stun, but it should not read as one — the
                         // zap's cyan ring says "shocked", this says "held".
@@ -13855,7 +14088,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // target is readable at a glance rather than only through the
                     // ticking damage numbers. Drawn from a time-seeded angle per
                     // tongue so they flicker without needing any stored state.
-                    if (this.burningUntil && Date.now() < this.burningUntil) {
+                    if (this.burningUntil && gameNow() < this.burningUntil) {
                         const t = Date.now() / 90;
                         ctx.save();
                         ctx.globalAlpha = 0.55 + 0.2 * Math.sin(t * 1.7);
@@ -13946,7 +14179,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (this.team === 'enemy') {
                             killCount++;
                             // Combo kill tracking
-                            const now = Date.now();
+                            const now = gameNow();
                             comboKills.push(now);
                             comboKills = comboKills.filter(k => now - k < 5000);
                             updateComboCounter();
@@ -14518,6 +14751,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedPlayerCharId = null;
             });
 
+            // Fighter select → splash. See the note on #rosterBaseBtn in index.html.
+            const rosterBaseBtn = document.getElementById('rosterBaseBtn');
+            if (rosterBaseBtn) rosterBaseBtn.addEventListener('click', () => {
+                selectedPlayerCharId = null;
+                showSplashMenu();
+            });
+
             /** A character's health as it stands now. Applied at the point the
              *  fighter is built rather than by rewriting the roster entry, so the
              *  data on disk stays the data that shipped. */
@@ -14680,7 +14920,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function applyFreeze(entity, ms) {
                 if (!entity || !entity.isAlive) return;
                 if (entity === mainPlayer && invincibilityEnabled) return;
-                const now = Date.now();
+                const now = gameNow();
                 if (now < (entity.freezeImmunityUntil || 0)) {
                     spawnFreezeResist(entity);
                     return;
@@ -15029,6 +15269,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Always close the pause menu and reset pause state when a new game begins
                 gamePaused = false;
                 pauseOverlay.classList.remove('active');
+                // A pause can end without closePauseMenu() (Quit Battle from the
+                // menu), and a clock left frozen would stop every timer in the next
+                // fight. Then stamp frameNow fresh: the countdown draws the fighters
+                // before the loop's first frame, and anything they set from frameNow
+                // must not be measured from the last frame of the previous round.
+                resumeBattleClock();
+                frameNow = gameNow();
 
                 // Every round starts from a clean input slate. Whatever was held
                 // when the last one ended — and whatever keyup went missing while
@@ -15066,8 +15313,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     enemySpriteGrants = {};
                     playerWins = 0;
                     enemyWins = 0;
-                    seriesTimeRemaining = SERIES_SECONDS; // Reset timer for fresh series
                 }
+                // Every round gets the full clock, Next Round included — see the
+                // note on seriesTimeRemaining for why it is not per series any more.
+                seriesTimeRemaining = SERIES_SECONDS;
                 isNextRound = false;
                 seriesPlayerCharId = playerCharacterId;
                 seriesEnemyCharId = actualEnemyId;
@@ -15302,7 +15551,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (thisBattleSession !== battleSession) return;
                         if (canvas.style.display !== 'block') return;
                         countdownActive = false;
-                        gameStartTime = Date.now();
+                        gameStartTime = gameNow();
+                        frameNow = gameStartTime;
+                        // The countdown draws Thanos's charge arc, and that first ask
+                        // is what sets the Snap's ready time (infinitySnapReadyAt is
+                        // lazy). Clearing it here starts the 25 seconds at GO, which is
+                        // what "the Snap starts empty every round" promises. It used to
+                        // be measured from a stale frameNow and could open the round
+                        // already charged.
+                        for (const ent of entities) if (ent) ent.infinitySnapReadyAt = null;
                         startTimer();
                         lastGameFrameTime = 0;
                         gameLoopId = requestAnimationFrame(gameLoop);
@@ -16026,13 +16283,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 specialCloudCityJabbaCharacter = null;
                 specialCloudCityGuardTimer = 0;
                 playableJabbaGuardCount = 0;
-                playableJabbaNextGuard = Date.now() + 2200;
+                playableJabbaNextGuard = gameNow() + 2200;
             }
 
             function spawnJabbaHutt() {
                 if (specialCloudCityJabbaSpawned) return;
                 specialCloudCityJabbaSpawned = true;
-                specialCloudCityGuardTimer = Date.now() + 2200;
+                specialCloudCityGuardTimer = gameNow() + 2200;
 
                 // Built from the roster's own Jabba entry rather than a second copy
                 // of his stats, so the boss who turns up here is the same character
@@ -16051,7 +16308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
                 jabba.characterId = 'jabba';
                 jabba.isJabba = true;
-                jabba.lastShotTime = Date.now();
+                jabba.lastShotTime = gameNow();
                 entities.push(jabba);
                 specialCloudCityJabbaCharacter = jabba;
 
@@ -16133,7 +16390,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const y = Math.min(canvasLogicalH - CHARACTER_SIZE, Math.max(CHARACTER_SIZE, specialCloudCityJabbaCharacter.y + Math.sin(angle) * spawnDist));
                 const guard = new Character(x, y, '#cc3333', 'Gamorrean Guard', 95, 'blaster', '#cc3333', false, false, 'enemy', false, false, 18);
                 guard.characterId = 'gamorrean_guard';
-                guard.lastShotTime = Date.now() - Math.random() * 600;
+                guard.lastShotTime = gameNow() - Math.random() * 600;
                 entities.push(guard);
             }
 
@@ -16148,7 +16405,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const y = Math.min(canvasLogicalH - CHARACTER_SIZE, Math.max(CHARACTER_SIZE, mainPlayer.y + Math.sin(angle) * spawnDist));
                 const guard = new Character(x, y, '#cc3333', 'Gamorrean Guard', 95, 'blaster', '#cc3333', false, false, 'player', false, true, 18);
                 guard.characterId = 'gamorrean_guard';
-                guard.lastShotTime = Date.now() - Math.random() * 600;
+                guard.lastShotTime = gameNow() - Math.random() * 600;
                 entities.push(guard);
             }
 
@@ -16252,7 +16509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     damage *= (1 - variance) + Math.random() * variance * 2;
                 }
                 damage = Math.round(damage);
-                const now = Date.now();
+                const now = gameNow();
                 if (target === mainPlayer && invincibilityEnabled) return;
 
                 // Dodge i-frames. Sits above the shield check on purpose: a hit
@@ -16529,7 +16786,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (escort.hp <= 0) e.anzellanEscorts.shift();
                         continue;
                     }
-                    if (e.shieldActive && Date.now() < e.shieldUntil) {
+                    if (e.shieldActive && gameNow() < e.shieldUntil) {
                         e.shieldActive = false;
                         e.shieldUntil = 0;
                         spawnHitSparks(e.x, e.y, '#00aaff', 10);
@@ -16550,7 +16807,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // as one hit, and crediting a hit per enemy caught would push
                     // end-of-round accuracy past 100%.
 
-                    e.hitFlashUntil = Date.now() + 90;
+                    e.hitFlashUntil = gameNow() + 90;
                     spawnHitSparks(e.x, e.y, '#ff9a3c', 8);
                     if (floatNums.length < MAX_FLOATS) {
                         floatNums.push({ x: e.x + (Math.random()-0.5)*20, y: e.y - CHARACTER_SIZE - 10, text: splash, life: 45, maxLife: 45, dy: -1.2 });
@@ -16607,7 +16864,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const AI_NECK_SNAP_CHANCE = 0.4;
 
             function updateAiForceChoke() {
-                const now = Date.now();
+                const now = gameNow();
                 for (let i = 0; i < entities.length; i++) {
                     const e = entities[i];
                     // Only the body the player is driving is excluded, and only
@@ -17496,7 +17753,7 @@ document.addEventListener('DOMContentLoaded', () => {
              *  reloading at knife range. */
             function updateWeaponSwapAI(e) {
                 if (!e || e === mainPlayer || !canWeaponSwap(e)) return;
-                const now = Date.now();
+                const now = gameNow();
                 if (now < e.stunnedUntil || now < e.knockedOutUntil || now < e.chokedUntil) return;
                 if (frameNow < (e.weaponSwapAIReadyAt || 0)) return;
                 const target = getClosestEnemy(e);
@@ -17525,8 +17782,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             function interactAbilityReady(e) {
                 if (!e) return false;
-                // Choke is the one on Date.now(); the rest run on frameNow.
-                if (canForceChoke(e)) return Date.now() >= (e.forceChokeReadyAt || 0);
+                // Choke reads gameNow() directly; the rest run on frameNow (stamped from it).
+                if (canForceChoke(e)) return gameNow() >= (e.forceChokeReadyAt || 0);
                 if (canUnibeam(e))    return frameNow >= (e.unibeamReadyAt || 0);
                 if (canWebGrenade(e)) return frameNow >= (e.webGrenadeReadyAt || 0);
                 if (canFlameBlast(e)) return frameNow >= (e.flameBlastReadyAt || 0);
@@ -18013,7 +18270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // cast and no cooldown is spent: a player whose target rolled
                     // can press again the moment the roll ends, and an AI Vader
                     // simply rolls for it again on his next tick.
-                    if (isInvulnerable(other, Date.now())) continue;
+                    if (isInvulnerable(other, gameNow())) continue;
                     const d = Math.hypot(other.x - caster.x, other.y - caster.y);
                     if (d < bestDist) { bestDist = d; best = other; }
                 }
@@ -18021,7 +18278,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function startForceChoke(caster, target) {
-                const now = Date.now();
+                const now = gameNow();
                 caster.forceChokeReadyAt = now + FORCE_CHOKE_COOLDOWN;
 
                 // Never shorten an existing hold — take whichever runs longer.
@@ -18064,7 +18321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             /** The entity `caster` could snap right now, or null. */
             function findNeckSnapTarget(caster) {
                 if (!canForceChoke(caster)) return null;
-                const now = Date.now();
+                const now = gameNow();
                 for (let i = 0; i < entities.length; i++) {
                     const e = entities[i];
                     if (!e.isAlive || e.chokedBy !== caster) continue;
@@ -18153,7 +18410,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function applyPoison(target, source) {
                 if (!target || !target.isAlive) return;
                 if (target === mainPlayer && invincibilityEnabled) return;
-                const now = Date.now();
+                const now = gameNow();
                 if (now >= target.poisonedUntil) target.poisonNextTickAt = now + POISON_TICK_MS;
                 target.poisonedUntil = now + POISON_DURATION_MS;
                 target.poisonFromTeam = source && source.team;
@@ -18161,7 +18418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             function tickPoison(e) {
                 if (!e.poisonedUntil) return;
-                const now = Date.now();
+                const now = gameNow();
                 if (!e.isAlive || now >= e.poisonedUntil) {
                     e.poisonedUntil = 0;
                     e.poisonNextTickAt = 0;
@@ -18197,7 +18454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function igniteBurn(target, source) {
                 if (!target || !target.isAlive) return;
                 if (target === mainPlayer && invincibilityEnabled) return;
-                const now = Date.now();
+                const now = gameNow();
                 // First application schedules the opening tick; a refresh leaves
                 // the existing cadence alone so re-igniting cannot front-load a
                 // tick on every one of those 43 hits a second.
@@ -18215,7 +18472,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function tickBurn(e) {
                 if (!e.burningUntil) return;
 
-                const now = Date.now();
+                const now = gameNow();
                 if (!e.isAlive || now >= e.burningUntil) {
                     e.burningUntil = 0;
                     e.burnNextTickAt = 0;
@@ -18255,7 +18512,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function tickForceChoke(e, tickScale) {
                 if (!e.chokedUntil) return;
 
-                const now = Date.now();
+                const now = gameNow();
                 if (!e.isAlive || now >= e.chokedUntil || e.chokeMsRemaining <= 0) {
                     if (e.chokeTickAccum >= 1) emitChokeNumber(e);
                     e.chokedUntil = 0;
@@ -18316,7 +18573,7 @@ document.addEventListener('DOMContentLoaded', () => {
             /** The grip itself: a tendril from Vader's hand and a ring closing on
              *  the victim's throat. Drawn from Character.draw. */
             function drawForceChoke(target) {
-                const now = Date.now();
+                const now = gameNow();
                 const remain = Math.max(0, target.chokedUntil - now);
                 const t = 1 - remain / FORCE_CHOKE_DURATION; // 0 at the grab, 1 as it releases
 
@@ -18359,7 +18616,7 @@ document.addEventListener('DOMContentLoaded', () => {
             /** Cooldown arc under a player-controlled Vader: a full red ring means
              *  the choke is ready, a partial one shows it recharging. */
             function drawForceChokeCooldown(e) {
-                const now = Date.now();
+                const now = gameNow();
                 const remain = Math.max(0, (e.forceChokeReadyAt || 0) - now);
                 const frac = remain > 0 ? 1 - remain / FORCE_CHOKE_COOLDOWN : 1;
                 const r = CHARACTER_SIZE + 9;
@@ -18995,7 +19252,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             // touch and gamepad support with no new bindings.
                             const sidearm = getSidearmConfig(e);
                             if (sidearm && throwHeld) {
-                                const sidearmCooldown = ammoBoostActive ? 0 : sidearm.cooldown;
+                                // Through the same floor as the main gun. This was the one
+                                // path the 2026-10-10 Ammo fix missed: a cooldown of 0 here
+                                // fired a 25-damage bolt every frame for the whole boost,
+                                // about 1,500 DPS at 60 Hz and 3,600 at 144 Hz.
+                                const sidearmCooldown = ammoBoostedCooldown(sidearm, ammoBoostActive);
                                 if (now - e.lastSidearmShotTime > sidearmCooldown) {
                                     const target = resolvePlayerAim(e);
                                     if (target) {
@@ -20301,7 +20562,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const comboEl = document.getElementById('comboCounter');
                 if (!comboEl) return;
                 
-                const now = Date.now();
+                const now = gameNow();
                 const activeCombos = comboKills.filter(k => now - k < 5000);
                 
                 if (activeCombos.length >= 2) {
@@ -20446,6 +20707,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 }
 
+                // A loss ends a run of consecutive Vader wins (Dark Lord's Reign).
+                // Losing used to leave the count alone; what broke the run was
+                // leaving the series, which also wiped every other counter.
+                if (!playerWon && vaderConsecutiveWins > 0) {
+                    vaderConsecutiveWins = 0;
+                    persistAchievementCounters();
+                }
+
                 // Senator Palpatine unlock (defeat path): Lose as Qui-Gon vs Darth Maul on Naboo
                 if (!playerWon && pCharData && eCharData && currentArena === 'naboo' && !gameUnlocks.senatorPalpatine) {
                     if (pCharData.id === 'quigon' && eCharData.id === 'maul') {
@@ -20540,7 +20809,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageText.style.textShadow = `0 0 15px ${color}`;
                 document.querySelector('.message-box').style.borderColor = color;
 
-                const elapsed = Math.round((Date.now() - gameStartTime) / 1000);
+                const elapsed = Math.round((gameNow() - gameStartTime) / 1000);
                 const mins = Math.floor(elapsed / 60);
                 const secs = elapsed % 60;
                 const endTimeEl = document.getElementById('endTime');
@@ -20588,7 +20857,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (timerEl) {
                     timerEl.style.display = 'block';
                     timerEl.classList.remove('sudden-death');
-                    // Don't reset seriesTimeRemaining here - it's set when series starts
+                    // Don't reset seriesTimeRemaining here - setupGame sets it for every round
                     const m = Math.floor(seriesTimeRemaining / 60);
                     const s = Math.floor(seriesTimeRemaining % 60);
                     setTextCached(timerEl, `${m}:${s.toString().padStart(2, '0')}`);
@@ -20622,9 +20891,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Single wall-clock stamp for the whole frame — update() and draw()
-                // read frameNow rather than calling Date.now() again.
-                frameNow = Date.now();
+                // Single stamp for the whole frame — update() and draw() read
+                // frameNow rather than calling the clock again. Battle time, not
+                // wall time: see BATTLE CLOCK at the top of the file.
+                frameNow = gameNow();
 
                 const ts = timeStamp ?? performance.now();
                 const rawDt = lastGameFrameTime ? (ts - lastGameFrameTime) / 1000 : 1 / TARGET_FPS;
@@ -20729,10 +20999,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (pCharData && pCharData.id === 'jabba') {
-                    if (Date.now() > playableJabbaNextGuard) {
+                    if (gameNow() > playableJabbaNextGuard) {
                         if (playableJabbaGuardCount < 6) {
                             spawnPlayableGamorreanGuard();
-                            playableJabbaNextGuard = Date.now() + 2200;
+                            playableJabbaNextGuard = gameNow() + 2200;
                         } else {
                             endGame(false);
                             return;
@@ -20747,7 +21017,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!mainPlayer || !mainEnemy) return;
                         const pPct = mainPlayer.health / mainPlayer.maxHealth;
                         const ePct = mainEnemy.health / mainEnemy.maxHealth;
-                        if (pPct >= ePct) endGame(true, 'timeout');
+                        // The player has to be strictly ahead to take a round on time.
+                        // A dead heat used to go to the player, which paid out a win
+                        // for three minutes of hiding behind a crate with neither side
+                        // landing a hit. Level on health is not winning.
+                        if (pPct > ePct) endGame(true, 'timeout');
                         else endGame(false, 'timeout');
                         return;
                     }
@@ -20827,12 +21101,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 hud.style.display = 'none';
                 opponentMenu.style.display = 'none';
                 stopBattleSystems();
+                // "Return to Base" means the splash — Shop, Armory, Kamino and the
+                // Dossier live there. It used to stop at fighter select, which had no
+                // way onward to the splash, so credits won in a fight could not be
+                // spent without reloading the page. showMainMenu() still runs first
+                // for the menu music and the arena-button refresh it does.
                 showMainMenu();
+                showSplashMenu();
                 selectedPlayerCharId = null;
                 resetSeriesAndEffects();
                 resetTouchInput();
                 resetKeyboardInput();
-                resetAchievementCounters();
                 resizeCanvas();
                 updateMobileControlsVisibility();
                 flushAnnouncementQueue();
@@ -20855,7 +21134,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateMobileControlsVisibility();
                     // Start a fresh series with the same matchup and arena
                     resetSeriesAndEffects();
-                    resetAchievementCounters();
                     setupGame(seriesPlayerCharId, seriesEnemyCharId);
                 });
             }
@@ -20890,7 +21168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 pauseBackupBtn.style.display = 'block';
                 const remaining = PAUSE_BACKUP_MAX_USES - pauseBackupUses;
-                const cooldownLeft = Math.max(0, pauseBackupReadyAt - Date.now());
+                const cooldownLeft = Math.max(0, pauseBackupReadyAt - gameNow());
                 if (remaining <= 0) {
                     pauseBackupBtn.disabled = true;
                     pauseBackupBtn.textContent = '📡 Backup Spent (0 left)';
@@ -20911,6 +21189,8 @@ document.addEventListener('DOMContentLoaded', () => {
             function openPauseMenu() {
                 if (!isInBattle() || gamePaused) return;
                 gamePaused = true;
+                // Stops every combat timer where it stands — see BATTLE CLOCK.
+                freezeBattleClock();
                 cancelAnimationFrame(gameLoopId);
                 // Cut the loops, which would otherwise drone on under the menu.
                 // One-shots still in flight are left to finish — they are brief, and
@@ -20926,6 +21206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function closePauseMenu() {
                 if (!gamePaused) return;
                 gamePaused = false;
+                resumeBattleClock();
                 pauseOverlay.classList.remove('active');
                 updateMobileControlsVisibility();
                 // Bring back the blade hum the pause silenced. Lightning is not
@@ -20954,7 +21235,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const trooper = new Character(x, y, commanderDef ? commanderDef.color : pCharData.color, troopInfo ? troopInfo.name : 'Clone Trooper', 50, 'blaster', null, false, false, 'player', false, true, 12.5);
                         trooper.characterId     = troopInfo ? troopInfo.unitId : pCharData.id;
                         trooper.hasCalledBackup = true;
-                        trooper.lastShotTime    = Date.now() - Math.random() * 600;
+                        trooper.lastShotTime    = gameNow() - Math.random() * 600;
                         entities.push(trooper);
                     }
 
@@ -20966,7 +21247,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const commander = new Character(x, y, commanderDef.color, commanderDef.name, 90, 'blaster', null, false, false, 'player', false, true, 18.75);
                         commander.characterId     = commanderDef.id;
                         commander.hasCalledBackup = true;
-                        commander.lastShotTime    = Date.now() - Math.random() * 600;
+                        commander.lastShotTime    = gameNow() - Math.random() * 600;
                         entities.push(commander);
                     }
 
@@ -20998,7 +21279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                   false, false, 'player', false, true, 20);
                     trooper.characterId     = info.unitId;
                     trooper.hasCalledBackup = true;
-                    trooper.lastShotTime    = Date.now() - Math.random() * 600;
+                    trooper.lastShotTime    = gameNow() - Math.random() * 600;
                     entities.push(trooper);
                 }
 
@@ -21012,15 +21293,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // the keyboard can both reach this button.
                 if (!pCharData || !canCallBackup(pCharData.id)) return;
                 if (pauseBackupUses >= PAUSE_BACKUP_MAX_USES) return;
-                if (Date.now() < pauseBackupReadyAt) return;
+                if (gameNow() < pauseBackupReadyAt) return;
                 pauseBackupUses++;
-                pauseBackupReadyAt = Date.now() + PAUSE_BACKUP_COOLDOWN_MS;
+                pauseBackupReadyAt = gameNow() + PAUSE_BACKUP_COOLDOWN_MS;
                 spawnPauseBackup();
                 refreshPauseBackupButton();
                 closePauseMenu();
             });
             pauseQuitBtn.addEventListener('click', () => {
                 gamePaused = false;
+                resumeBattleClock();
                 pauseOverlay.classList.remove('active');
                 canvas.style.display = 'none';
                 hud.style.display = 'none';
@@ -21031,7 +21313,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetSeriesAndEffects();
                 resetTouchInput();
                 resetKeyboardInput();
-                resetAchievementCounters();
                 resizeCanvas();
                 updateMobileControlsVisibility();
                 flushAnnouncementQueue();
@@ -21049,6 +21330,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         closePauseMenu();
                     } else if (isInBattle()) {
                         openPauseMenu();
+                    } else if (!e.defaultPrevented) {
+                        // Out of battle, Escape on the two pick screens steps back
+                        // one screen, as a gamepad's B already does. Only when one of
+                        // them is the top layer: every overlay above them has its own
+                        // Escape handling. Typing in a search box, it just leaves the
+                        // box rather than throwing the player out of the screen.
+                        const layer = getActiveUiLayer();
+                        const active = document.activeElement;
+                        if (layer && (layer.id === 'mainMenu' || layer.id === 'opponentMenu')) {
+                            if (active && active.tagName === 'INPUT' && active.type === 'text') {
+                                active.blur();
+                            } else if (layer.id === 'mainMenu') {
+                                showSplashMenu();
+                            } else {
+                                const back = document.getElementById('backBtn');
+                                if (back) back.click();
+                            }
+                        }
                     }
                 }
 
@@ -21072,7 +21371,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // cleared on blur for exactly this reason; keys were not.
             window.addEventListener('blur', resetKeyboardInput);
             document.addEventListener('visibilitychange', () => {
-                if (document.hidden) resetKeyboardInput();
+                if (!document.hidden) return;
+                resetKeyboardInput();
+                // Leaving the tab mid-fight pauses it. The browser stops drawing a
+                // hidden tab, so the fight was frozen anyway — but the clock was not,
+                // and looping sounds (Force Lightning, the Beam, the Flamethrower, a
+                // saber hum) droned on with nobody there. openPauseMenu() freezes
+                // the battle clock and cuts the loops; the player resumes when back.
+                if (isInBattle() && !gamePaused) openPauseMenu();
             });
 
             window.addEventListener('resize', resizeCanvas);
@@ -21083,42 +21389,44 @@ document.addEventListener('DOMContentLoaded', () => {
              *  the first point at which everything they read is initialised, since
              *  forgedWeapons and createdCharacters are declared thousands of lines
              *  after loadGameSettings() is called.                                 */
-            loadMatchStats();
-            loadContracts();
+            // Each step runs through bootStep(), so a bad save costs one step
+            // rather than the whole start-up.
+            bootStep(loadMatchStats);
+            bootStep(loadContracts);
             // After the roster is built — it writes onto the character record, and
             // `characters` is a const declared far below loadGameSettings().
-            applyIronManMark();
+            bootStep(applyIronManMark);
             // After applyIronManMark(), because whether the board is closed at all
             // depends on the mark it just worked out.
-            loadStarkContract();
+            bootStep(loadStarkContract);
             // Same pair of calls the suit needs, for the same reasons: the level has
             // to be written onto the roster record before anything reads it, and the
             // standing order has to be restored before the Dossier can draw it.
-            applyGrootLevel();
-            loadGrootContract();
+            bootStep(applyGrootLevel);
+            bootStep(loadGrootContract);
             // Both of the above rewrite a roster record's name, hp and weapon,
             // and both run after the columns were built. Without this the button
             // still said "Iron Man" while its own stat card said "Iron Man Mk 4",
             // until something unrelated rebuilt the column.
-            rebuildAllRosters();
-            rebuildOpponentRosters();
+            bootStep(rebuildAllRosters);
+            bootStep(rebuildOpponentRosters);
             // Seed on first run after this update, so an existing save does not open
             // to a pill claiming the whole catalogue is new.
-            if (!shopSeenIds.length) markShopSeen();
-            refreshSplashState();
+            bootStep(() => { if (!shopSeenIds.length) markShopSeen(); });
+            bootStep(refreshSplashState);
             // A save that has already seen the Snap goes straight to the end state
             // here, before the loading screen lifts — otherwise the retired tiles
             // are on screen for the whole load and then vanish. The intro itself
             // still starts later, from maybePlay(), which needs measurable tiles.
-            if (window.SnapIntro) SnapIntro.applyIfSnapped();
+            if (window.SnapIntro) bootStep(() => SnapIntro.applyIfSnapped());
             // Arm the click trigger here too. maybePlay() was only being called
             // once the loading screen lifted, which left a window where clicking
             // the menu did nothing at all — and worse, that dead click still
             // started the lobby track, so the run-up below had already lost its
             // sync before the intro was even listening. Arming needs no
             // measurements; only play() does.
-            if (window.SnapIntro) SnapIntro.maybePlay();
+            if (window.SnapIntro) bootStep(() => SnapIntro.maybePlay());
             // The arena picker reads snapHasHappened() through isArenaRetired(), so
             // it has to be rebuilt once that flag is known.
-            refreshArenaButtons();
+            bootStep(refreshArenaButtons);
         });
