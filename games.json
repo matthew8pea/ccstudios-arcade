@@ -1,5 +1,5 @@
 {
-  "generated": 1791829196693,
+  "generated": 1791830077322,
   "site": {
     "title": "CCStudios Arcade",
     "tagline": ""
@@ -8,7 +8,7 @@
     {
       "slug": "meteor-60-seconds",
       "title": "Meteor 60 Seconds",
-      "description": "A meteor hits Earth in 60 seconds. Spend them however you like, and hunt down every strange ending. A fan tribute to AvoCavo's game.",
+      "description": "You have 60 seconds before a meteor destroys the town. What will you do with your final minute?",
       "folder": "meteor-60-seconds",
       "url": "games/meteor-60-seconds/index.html",
       "cover": "covers/meteor-60-seconds.jpg",
