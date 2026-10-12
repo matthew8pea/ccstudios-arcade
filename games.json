@@ -1,5 +1,5 @@
 {
-  "generated": 1791828616510,
+  "generated": 1791829092205,
   "site": {
     "title": "CCStudios Arcade",
     "tagline": ""
@@ -22,7 +22,8 @@
       ],
       "order": null,
       "added": 1791828616510,
-      "updated": 1791828500841
+      "updated": 1791828500841,
+      "released": 1791828616510
     },
     {
       "slug": "galactic-legends",
@@ -40,7 +41,8 @@
       ],
       "order": null,
       "added": 0,
-      "updated": 1791828142552
+      "updated": 1791828142552,
+      "released": 1787530184029
     },
     {
       "slug": "galactic-tower-defense",
@@ -58,7 +60,8 @@
       ],
       "order": null,
       "added": 1791739000466,
-      "updated": 1791727520881
+      "updated": 1791727520881,
+      "released": 1791739000466
     },
     {
       "slug": "galactic-city-defense",
@@ -77,7 +80,8 @@
       ],
       "order": null,
       "added": 0,
-      "updated": 1791649155199
+      "updated": 1791649155199,
+      "released": 1790889925032
     },
     {
       "slug": "galactic-playground",
@@ -95,7 +99,8 @@
       ],
       "order": null,
       "added": 0,
-      "updated": 1790533427422
+      "updated": 1790533427422,
+      "released": 1790511767148
     }
   ]
 }

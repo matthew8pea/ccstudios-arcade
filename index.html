@@ -67,6 +67,7 @@
   .brand h1 { margin: 0; font: 700 18px/1.1 var(--display); letter-spacing: .14em; text-transform: uppercase; }
   .brand h1 span { color: var(--amber); }
   .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; letter-spacing: .04em; }
+  .brand p:empty { display: none; }
 
   .search { position: relative; flex: 0 1 320px; min-width: 200px; }
   .search input { width: 100%; height: 40px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-2);
@@ -272,10 +273,26 @@
     if (d < 365) return Math.round(d / 30) + 'mo ago';
     return Math.round(d / 365) + 'y ago';
   }
+  // 2 = NEW (first 14 days on the site), 1 = UPDATED (changed in the last 7 days), 0 = normal
+  function status(g) {
+    if (g.added && Date.now() - g.added < 14 * DAY) return 2;
+    if (Date.now() - g.updated < 7 * DAY && g.updated - g.added > DAY) return 1;
+    return 0;
+  }
   function badge(g) {
-    if (Date.now() - g.added < 14 * DAY) return '<span class="badge">NEW</span>';
-    if (Date.now() - g.updated < 7 * DAY && g.updated - g.added > DAY) return '<span class="badge upd">UPDATED</span>';
-    return '';
+    var st = status(g);
+    return st === 2 ? '<span class="badge">NEW</span>' : st === 1 ? '<span class="badge upd">UPDATED</span>' : '';
+  }
+  // Default order: pinned ("order" in arcade.json), then NEW (newest first), then UPDATED (latest first),
+  // then everything else by release date (newest first).
+  function byDefault(a, b) {
+    var pin = (a.order == null ? 1e9 : a.order) - (b.order == null ? 1e9 : b.order);
+    if (pin) return pin;
+    var sa = status(a), sb = status(b);
+    if (sa !== sb) return sb - sa;
+    if (sa === 2) return b.added - a.added;
+    if (sa === 1) return b.updated - a.updated;
+    return (b.released || 0) - (a.released || 0) || a.title.localeCompare(b.title);
   }
   function media(g, cls) {
     var h = hue(g.slug);
@@ -304,18 +321,16 @@
     });
     if (state.sort === 'az') list.sort(function (a, b) { return a.title.localeCompare(b.title); });
     else if (state.sort === 'played') list.sort(function (a, b) { return (played[b.slug] || 0) - (played[a.slug] || 0) || b.updated - a.updated; });
-    else list.sort(function (a, b) { return (a.order == null ? 1e9 : a.order) - (b.order == null ? 1e9 : b.order) || b.updated - a.updated; });
+    else list.sort(byDefault);
     return list;
   }
 
   function renderHero() {
     var hero = $('hero');
-    // featured: explicit order first, else most recently updated
-    var g = state.games.slice().sort(function (a, b) {
-      return (a.order == null ? 1e9 : a.order) - (b.order == null ? 1e9 : b.order) || b.updated - a.updated;
-    })[0];
+    // featured = first game in the default order
+    var g = state.games.slice().sort(byDefault)[0];
     if (!g) { hero.hidden = true; return; }
-    var fresh = Date.now() - g.added < 14 * DAY ? 'New release' : 'Latest update';
+    var fresh = ['Featured', 'Latest update', 'New release'][status(g)];
     hero.innerHTML = media(g) +
       '<div class="info"><div class="eyebrow">' + fresh + '</div><h2>' + esc(g.title) + '</h2>' + credit(g, true) +
       (g.description ? '<p>' + esc(g.description) + '</p>' : '') +

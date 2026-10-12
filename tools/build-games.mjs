@@ -64,9 +64,9 @@ function loadExcludes() {
 const EXCLUDES = loadExcludes();
 const excluded = (full, name) => EXCLUDES.names.some((r) => r.test(name)) || EXCLUDES.paths.includes(full.toLowerCase());
 
-/** When the game itself last changed: newest modification time of the files that ship with it. */
-function newestMtime(dir) {
-  let newest = 0;
+/** Newest and oldest modification times of the files that ship with a game (= last update / roughly when it was made). */
+function fileTimes(dir) {
+  let newest = 0, oldest = Infinity;
   const walk = (d, top) => {
     let entries;
     try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
@@ -75,12 +75,12 @@ function newestMtime(dir) {
       if (excluded(full, e.name)) continue;
       if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(full, false); }
       else if (e.isFile() && !SKIP_FILES.test(e.name) && !(top && IMG.test(e.name))) {
-        try { newest = Math.max(newest, fs.statSync(full).mtimeMs); } catch { /* ignore */ }
+        try { const t = fs.statSync(full).mtimeMs; newest = Math.max(newest, t); oldest = Math.min(oldest, t); } catch { /* ignore */ }
       }
     }
   };
   walk(dir, true);
-  return newest;
+  return { newest, oldest: oldest === Infinity ? 0 : oldest };
 }
 
 /** First image in the folder whose name starts with one of `names` (in priority order). */
@@ -158,7 +158,8 @@ function build() {
     for (let i = 2; slugs.has(slug); i++) slug = `${slugify(o.slug || folder)}-${i}`;
     slugs.add(slug);
 
-    const updated = Math.round(newestMtime(dir)) || now;
+    const times = fileTimes(dir);
+    const updated = Math.round(times.newest) || now;
     const old = prevBySlug.get(slug);
     const added = old ? old.added : firstRun ? 0 : now;
 
@@ -177,6 +178,9 @@ function build() {
       tags: Array.isArray(o.tags) ? o.tags : [],
       order: typeof o.order === 'number' ? o.order : null,
       added, updated,
+      // Release date for ordering: arcade.json "released" ("2026-09-27"), else when it first showed up here,
+      // else (games that were here at launch) its oldest file.
+      released: (o.released && Date.parse(o.released)) || added || Math.round(times.oldest) || updated,
     });
     console.log(`  + ${title}  ->  games/${folder}/${entry}`);
   }
