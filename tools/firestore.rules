@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// Paste this into Firebase console > Firestore Database > Rules, then click Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each player's own record: their username and the games they've liked. Only they can see or change it.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // One document per like at likes/{game}/by/{player}. Anyone can count them; players can only add or
+    // remove their own, so each account can like a game once.
+    match /likes/{game}/by/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && request.resource.data.keys().hasOnly(['at']);
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

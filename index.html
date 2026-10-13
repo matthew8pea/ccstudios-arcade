@@ -20,6 +20,7 @@
     --dim: #5d6478;
     --amber: #ffb547;
     --cyan: #53d5ff;
+    --pink: #ff5c8a;
     --radius: 14px;
     --display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
     --body: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
@@ -113,7 +114,9 @@
   .card { position: relative; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line);
     border-radius: var(--radius); overflow: hidden; cursor: pointer; text-align: left; padding: 0;
     transition: transform .18s cubic-bezier(.2, .8, .2, 1), border-color .18s, box-shadow .18s; }
-  .card:hover, .card:focus-visible { transform: translateY(-3px); border-color: rgba(255, 181, 71, .45);
+  .cell { position: relative; display: flex; min-width: 0; }
+  .cell > .card { flex: 1; min-width: 0; }
+  .cell:hover > .card, .card:focus-visible { transform: translateY(-3px); border-color: rgba(255, 181, 71, .45);
     box-shadow: 0 14px 40px -12px rgba(0, 0, 0, .7), 0 0 0 1px rgba(255, 181, 71, .15); }
   .card .media { aspect-ratio: 16 / 9; }
   .card .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
@@ -132,8 +135,8 @@
     background: rgba(7, 8, 13, .35); }
   .play-hint span { width: 58px; height: 58px; border-radius: 50%; background: var(--amber); display: grid; place-items: center;
     box-shadow: 0 8px 30px rgba(255, 181, 71, .35); transform: scale(.85); transition: transform .18s; }
-  .card:hover .play-hint, .card:focus-visible .play-hint { opacity: 1; }
-  .card:hover .play-hint span { transform: scale(1); }
+  .cell:hover .play-hint, .card:focus-visible .play-hint { opacity: 1; }
+  .cell:hover .play-hint span { transform: scale(1); }
 
   .media { position: relative; overflow: hidden; background: var(--bg-2); }
   .media img.cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -144,6 +147,77 @@
   .badge { position: absolute; top: 10px; left: 10px; z-index: 2; font: 800 10.5px/1 var(--display); letter-spacing: .16em;
     padding: 6px 8px; border-radius: 6px; background: var(--amber); color: #1a1205; }
   .badge.upd { background: var(--cyan); color: #04202b; }
+  .plays { position: absolute; right: 10px; bottom: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 5px;
+    font: 700 11.5px/1 var(--body); padding: 5px 8px; border-radius: 6px; background: rgba(7, 8, 13, .72); color: var(--text);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .plays svg { color: var(--amber); }
+
+  /* likes (hidden until accounts are set up in firebase-config.js) */
+  html:not(.accounts) [data-like] { display: none !important; }
+  [data-like] svg { fill: none; stroke: currentColor; flex: none; }
+  [data-like].on svg { fill: currentColor; }
+  .like { position: absolute; top: 10px; right: 10px; z-index: 3; display: inline-flex; align-items: center; gap: 5px; height: 28px;
+    padding: 0 8px; border: 0; border-radius: 8px; background: rgba(7, 8, 13, .72); color: var(--text); cursor: pointer;
+    font: 700 12px/1 var(--body); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    transition: transform .18s cubic-bezier(.2, .8, .2, 1), background .15s, color .15s; }
+  .cell:hover > .like { transform: translateY(-3px); }
+  .like:hover { background: rgba(7, 8, 13, .92); color: var(--pink); }
+  .like.on, .like-btn.on, #pLike.on { color: var(--pink); }
+  .like-btn.on { border-color: rgba(255, 92, 138, .45); }
+  .like-btn .n, #pLike .n { color: var(--muted); font-weight: 600; }
+  .like-btn .n::before { content: "· "; }
+
+  /* account */
+  .acct { position: relative; }
+  .btn.sm { height: 40px; padding: 0 14px; border-radius: 10px; font-size: 13.5px; }
+  .btn.chip { padding: 0 10px 0 6px; gap: 8px; }
+  .btn.chip svg { color: var(--muted); }
+  .av { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: #fff; font: 800 13px/1 var(--display); }
+  .menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; min-width: 230px; padding: 6px; border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--line-2); box-shadow: 0 18px 50px -10px rgba(0, 0, 0, .8); }
+  .menu .who { padding: 8px 10px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+  .menu .who b { color: var(--text); }
+  .menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px;
+    background: none; cursor: pointer; text-align: left; font-size: 14px; }
+  .menu button:hover, .menu button:focus-visible { background: var(--panel-2); }
+  .menu button svg { color: var(--muted); fill: none; stroke: currentColor; }
+
+  /* dialogs */
+  .dlg { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 26px 24px 22px; border-radius: 18px;
+    border: 1px solid var(--line-2); background: var(--panel); color: var(--text); box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .9); }
+  .dlg::backdrop { background: rgba(4, 5, 9, .72); backdrop-filter: blur(3px); }
+  .dlg h2 { margin: 0 40px 6px 0; font: 800 22px/1.2 var(--display); }
+  .dlg .note { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+  .dlg label { display: block; margin: 0 0 14px; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .dlg label span { color: var(--dim); font-weight: 400; }
+  .dlg input, .dlg select, .dlg textarea { display: block; width: 100%; margin-top: 6px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: 15px/1.4 var(--body); outline: none; }
+  .dlg textarea { resize: vertical; min-height: 120px; }
+  .dlg input:focus, .dlg select:focus, .dlg textarea:focus { border-color: rgba(83, 213, 255, .55); }
+  .dlg .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .dlg .err { margin: -2px 0 14px; color: #ff8f8f; font-size: 13.5px; }
+  .dlg .err:empty { display: none; }
+  .dlg .err a { color: var(--cyan); }
+  .dlg .fine { margin: -4px 0 16px; color: var(--dim); font-size: 12.5px; }
+  .dlg .actions { display: flex; gap: 10px; justify-content: center; }
+  .btn.wide { width: 100%; justify-content: center; }
+  .btn:disabled { opacity: .6; cursor: progress; }
+  .x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border: 0; border-radius: 8px; background: none;
+    color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+  .x:hover { background: var(--panel-2); color: var(--text); }
+  .tabs { display: flex; gap: 4px; padding: 3px; margin: 0 0 18px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg-2); }
+  .tabs button { flex: 1; height: 36px; border: 0; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; font-weight: 700; }
+  .tabs button[aria-selected="true"] { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .done { text-align: center; padding-top: 8px; }
+  .done h2 { margin-right: 0; }
+  .done .ok { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(83, 213, 255, .12); color: var(--cyan); }
+  .linkish { border: 0; background: none; padding: 0; color: var(--muted); cursor: pointer; font-size: 12.5px;
+    text-decoration: underline; text-underline-offset: 3px; }
+  .linkish:hover { color: var(--text); }
+  .toast { position: fixed; left: 50%; bottom: 24px; translate: -50% 0; z-index: 90; max-width: calc(100vw - 32px); padding: 12px 16px;
+    border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line-2); box-shadow: 0 18px 50px -10px rgba(0, 0, 0, .8); font-size: 14px; }
 
   .empty { border: 1px dashed var(--line-2); border-radius: var(--radius); padding: 40px 24px; text-align: center; color: var(--muted); }
   .empty h4 { margin: 0 0 6px; color: var(--text); font: 700 18px/1.3 var(--display); }
@@ -183,6 +257,13 @@
   @media (max-width: 520px) {
     .wrap { padding: 0 16px 48px; }
     .seg button { padding: 0 9px; }
+    .acct { order: 1; }
+    .seg { order: 2; }
+    .acct .lbl { display: none; }
+    .btn.sm { padding: 0 11px; }
+    .btn.chip { padding: 0 8px 0 6px; }
+    .dlg { padding: 22px 18px 18px; }
+    .dlg .row2 { grid-template-columns: 1fr; gap: 0; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -205,9 +286,11 @@
     </label>
     <div class="seg" role="group" aria-label="Sort">
       <button data-sort="recent" aria-pressed="true">Newest</button>
-      <button data-sort="played" aria-pressed="false">Played</button>
+      <button data-sort="popular" aria-pressed="false">Popular</button>
       <button data-sort="az" aria-pressed="false">A–Z</button>
+      <button data-sort="liked" aria-pressed="false" id="likedTab" hidden>Liked</button>
     </div>
+    <div class="acct" id="acct" hidden></div>
   </header>
 
   <section id="hero" class="hero" hidden></section>
@@ -215,7 +298,7 @@
   <div class="bar"><h3>All games <b id="count"></b></h3></div>
   <div id="grid" class="grid"></div>
 
-  <footer><span>© <span id="year"></span> Cousin Crew Studios</span><span id="stamp"></span></footer>
+  <footer><span>© <span id="year"></span> Cousin Crew Studios</span><button class="linkish" id="footMsg" type="button" hidden>Message the creators</button><span id="stamp"></span></footer>
 </div>
 
 <div id="player" role="dialog" aria-modal="true" aria-labelledby="pTitle">
@@ -224,6 +307,7 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl">Games</span>
     </button>
     <div class="title"><img id="pIcon" alt="" hidden><strong id="pTitle"></strong><span id="pBy"></span></div>
+    <button class="ibtn" id="pLike" data-kind="bar" type="button"></button>
     <button class="ibtn" id="pReload" title="Restart game">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span class="lbl">Restart</span>
     </button>
@@ -240,6 +324,49 @@
   </div>
 </div>
 
+<div class="toast" id="toast" role="status" hidden></div>
+
+<dialog class="dlg" id="authDlg" aria-labelledby="authTitle">
+  <button type="button" class="x" data-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <h2 id="authTitle">Your arcade account</h2>
+  <p class="note" id="authWhy"></p>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" data-mode="signup">Sign up</button>
+    <button type="button" role="tab" data-mode="login">Log in</button>
+  </div>
+  <form id="authForm" novalidate>
+    <label>Username<input id="aUser" autocomplete="username" maxlength="20" autocapitalize="off" spellcheck="false" required></label>
+    <label>Password<input id="aPass" type="password" autocomplete="new-password" required></label>
+    <p class="fine" id="authHint">3 to 20 letters, numbers or underscores, and a password of at least 6 characters. You'll stay logged in on this device.</p>
+    <p class="err" id="authErr" role="alert"></p>
+    <button class="btn primary wide" id="authGo" type="submit">Create account</button>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="msgDlg" aria-labelledby="msgTitle">
+  <button type="button" class="x" data-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <form id="msgForm" novalidate>
+    <h2 id="msgTitle">Message the creators</h2>
+    <p class="note">Feedback, bug reports, game ideas, or anything else. It goes straight to Cousin Crew Studios.</p>
+    <div class="row2">
+      <label>Type<select id="mType"><option>Feedback</option><option>Bug report</option><option>Game idea</option><option>Something else</option></select></label>
+      <label>About<select id="mGame"></select></label>
+    </div>
+    <label>Message<textarea id="mBody" rows="6" maxlength="4000" required></textarea></label>
+    <label>Your email <span>(optional, if you'd like a reply)</span><input id="mEmail" type="email" autocomplete="email"></label>
+    <input class="hp" id="mHoney" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <p class="err" id="msgErr" role="alert"></p>
+    <button class="btn primary wide" id="msgGo" type="submit">Send message</button>
+  </form>
+  <div class="done" id="msgDone" hidden>
+    <div class="ok"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>Message sent</h2>
+    <p class="note">Thanks! Cousin Crew Studios will read it soon.</p>
+    <div class="actions"><button type="button" class="btn" id="msgAgain">Send another</button><button type="button" class="btn primary" data-close>Done</button></div>
+  </div>
+</dialog>
+
+<script src="firebase-config.js"></script>
 <script>
 (function () {
   'use strict';
@@ -254,6 +381,81 @@
   };
   var played = store.get('cca-played', {});
   state.sort = store.get('cca-sort', 'recent');
+  if (state.sort === 'played') state.sort = 'popular'; // old sort name
+
+  // ---- play counts ----
+  // Shared across every visitor via Abacus (https://abacus.jasoncameron.dev), a free counter API that needs no
+  // account. Each game is one counter: /hit adds a play and returns the new total, /get reads it.
+  var COUNTER = 'https://abacus.jasoncameron.dev';
+  var COUNTER_NS = 'ccstudios-arcade-matthew8pea';
+  var REPLAY_GAP = 30 * 60 * 1000; // relaunching the same game within 30 minutes isn't a new play
+  var LOCAL = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  var plays = store.get('cca-plays', {}); // last known totals, shown instantly while fresh ones load
+  var likes = store.get('cca-likes', {}); // last known like totals (likes live in Firebase, see accounts below)
+  function noop() {}
+
+  // Abacus allows 30 requests per visitor every 10 seconds; queue anything past 25 so a big arcade loads slowly
+  // instead of failing.
+  var sent = [], queue = [], pumpTimer = null;
+  function pump() {
+    pumpTimer = null;
+    var now = Date.now();
+    while (sent.length && now - sent[0] > 10000) sent.shift();
+    while (queue.length && sent.length < 25) { sent.push(now); queue.shift()(); }
+    if (queue.length) pumpTimer = setTimeout(pump, 10050 - (now - sent[0]));
+  }
+  function counter(action, name) {
+    var k = String(name).replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 64);
+    while (k.length < 3) k += '_';
+    var url = COUNTER + '/' + action + '/' + COUNTER_NS + '/' + k;
+    return new Promise(function (resolve, reject) {
+      queue.push(function () {
+        fetch(url, { cache: 'no-store' })
+          .then(function (r) {
+            if (r.status === 404) return 0; // nobody has hit it yet
+            if (!r.ok) throw new Error(r.status);
+            return r.json().then(function (d) { if (typeof d.value !== 'number') throw new Error('bad'); return d.value; });
+          })
+          .then(resolve, reject);
+      });
+      if (!pumpTimer) pump();
+    });
+  }
+  function saveCounts() { store.set('cca-plays', plays); store.set('cca-likes', likes); }
+  function loadCounts() {
+    return Promise.all(state.games.map(function (g) {
+      // offline or rate limited: keep the last known total
+      return counter('get', g.slug).then(function (n) { plays[g.slug] = n; }, noop);
+    }).concat(loadLikes())).then(saveCounts);
+  }
+  var lastRefresh = 0;
+  function refreshCounts() {
+    if (!state.games.length || Date.now() - lastRefresh < 60000) return;
+    lastRefresh = Date.now();
+    loadCounts().then(function () { if (!current) render(); });
+  }
+  // pick up other visitors' plays and likes when someone comes back to the tab
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && !current) refreshCounts(); });
+  function countPlay(g) {
+    var last = played[g.slug];
+    if (LOCAL || (last && Date.now() - last < REPLAY_GAP)) return; // preview.bat runs don't count
+    counter('hit', g.slug).then(function (n) { plays[g.slug] = n; saveCounts(); if (!current) renderGrid(); }, noop);
+  }
+  function likeCount(slug) { return Math.max(0, likes[slug] || 0); }
+  function fmtPlays(n) {
+    if (n < 1000) return String(n);
+    try { return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n); }
+    catch (e) { return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K'; }
+  }
+  function playsLabel(slug) {
+    var n = plays[slug];
+    return typeof n === 'number' ? fmtPlays(n) + (n === 1 ? ' play' : ' plays') : '';
+  }
+  function playsPill(g) {
+    var label = playsLabel(g.slug);
+    return label ? '<span class="plays"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+      '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>' + label + '</span>' : '';
+  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -320,7 +522,10 @@
       return (g.title + ' ' + g.description + ' ' + (g.tags || []).join(' ') + ' ' + (g.author || '') + ' ' + g.folder).toLowerCase().indexOf(q) >= 0;
     });
     if (state.sort === 'az') list.sort(function (a, b) { return a.title.localeCompare(b.title); });
-    else if (state.sort === 'played') list.sort(function (a, b) { return (played[b.slug] || 0) - (played[a.slug] || 0) || b.updated - a.updated; });
+    else if (state.sort === 'popular') list.sort(function (a, b) {
+      return (plays[b.slug] || 0) - (plays[a.slug] || 0) || likeCount(b.slug) - likeCount(a.slug) || byDefault(a, b);
+    });
+    else if (state.sort === 'liked') list = list.filter(function (g) { return isLiked(g.slug); }).sort(byDefault);
     else list.sort(byDefault);
     return list;
   }
@@ -336,7 +541,7 @@
       (g.description ? '<p>' + esc(g.description) + '</p>' : '') +
       '<div class="actions"><button class="btn primary" data-play="' + esc(g.slug) + '">' +
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>Play now</button>' +
-      '<span class="meta">Updated ' + ago(g.updated) + '</span></div></div>';
+      likeBtn(g, 'hero') + '<span class="meta">' + (playsLabel(g.slug) ? playsLabel(g.slug) + ' · ' : '') + 'Updated ' + ago(g.updated) + '</span></div></div>';
     hero.hidden = false;
   }
 
@@ -344,29 +549,33 @@
     var list = sorted();
     $('count').textContent = state.games.length ? '· ' + (state.q ? list.length + ' of ' : '') + state.games.length : '';
     if (!list.length) {
-      $('grid').innerHTML = state.games.length
-        ? '<div class="empty" style="grid-column:1/-1"><h4>No games match “' + esc(state.q) + '”</h4>Try a different search.</div>'
-        : '';
+      $('grid').innerHTML = !state.games.length ? ''
+        : state.q ? '<div class="empty" style="grid-column:1/-1"><h4>No games match “' + esc(state.q) + '”</h4>Try a different search.</div>'
+        : '<div class="empty" style="grid-column:1/-1"><h4>No liked games yet</h4>Tap the heart on a game to save it here.</div>';
+      paintLikes();
       return;
     }
     $('grid').innerHTML = list.map(function (g) {
       var tags = (g.tags || []).slice(0, 3).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
-      var when = played[g.slug] && state.sort === 'played' ? 'Played ' + ago(played[g.slug]) : 'Updated ' + ago(g.updated);
-      return '<button class="card" data-play="' + esc(g.slug) + '" aria-label="Play ' + esc(g.title) + '">' +
-        '<div style="position:relative">' + badge(g) + media(g) +
+      var when = 'Updated ' + ago(g.updated);
+      return '<div class="cell"><button class="card" data-play="' + esc(g.slug) + '" aria-label="Play ' + esc(g.title) + '">' +
+        '<div style="position:relative">' + badge(g) + playsPill(g) + media(g) +
         '<div class="play-hint" aria-hidden="true"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="#1a1205"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg></span></div></div>' +
         '<div class="body"><h4>' + esc(g.title) + '</h4>' + credit(g, false) + (g.description ? '<p>' + esc(g.description) + '</p>' : '') +
-        '<div class="foot">' + tags + '<span class="when">' + when + '</span></div></div></button>';
+        '<div class="foot">' + tags + '<span class="when">' + when + '</span></div></div></button>' + likeBtn(g, 'card') + '</div>';
     }).join('');
+    paintLikes();
   }
 
   function render() { renderHero(); renderGrid(); }
+  function find(slug) { return state.games.filter(function (x) { return x.slug === slug; })[0]; }
 
   // ---- player ----
   var current = null;
   function open(slug) {
-    var g = state.games.filter(function (x) { return x.slug === slug; })[0];
+    var g = find(slug);
     if (!g) { close(); return; }
+    if (current !== g) countPlay(g);
     current = g;
     played[g.slug] = Date.now(); store.set('cca-played', played);
     document.title = g.title + ' · ' + (state.site.title || 'CCStudios Arcade');
@@ -375,10 +584,11 @@
     var ic = g.icon || g.cover;
     $('pIcon').hidden = !ic; if (ic) $('pIcon').src = ic;
     $('pNew').href = g.url;
+    $('pLike').setAttribute('data-like', g.slug);
+    paintLikes();
     $('pLoadText').textContent = 'Loading ' + g.title + '…';
     $('pLoading').classList.remove('done');
-    var f = $('frame');
-    if (f.getAttribute('src') !== g.url) f.src = g.url;
+    if ($('frame').getAttribute('src') !== g.url) setFrame(g.url);
     else $('pLoading').classList.add('done');
     $('player').classList.add('open');
     document.body.classList.add('playing');
@@ -387,20 +597,29 @@
     current = null;
     $('player').classList.remove('open');
     document.body.classList.remove('playing');
-    $('frame').src = 'about:blank'; // unloads the game (stops its audio and loops)
+    setFrame('about:blank'); // unloads the game (stops its audio and loops)
     document.title = state.site ? state.site.title : 'CCStudios Arcade';
-    if (state.games.length) renderGrid();
+    if (state.games.length) { render(); refreshCounts(); }
   }
   function route() {
     var m = location.hash.match(/^#play\/(.+)$/);
     if (m) open(decodeURIComponent(m[1])); else if (current) close();
   }
 
-  $('frame').addEventListener('load', function () {
+  function onFrameLoad() {
     if (!current) return;
     $('pLoading').classList.add('done');
     try { $('frame').contentWindow.focus(); } catch (e) { $('frame').focus(); }
-  });
+  }
+  // Swap in a fresh iframe instead of changing src: changing src adds a browser history entry, so the
+  // Back button would step through old games instead of returning to the list.
+  function setFrame(url) {
+    var old = $('frame'), f = old.cloneNode(false);
+    f.src = url;
+    f.addEventListener('load', onFrameLoad);
+    old.parentNode.replaceChild(f, old);
+  }
+  $('frame').addEventListener('load', onFrameLoad);
   $('pBack').addEventListener('click', function () {
     if (history.state && history.state.cca) history.back(); else location.hash = '';
   });
@@ -415,6 +634,8 @@
     if (req) req.call(f);
   });
   document.addEventListener('click', function (e) {
+    var lk = e.target.closest('[data-like]');
+    if (lk) { toggleLike(lk.getAttribute('data-like')); return; }
     var b = e.target.closest('[data-play]');
     if (!b) return;
     history.pushState({ cca: 1 }, '', '#play/' + encodeURIComponent(b.getAttribute('data-play')));
@@ -427,19 +648,328 @@
       if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); $('pBack').click(); }
       return;
     }
-    if (e.key === '/' && document.activeElement !== $('q')) { e.preventDefault(); $('q').focus(); }
+    if (e.key === 'Escape') toggleMenu(false);
+    if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && !document.querySelector('dialog[open]')) {
+      e.preventDefault(); $('q').focus();
+    }
     if (e.key === 'Escape' && document.activeElement === $('q')) { $('q').value = ''; state.q = ''; renderGrid(); $('q').blur(); }
+  });
+
+  // ---- accounts, likes and messages ----
+  // Accounts use Firebase (free), so they work on every device. The project's keys live in firebase-config.js;
+  // until that file is filled in, the Sign up button, hearts and messages stay hidden and the rest of the
+  // arcade works as before. Usernames become Firebase logins of the form <name>@<authDomain>; no email is ever
+  // sent to them. Firestore holds users/{uid} (that player's liked games) and likes/{game}/by/{uid} (one doc per
+  // like, so a game's total is a count of that collection).
+  var FB_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+  var fb = null; // { A: auth module, F: firestore module, auth, db } once Firebase has loaded
+  var me = null; // { uid, name, favs: [slugs] } while logged in
+  var afterLogin = null, wantLiked = store.get('cca-sort', '') === 'liked';
+  var ICON = {
+    heart: '<svg width="15" height="15" viewBox="0 0 24 24" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.4C1.4 7.6 3.7 4 7.3 4c2 0 3.6 1.1 4.7 2.7C13.1 5.1 14.7 4 16.7 4c3.6 0 5.9 3.6 4.6 7.1-1.8 4.8-9.3 9.4-9.3 9.4z"/></svg>',
+    user: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>',
+    caret: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+    mail: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+    out: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>'
+  };
+
+  function configured() {
+    return typeof firebaseConfig !== 'undefined' && firebaseConfig && !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
+  }
+  var fbReady = !configured() ? Promise.reject(new Error('Firebase is not set up')) : Promise.all([
+    import(FB_SDK + 'firebase-app.js'), import(FB_SDK + 'firebase-auth.js'), import(FB_SDK + 'firebase-firestore-lite.js')
+  ]).then(function (m) {
+    var app = m[0].initializeApp(firebaseConfig);
+    fb = { A: m[1], F: m[2], auth: m[1].getAuth(app), db: m[2].getFirestore(app) };
+    document.documentElement.classList.add('accounts');
+    renderAccount();
+    fb.A.onAuthStateChanged(fb.auth, function (u) {
+      if (!u) { setMe(null); return; }
+      setMe({ uid: u.uid, name: u.displayName || u.email.split('@')[0], favs: [] });
+      fb.F.getDoc(userRef(u.uid)).then(function (snap) {
+        if (!me || me.uid !== u.uid) return;
+        me.favs = (snap.exists() && snap.data().favs) || [];
+        if (wantLiked) { wantLiked = false; setSort('liked'); }
+        refreshLikes();
+      }, function (e) { console.warn('Could not load liked games', e); }).then(function () {
+        // finish whatever they were doing when we asked them to log in (their likes are loaded by now)
+        var then = afterLogin; afterLogin = null;
+        if (then && me && me.uid === u.uid) then();
+      });
+    });
+  });
+  fbReady.catch(function (e) { console.info('Accounts are off:', e.message); });
+
+  function userRef(uid) { return fb.F.doc(fb.db, 'users', uid); }
+  function likeRef(slug, uid) { return fb.F.doc(fb.db, 'likes', slug, 'by', uid); }
+  function loginFor(name) { return name.toLowerCase() + '@' + (firebaseConfig.authDomain || firebaseConfig.projectId + '.firebaseapp.com'); }
+
+  function setMe(u) {
+    me = u;
+    if (!me && state.sort === 'liked') setSort('recent');
+    renderAccount();
+    refreshLikes();
+  }
+  function requireLogin(why, then) {
+    if (me) { then(); return; }
+    if (!fb) return;
+    afterLogin = then;
+    openAuth('signup', why);
+  }
+
+  // ---- account button and menu ----
+  function renderAccount() {
+    var box = $('acct');
+    box.hidden = !fb;
+    $('likedTab').hidden = !me;
+    $('footMsg').hidden = !fb;
+    if (!fb) return;
+    box.innerHTML = !me
+      ? '<button class="btn sm" id="acctBtn" type="button" title="Sign up / Log in">' + ICON.user + '<span class="lbl">Sign up / Log in</span></button>'
+      : '<button class="btn sm chip" id="acctBtn" type="button" aria-haspopup="menu" aria-expanded="false" title="Account">' +
+        '<span class="av" style="background:hsl(' + hue(me.name) + ' 55% 40%)">' + esc(me.name.charAt(0).toUpperCase()) + '</span>' +
+        '<span class="lbl">' + esc(me.name) + '</span>' + ICON.caret + '</button>' +
+        '<div class="menu" id="acctMenu" role="menu" hidden><div class="who">Logged in as <b>' + esc(me.name) + '</b></div>' +
+        '<button type="button" role="menuitem" data-act="liked">' + ICON.heart + 'Liked games</button>' +
+        '<button type="button" role="menuitem" data-act="message">' + ICON.mail + 'Message the creators</button>' +
+        '<button type="button" role="menuitem" data-act="logout">' + ICON.out + 'Log out</button></div>';
+  }
+  function toggleMenu(show) {
+    var m = $('acctMenu');
+    if (!m) return;
+    if (show == null) show = m.hidden;
+    m.hidden = !show;
+    $('acctBtn').setAttribute('aria-expanded', String(show));
+    if (show) m.querySelector('[data-act]').focus();
+  }
+  $('acct').addEventListener('click', function (e) {
+    if (e.target.closest('#acctBtn')) { if (me) toggleMenu(); else { afterLogin = null; openAuth('signup'); } return; }
+    var act = e.target.closest('[data-act]');
+    if (!act) return;
+    toggleMenu(false);
+    var a = act.getAttribute('data-act');
+    if (a === 'liked') { setSort('liked'); $('grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    else if (a === 'message') openMessage();
+    else if (a === 'logout') fb.A.signOut(fb.auth);
+  });
+  document.addEventListener('click', function (e) { if (!e.target.closest('#acct')) toggleMenu(false); });
+  $('footMsg').addEventListener('click', function () { openMessage(current && current.slug); });
+
+  function showDlg(d) { if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute('open', ''); } }
+  function closeDlg(d) { if (d.close) d.close(); else d.removeAttribute('open'); }
+  [].forEach.call(document.querySelectorAll('dialog'), function (d) {
+    d.addEventListener('click', function (e) {
+      if (e.target.closest('[data-close]')) { closeDlg(d); return; }
+      if (e.target !== d) return;
+      var r = d.getBoundingClientRect(); // a click on the dialog itself is either its padding or the backdrop
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeDlg(d);
+    });
+  });
+
+  // ---- sign up / log in ----
+  var authMode = 'signup';
+  function setAuthMode(m) {
+    authMode = m;
+    [].forEach.call(document.querySelectorAll('#authDlg [data-mode]'), function (b) {
+      b.setAttribute('aria-selected', String(b.getAttribute('data-mode') === m));
+    });
+    $('authGo').textContent = m === 'signup' ? 'Create account' : 'Log in';
+    $('aPass').setAttribute('autocomplete', m === 'signup' ? 'new-password' : 'current-password');
+    $('authHint').hidden = m !== 'signup';
+    $('authErr').textContent = '';
+  }
+  function openAuth(mode, why) {
+    $('authForm').reset();
+    setAuthMode(mode);
+    $('authWhy').textContent = why || 'Make an account to like games and send messages to the creators.';
+    showDlg($('authDlg'));
+    $('aUser').focus();
+  }
+  [].forEach.call(document.querySelectorAll('#authDlg [data-mode]'), function (b) {
+    b.addEventListener('click', function () { setAuthMode(b.getAttribute('data-mode')); $('aUser').focus(); });
+  });
+  var AUTH_ERRORS = {
+    'auth/email-already-in-use': 'That username is taken. Pick another, or log in if it\'s yours.',
+    'auth/weak-password': 'Use at least 6 characters for your password.',
+    'auth/invalid-credential': 'Wrong username or password.',
+    'auth/invalid-login-credentials': 'Wrong username or password.',
+    'auth/wrong-password': 'Wrong username or password.',
+    'auth/user-not-found': 'Wrong username or password.',
+    'auth/invalid-email': 'Usernames are 3 to 20 letters, numbers or underscores.',
+    'auth/too-many-requests': 'Too many tries. Wait a minute, then try again.',
+    'auth/network-request-failed': 'Couldn\'t reach the server. Check your connection and try again.',
+    'auth/operation-not-allowed': 'Sign ups aren\'t switched on yet. Check back soon!'
+  };
+  $('authForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('aUser').value.trim(), pass = $('aPass').value, err = $('authErr'), go = $('authGo');
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(name)) { err.textContent = 'Usernames are 3 to 20 letters, numbers or underscores.'; $('aUser').focus(); return; }
+    if (pass.length < 6) { err.textContent = 'Passwords are at least 6 characters.'; $('aPass').focus(); return; }
+    err.textContent = '';
+    go.disabled = true;
+    var signup = authMode === 'signup';
+    var job = signup
+      ? fb.A.createUserWithEmailAndPassword(fb.auth, loginFor(name), pass).then(function (cred) {
+          // keep the capitals they typed; the login itself is lowercase
+          if (me && me.uid === cred.user.uid) { me.name = name; renderAccount(); }
+          return Promise.all([
+            fb.A.updateProfile(cred.user, { displayName: name }),
+            fb.F.setDoc(userRef(cred.user.uid), { name: name, favs: [], created: fb.F.serverTimestamp() }, { merge: true })
+          ]);
+        })
+      : fb.A.signInWithEmailAndPassword(fb.auth, loginFor(name), pass);
+    job.then(function () { closeDlg($('authDlg')); }, function (x) {
+      err.textContent = AUTH_ERRORS[x && x.code] || 'Something went wrong (' + ((x && x.code) || 'unknown') + '). Try again.';
+      if (!signup) $('aPass').select();
+    }).then(function () { go.disabled = false; });
+  });
+
+  // ---- likes ----
+  function isLiked(slug) { return !!me && me.favs.indexOf(slug) >= 0; }
+  function loadLikes() {
+    return fbReady.then(function () {
+      var count = fb.F.getCount || fb.F.getCountFromServer;
+      return Promise.all(state.games.map(function (g) {
+        return count(fb.F.collection(fb.db, 'likes', g.slug, 'by'))
+          .then(function (snap) { likes[g.slug] = snap.data().count; }, noop);
+      }));
+    }, noop);
+  }
+  function likeBtn(g, kind) {
+    var cls = kind === 'hero' ? 'btn like-btn' : 'like';
+    return '<button type="button" class="' + cls + '" data-like="' + esc(g.slug) + '" data-kind="' + kind + '"></button>';
+  }
+  function likeInner(slug, kind) {
+    var n = likeCount(slug), on = isLiked(slug), num = n ? '<span class="n">' + fmtPlays(n) + '</span>' : '';
+    if (kind === 'hero') return ICON.heart + (on ? 'Liked' : 'Like') + num;
+    if (kind === 'bar') return ICON.heart + '<span class="lbl">' + (on ? 'Liked' : 'Like') + '</span>' + num;
+    return ICON.heart + num;
+  }
+  function paintLikes() {
+    [].forEach.call(document.querySelectorAll('[data-like]'), function (b) {
+      var slug = b.getAttribute('data-like'), on = isLiked(slug), g = find(slug), n = likeCount(slug);
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', (on ? 'Unlike ' : 'Like ') + (g ? g.title : 'this game') + ', ' + n + (n === 1 ? ' like' : ' likes'));
+      b.title = !me ? 'Log in to like games' : on ? 'Unlike' : 'Like';
+      b.innerHTML = likeInner(slug, b.getAttribute('data-kind'));
+    });
+  }
+  function refreshLikes() {
+    if (state.sort === 'liked' && state.games.length && !current) renderGrid();
+    paintLikes();
+  }
+  function toggleLike(slug) {
+    if (!fb) return;
+    if (!me) {
+      requireLogin('Log in to like games. Your liked games are saved to your account.', function () {
+        if (!isLiked(slug)) setLike(slug, true); // a like they made before logging in elsewhere stays on
+      });
+      return;
+    }
+    setLike(slug, !isLiked(slug));
+  }
+  function setLike(slug, on) {
+    var who = me, i = who.favs.indexOf(slug);
+    if (on === (i >= 0)) return;
+    // show it right away, undo if the save fails
+    if (on) who.favs.push(slug); else who.favs.splice(i, 1);
+    likes[slug] = likeCount(slug) + (on ? 1 : -1);
+    refreshLikes();
+    var b = fb.F.writeBatch(fb.db);
+    b.set(userRef(who.uid), { favs: on ? fb.F.arrayUnion(slug) : fb.F.arrayRemove(slug) }, { merge: true });
+    if (on) b.set(likeRef(slug, who.uid), { at: fb.F.serverTimestamp() });
+    else b.delete(likeRef(slug, who.uid));
+    b.commit().then(saveCounts, function (e) {
+      console.warn('Could not save like', e);
+      var j = who.favs.indexOf(slug);
+      if (on && j >= 0) who.favs.splice(j, 1); else if (!on && j < 0) who.favs.push(slug);
+      likes[slug] = likeCount(slug) + (on ? -1 : 1);
+      refreshLikes();
+      toast('Couldn\'t save that. Try again in a moment.');
+    });
+  }
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 4000);
+  }
+
+  // ---- messages to the creators ----
+  // Sent through FormSubmit (https://formsubmit.co), which emails whatever is posted to it and needs no account.
+  // The very first message makes FormSubmit email this inbox an "Activate Form" link; click it once and every
+  // message after that is delivered. FormSubmit then offers a random-string alias you can use here instead of the
+  // address, which keeps the address out of the page source.
+  var FEEDBACK_TO = 'cousincrewstudios@protonmail.com';
+  function openMessage(slug) {
+    requireLogin('Log in to send a message to the creators.', function () {
+      var pick = $('mGame').value;
+      $('mGame').innerHTML = '<option value="">The whole arcade</option>' + state.games.map(function (g) {
+        return '<option value="' + esc(g.slug) + '">' + esc(g.title) + '</option>';
+      }).join('');
+      $('mGame').value = slug || pick || '';
+      $('msgForm').hidden = false;
+      $('msgDone').hidden = true;
+      $('msgErr').textContent = '';
+      showDlg($('msgDlg'));
+      $('mBody').focus();
+    });
+  }
+  function mailto(d) {
+    return 'mailto:' + FEEDBACK_TO + '?subject=' + encodeURIComponent(d._subject) +
+      '&body=' + encodeURIComponent(d.Message + '\n\n- ' + d.Username);
+  }
+  $('msgAgain').addEventListener('click', function () { $('msgDone').hidden = true; $('msgForm').hidden = false; $('mBody').focus(); });
+  $('msgForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = $('msgErr'), go = $('msgGo'), body = $('mBody').value.trim(), email = $('mEmail').value.trim();
+    if (!me) return;
+    if (body.length < 2) { err.textContent = 'Write a message first.'; $('mBody').focus(); return; }
+    if (email && !$('mEmail').checkValidity()) { err.textContent = 'That email address doesn\'t look right.'; $('mEmail').focus(); return; }
+    var wait = 30000 - (Date.now() - store.get('cca-msg-at', 0));
+    if (wait > 0) { err.textContent = 'You just sent one. Try again in ' + Math.ceil(wait / 1000) + ' seconds.'; return; }
+    var type = $('mType').value, g = find($('mGame').value);
+    var data = {
+      _subject: '[CCStudios Arcade] ' + type + ' from ' + me.name + (g ? ' about ' + g.title : ''),
+      _template: 'table',
+      Username: me.name, Type: type, About: g ? g.title : 'The whole arcade', Message: body
+    };
+    if (email) { data.email = email; data._replyto = email; }
+    function sent() {
+      store.set('cca-msg-at', Date.now());
+      $('mBody').value = '';
+      $('msgForm').hidden = true;
+      $('msgDone').hidden = false;
+    }
+    if ($('mHoney').value) { sent(); return; } // only bots fill the hidden field
+    err.textContent = '';
+    go.disabled = true; go.textContent = 'Sending…';
+    fetch('https://formsubmit.co/ajax/' + FEEDBACK_TO, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (String(d.success) !== 'true') throw new Error(d.message || 'not sent'); sent(); })
+      .catch(function (x) {
+        var off = /activat/i.test(x && x.message);
+        err.innerHTML = (off ? 'Messages aren\'t switched on yet.' : 'Your message couldn\'t be sent.') +
+          ' You can <a href="' + esc(mailto(data)) + '">send it from your email app</a> instead.';
+      })
+      .then(function () { go.disabled = false; go.textContent = 'Send message'; });
   });
 
   // ---- controls ----
   $('q').addEventListener('input', function () { state.q = this.value; renderGrid(); });
+  function setSort(s) {
+    state.sort = s; store.set('cca-sort', s);
+    [].forEach.call(document.querySelectorAll('.seg button'), function (x) { x.setAttribute('aria-pressed', String(x.dataset.sort === s)); });
+    if (state.games.length) renderGrid();
+  }
+  if (state.sort === 'liked') state.sort = 'recent'; // nobody is logged in yet
   [].forEach.call(document.querySelectorAll('.seg button'), function (b) {
     b.setAttribute('aria-pressed', String(b.dataset.sort === state.sort));
-    b.addEventListener('click', function () {
-      state.sort = b.dataset.sort; store.set('cca-sort', state.sort);
-      [].forEach.call(document.querySelectorAll('.seg button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
-      renderGrid();
-    });
+    b.addEventListener('click', function () { setSort(b.dataset.sort); });
   });
   $('year').textContent = new Date().getFullYear();
 
@@ -463,6 +993,7 @@
       }
       render();
       route();
+      refreshCounts();
     })
     .catch(function () {
       var local = location.protocol === 'file:';

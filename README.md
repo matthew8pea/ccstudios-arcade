@@ -40,6 +40,46 @@ The title comes from the game's `<title>` tag. To change it, or to add a descrip
 - **order**: pins games to the front. The lowest number goes first and becomes the featured game.
 - **hidden**: set to `true` to keep a game off the site without deleting the folder.
 
+## Play counts
+
+Every game card shows how many times it's been played, and **Popular** sorts by it. The totals are shared by everyone who visits, and they're stored by [Abacus](https://abacus.jasoncameron.dev), a free counter service that needs no account or setup.
+
+- A play counts when someone opens a game from the arcade. Opening the same game again within 30 minutes doesn't count twice.
+- Plays on your PC through preview.bat don't count, so testing won't inflate the numbers.
+- Totals refresh when someone loads the page, comes back from a game, or returns to the tab.
+- Anyone determined could inflate a counter, so treat the numbers as a fun stat, not exact analytics.
+- A counter is tied to the game's slug (its folder name, lowercased with dashes). Renaming a game's folder starts its count from zero.
+
+## Accounts, likes and messages
+
+The **Sign up / Log in** button in the top bar lets players make an account with a username and password. Accounts work on any device and stay logged in. A logged-in player can:
+
+- **Like games** with the heart on each game. Every game shows its like count, and **Liked** lists the games you've liked.
+- **Message the creators** from the account menu or the footer link. Messages are emailed to cousincrewstudios@protonmail.com.
+
+Accounts run on Firebase (Google's free app backend). Until `firebase-config.js` is filled in, the account button, hearts and messages stay hidden and everything else works as normal.
+
+### One-time Firebase setup
+
+1. Go to https://console.firebase.google.com, click **Create a project**, name it (for example `ccstudios-arcade`), and turn Google Analytics off.
+2. Open **Build > Authentication**, click **Get started**, choose **Email/Password**, switch on the first toggle, and save.
+3. On the same page, open **Settings > Authorized domains** and add `matthew8pea.github.io`.
+4. Open **Build > Firestore Database**, click **Create database**, pick a location near you, and choose **production mode**.
+5. Open the **Rules** tab, replace everything with the contents of `tools/firestore.rules`, and click **Publish**.
+6. Click the gear icon > **Project settings**. Under **Your apps**, click the web icon (`</>`), name it `arcade`, and click **Register app** (leave Firebase Hosting off).
+7. Copy the values Firebase shows (`apiKey`, `authDomain`, `projectId` and the rest) into the matching quotes in `firebase-config.js`.
+8. Double-click **publish.bat**.
+
+### Switch on messages
+
+Messages are sent through FormSubmit (https://formsubmit.co), which needs no account. After publishing, log in on the site and send yourself a test message. FormSubmit emails cousincrewstudios@protonmail.com an **Activate Form** link. Click it, and every message after that is delivered. Check the spam folder if it doesn't show up.
+
+### Good to know
+
+- Usernames are 3 to 20 letters, numbers or underscores. Firebase only sees them as logins like `name@your-project.firebaseapp.com`; no email is ever sent there.
+- There's no "forgot password". To reset someone, delete their account in Firebase under **Authentication > Users** so they can sign up again.
+- Each account can like a game once, so like counts are real. Play counts stay on Abacus and work without an account.
+
 ## What never gets uploaded
 
 publish.bat copies `CCStudios Arcade` into a separate repo folder (`%USERPROFILE%\CCStudios-Arcade-site`) and leaves these out:
