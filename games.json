@@ -1,5 +1,5 @@
 {
-  "generated": 1792010766186,
+  "generated": 1792022197378,
   "site": {
     "title": "CCStudios Arcade",
     "tagline": ""
@@ -26,85 +26,8 @@
       ],
       "order": null,
       "added": 1792010766186,
-      "updated": 1792010008000,
+      "updated": 1791832166593,
       "released": 1792010766186
-    },
-    {
-      "slug": "galactic-city-defense",
-      "title": "Galactic City Defense",
-      "description": "Third-person shooter across Coruscant rooftops, the Jedi Temple and Tatooine. Play as Commander Cody or Commander Fox. VR ready.",
-      "folder": "Galactic City Defense",
-      "url": "games/Galactic%20City%20Defense/index.html",
-      "cover": "covers/galactic-city-defense.jpg",
-      "icon": null,
-      "author": null,
-      "authorUrl": null,
-      "tags": [
-        "3D",
-        "Shooter",
-        "VR"
-      ],
-      "order": null,
-      "added": 0,
-      "updated": 1792010000000,
-      "released": 1792010000000
-    },
-    {
-      "slug": "galactic-legends",
-      "title": "Galactic Legends",
-      "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
-      "folder": "galactic legends",
-      "url": "games/galactic%20legends/index.html",
-      "cover": null,
-      "icon": "games/galactic%20legends/favicon.png",
-      "author": null,
-      "authorUrl": null,
-      "tags": [
-        "Fighting",
-        "Arena"
-      ],
-      "order": null,
-      "added": 0,
-      "updated": 1792010000000,
-      "released": 1792010000000
-    },
-    {
-      "slug": "galactic-playground",
-      "title": "Galactic Playground",
-      "description": "2D physics sandbox full of Jedi, Sith, troopers, droids and starships. Build it, break it, blow it up.",
-      "folder": "Galactic-Playground",
-      "url": "games/Galactic-Playground/index.html",
-      "cover": "covers/galactic-playground.jpg",
-      "icon": null,
-      "author": null,
-      "authorUrl": null,
-      "tags": [
-        "Sandbox",
-        "Physics"
-      ],
-      "order": null,
-      "added": 0,
-      "updated": 1792010000000,
-      "released": 1792010000000
-    },
-    {
-      "slug": "galactic-tower-defense",
-      "title": "Galactic Tower Defense",
-      "description": "Hold the line across three sectors. Build and upgrade 10 units, fire off Legendary Protocols, and survive the Hollow Sovereign.",
-      "folder": "galactic-tower-defense",
-      "url": "games/galactic-tower-defense/index.html",
-      "cover": "covers/galactic-tower-defense.jpg",
-      "icon": null,
-      "author": null,
-      "authorUrl": null,
-      "tags": [
-        "Strategy",
-        "Tower Defense"
-      ],
-      "order": null,
-      "added": 1791739000466,
-      "updated": 1792010000000,
-      "released": 1791739000466
     },
     {
       "slug": "meteor-60-seconds",
@@ -123,8 +46,85 @@
       ],
       "order": null,
       "added": 1791828616510,
-      "updated": 1792010000000,
+      "updated": 1791828500841,
       "released": 1791828616510
+    },
+    {
+      "slug": "galactic-legends",
+      "title": "Galactic Legends",
+      "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
+      "folder": "galactic legends",
+      "url": "games/galactic%20legends/index.html",
+      "cover": null,
+      "icon": "games/galactic%20legends/favicon.png",
+      "author": null,
+      "authorUrl": null,
+      "tags": [
+        "Fighting",
+        "Arena"
+      ],
+      "order": null,
+      "added": 0,
+      "updated": 1791828142552,
+      "released": 1787530184029
+    },
+    {
+      "slug": "galactic-tower-defense",
+      "title": "Galactic Tower Defense",
+      "description": "Hold the line across three sectors. Build and upgrade 10 units, fire off Legendary Protocols, and survive the Hollow Sovereign.",
+      "folder": "galactic-tower-defense",
+      "url": "games/galactic-tower-defense/index.html",
+      "cover": "covers/galactic-tower-defense.jpg",
+      "icon": null,
+      "author": null,
+      "authorUrl": null,
+      "tags": [
+        "Strategy",
+        "Tower Defense"
+      ],
+      "order": null,
+      "added": 1791739000466,
+      "updated": 1791727520881,
+      "released": 1791739000466
+    },
+    {
+      "slug": "galactic-city-defense",
+      "title": "Galactic City Defense",
+      "description": "Third-person shooter across Coruscant rooftops, the Jedi Temple and Tatooine. Play as Commander Cody or Commander Fox. VR ready.",
+      "folder": "Galactic City Defense",
+      "url": "games/Galactic%20City%20Defense/index.html",
+      "cover": "covers/galactic-city-defense.jpg",
+      "icon": null,
+      "author": null,
+      "authorUrl": null,
+      "tags": [
+        "3D",
+        "Shooter",
+        "VR"
+      ],
+      "order": null,
+      "added": 0,
+      "updated": 1791649155199,
+      "released": 1790889925032
+    },
+    {
+      "slug": "galactic-playground",
+      "title": "Galactic Playground",
+      "description": "2D physics sandbox full of Jedi, Sith, troopers, droids and starships. Build it, break it, blow it up.",
+      "folder": "Galactic-Playground",
+      "url": "games/Galactic-Playground/index.html",
+      "cover": "covers/galactic-playground.jpg",
+      "icon": null,
+      "author": null,
+      "authorUrl": null,
+      "tags": [
+        "Sandbox",
+        "Physics"
+      ],
+      "order": null,
+      "added": 0,
+      "updated": 1790533427422,
+      "released": 1790511767148
     }
   ]
 }
