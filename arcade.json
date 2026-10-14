@@ -49,6 +49,22 @@
     },
     "Atlas (dont load)": {
       "hidden": true
+    },
+    "atlas": {
+      "title": "Atlas",
+      "description": "Explore, build, craft, edit procedural worlds, and break the seal on the Magnetic Fields in this voxel action-adventure.",
+      "cover": "covers/atlas.jpg",
+      "tags": [
+        "3D",
+        "Sandbox",
+        "Adventure"
+      ],
+      "unreleased": {
+        "source": "Atlas (dont load)",
+        "access": [
+          "cousincrewstudios"
+        ]
+      }
     }
   }
 }

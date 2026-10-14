@@ -147,6 +147,7 @@
   .badge { position: absolute; top: 10px; left: 10px; z-index: 2; font: 800 10.5px/1 var(--display); letter-spacing: .16em;
     padding: 6px 8px; border-radius: 6px; background: var(--amber); color: #1a1205; }
   .badge.upd { background: var(--cyan); color: #04202b; }
+  .badge.unrel { background: #a78bfa; color: #160b33; }
   .plays { position: absolute; right: 10px; bottom: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 5px;
     font: 700 11.5px/1 var(--body); padding: 5px 8px; border-radius: 6px; background: rgba(7, 8, 13, .72); color: var(--text);
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
@@ -371,7 +372,7 @@
 (function () {
   'use strict';
   var DAY = 864e5;
-  var state = { games: [], sort: 'recent', q: '' };
+  var state = { all: [], games: [], sort: 'recent', q: '' };
   var $ = function (id) { return document.getElementById(id); };
 
   // per-viewer conveniences only; the site works fine without storage
@@ -423,7 +424,7 @@
   }
   function saveCounts() { store.set('cca-plays', plays); store.set('cca-likes', likes); }
   function loadCounts() {
-    return Promise.all(state.games.map(function (g) {
+    return Promise.all(state.games.filter(function (g) { return !g.unreleased; }).map(function (g) {
       // offline or rate limited: keep the last known total
       return counter('get', g.slug).then(function (n) { plays[g.slug] = n; }, noop);
     }).concat(loadLikes())).then(saveCounts);
@@ -437,6 +438,7 @@
   // pick up other visitors' plays and likes when someone comes back to the tab
   document.addEventListener('visibilitychange', function () { if (!document.hidden && !current) refreshCounts(); });
   function countPlay(g) {
+    if (g.unreleased) return; // no public counter for games that aren't out yet
     var last = played[g.slug];
     if (LOCAL || (last && Date.now() - last < REPLAY_GAP)) return; // preview.bat runs don't count
     counter('hit', g.slug).then(function (n) { plays[g.slug] = n; saveCounts(); if (!current) renderGrid(); }, noop);
@@ -482,6 +484,7 @@
     return 0;
   }
   function badge(g) {
+    if (g.unreleased) return '<span class="badge unrel">UNRELEASED</span>';
     var st = status(g);
     return st === 2 ? '<span class="badge">NEW</span>' : st === 1 ? '<span class="badge upd">UPDATED</span>' : '';
   }
@@ -533,7 +536,7 @@
   function renderHero() {
     var hero = $('hero');
     // featured = first game in the default order
-    var g = state.games.slice().sort(byDefault)[0];
+    var g = state.games.filter(function (x) { return !x.unreleased; }).sort(byDefault)[0];
     if (!g) { hero.hidden = true; return; }
     var fresh = ['Featured', 'Latest update', 'New release'][status(g)];
     hero.innerHTML = media(g) +
@@ -568,6 +571,16 @@
   }
 
   function render() { renderHero(); renderGrid(); }
+
+  // Unreleased games only show for the early-access accounts in their arcade.json "access" list. Hiding the card
+  // is just tidiness: the game itself is encrypted by tools/lock-unreleased.mjs and only unlocks for accounts that
+  // tools/firestore.rules lets read its key.
+  function canSee(g) { return !g.unreleased || (!!me && (g.access || []).indexOf(me.login) >= 0); }
+  function applyAccess() {
+    var before = state.games.length;
+    state.games = state.all.filter(canSee);
+    return state.games.length !== before;
+  }
   function find(slug) { return state.games.filter(function (x) { return x.slug === slug; })[0]; }
 
   // ---- player ----
@@ -685,7 +698,7 @@
     renderAccount();
     fb.A.onAuthStateChanged(fb.auth, function (u) {
       if (!u) { setMe(null); return; }
-      setMe({ uid: u.uid, name: u.displayName || u.email.split('@')[0], favs: [] });
+      setMe({ uid: u.uid, name: u.displayName || u.email.split('@')[0], login: u.email.split('@')[0].toLowerCase(), favs: [] });
       fb.F.getDoc(userRef(u.uid)).then(function (snap) {
         if (!me || me.uid !== u.uid) return;
         me.favs = (snap.exists() && snap.data().favs) || [];
@@ -707,6 +720,7 @@
   function setMe(u) {
     me = u;
     if (!me && state.sort === 'liked') setSort('recent');
+    if (applyAccess()) { render(); route(); } // early-access games appear or disappear
     renderAccount();
     refreshLikes();
   }
@@ -750,7 +764,10 @@
     var a = act.getAttribute('data-act');
     if (a === 'liked') { setSort('liked'); $('grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     else if (a === 'message') openMessage();
-    else if (a === 'logout') fb.A.signOut(fb.auth);
+    else if (a === 'logout') {
+      try { indexedDB.deleteDatabase('cca-unreleased'); } catch (e) { /* forget unlocked early-access games */ }
+      fb.A.signOut(fb.auth);
+    }
   });
   document.addEventListener('click', function (e) { if (!e.target.closest('#acct')) toggleMenu(false); });
   $('footMsg').addEventListener('click', function () { openMessage(current && current.slug); });
@@ -979,7 +996,8 @@
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function (data) {
       state.site = data.site || {};
-      state.games = data.games || [];
+      state.all = data.games || [];
+      applyAccess();
       if (state.site.title) {
         var parts = state.site.title.split(' ');
         var last = parts.pop();

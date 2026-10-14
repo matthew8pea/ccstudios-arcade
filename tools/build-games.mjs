@@ -176,6 +176,8 @@ function build() {
       author: typeof o.author === 'string' && o.author.trim() ? o.author.trim() : null,
       authorUrl: typeof o.authorUrl === 'string' && /^https?:\/\//i.test(o.authorUrl) ? o.authorUrl : null,
       tags: Array.isArray(o.tags) ? o.tags : [],
+      // Unreleased games (see tools/lock-unreleased.mjs) only show for the accounts named in "access".
+      ...(o.unreleased ? { unreleased: true, access: (o.unreleased.access || []).map((n) => String(n).toLowerCase()) } : {}),
       order: typeof o.order === 'number' ? o.order : null,
       added, updated,
       // Release date for ordering: arcade.json "released" ("2026-09-27"), else when it first showed up here,

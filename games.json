@@ -1,67 +1,33 @@
 {
-  "generated": 1791930764751,
+  "generated": 1792010766186,
   "site": {
     "title": "CCStudios Arcade",
     "tagline": ""
   },
   "games": [
     {
-      "slug": "meteor-60-seconds",
-      "title": "Meteor 60 Seconds",
-      "description": "You have 60 seconds before a meteor destroys the town. What will you do with your final minute?",
-      "folder": "meteor-60-seconds",
-      "url": "games/meteor-60-seconds/index.html",
-      "cover": "covers/meteor-60-seconds.jpg",
-      "icon": null,
-      "author": "@sleep",
-      "authorUrl": "https://app.myagora.live/u/sleep",
-      "tags": [
-        "Fan Tribute",
-        "Story",
-        "Quick Play"
-      ],
-      "order": null,
-      "added": 1791828616510,
-      "updated": 1791828500841,
-      "released": 1791828616510
-    },
-    {
-      "slug": "galactic-legends",
-      "title": "Galactic Legends",
-      "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
-      "folder": "galactic legends",
-      "url": "games/galactic%20legends/index.html",
-      "cover": null,
-      "icon": "games/galactic%20legends/favicon.png",
-      "author": null,
-      "authorUrl": null,
-      "tags": [
-        "Fighting",
-        "Arena"
-      ],
-      "order": null,
-      "added": 0,
-      "updated": 1791828142552,
-      "released": 1787530184029
-    },
-    {
-      "slug": "galactic-tower-defense",
-      "title": "Galactic Tower Defense",
-      "description": "Hold the line across three sectors. Build and upgrade 10 units, fire off Legendary Protocols, and survive the Hollow Sovereign.",
-      "folder": "galactic-tower-defense",
-      "url": "games/galactic-tower-defense/index.html",
-      "cover": "covers/galactic-tower-defense.jpg",
+      "slug": "atlas",
+      "title": "Atlas",
+      "description": "Explore, build, craft, edit procedural worlds, and break the seal on the Magnetic Fields in this voxel action-adventure.",
+      "folder": "atlas",
+      "url": "games/atlas/index.html",
+      "cover": "covers/atlas.jpg",
       "icon": null,
       "author": null,
       "authorUrl": null,
       "tags": [
-        "Strategy",
-        "Tower Defense"
+        "3D",
+        "Sandbox",
+        "Adventure"
+      ],
+      "unreleased": true,
+      "access": [
+        "cousincrewstudios"
       ],
       "order": null,
-      "added": 1791739000466,
-      "updated": 1791727520881,
-      "released": 1791739000466
+      "added": 1792010766186,
+      "updated": 1792010008000,
+      "released": 1792010766186
     },
     {
       "slug": "galactic-city-defense",
@@ -80,8 +46,27 @@
       ],
       "order": null,
       "added": 0,
-      "updated": 1791649155199,
-      "released": 1790889925032
+      "updated": 1792010000000,
+      "released": 1792010000000
+    },
+    {
+      "slug": "galactic-legends",
+      "title": "Galactic Legends",
+      "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
+      "folder": "galactic legends",
+      "url": "games/galactic%20legends/index.html",
+      "cover": null,
+      "icon": "games/galactic%20legends/favicon.png",
+      "author": null,
+      "authorUrl": null,
+      "tags": [
+        "Fighting",
+        "Arena"
+      ],
+      "order": null,
+      "added": 0,
+      "updated": 1792010000000,
+      "released": 1792010000000
     },
     {
       "slug": "galactic-playground",
@@ -99,8 +84,47 @@
       ],
       "order": null,
       "added": 0,
-      "updated": 1790533427422,
-      "released": 1790511767148
+      "updated": 1792010000000,
+      "released": 1792010000000
+    },
+    {
+      "slug": "galactic-tower-defense",
+      "title": "Galactic Tower Defense",
+      "description": "Hold the line across three sectors. Build and upgrade 10 units, fire off Legendary Protocols, and survive the Hollow Sovereign.",
+      "folder": "galactic-tower-defense",
+      "url": "games/galactic-tower-defense/index.html",
+      "cover": "covers/galactic-tower-defense.jpg",
+      "icon": null,
+      "author": null,
+      "authorUrl": null,
+      "tags": [
+        "Strategy",
+        "Tower Defense"
+      ],
+      "order": null,
+      "added": 1791739000466,
+      "updated": 1792010000000,
+      "released": 1791739000466
+    },
+    {
+      "slug": "meteor-60-seconds",
+      "title": "Meteor 60 Seconds",
+      "description": "You have 60 seconds before a meteor destroys the town. What will you do with your final minute?",
+      "folder": "meteor-60-seconds",
+      "url": "games/meteor-60-seconds/index.html",
+      "cover": "covers/meteor-60-seconds.jpg",
+      "icon": null,
+      "author": "@sleep",
+      "authorUrl": "https://app.myagora.live/u/sleep",
+      "tags": [
+        "Fan Tribute",
+        "Story",
+        "Quick Play"
+      ],
+      "order": null,
+      "added": 1791828616510,
+      "updated": 1792010000000,
+      "released": 1791828616510
     }
   ]
 }

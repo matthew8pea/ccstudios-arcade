@@ -17,5 +17,14 @@ service cloud.firestore {
                     && request.resource.data.keys().hasOnly(['at']);
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Unreleased games: unreleased/{game} holds the key that unlocks that game (see tools/lock-unreleased.mjs).
+    // Only these early-access accounts can read it. Add a player as '<username>@ccstudios-arcade.firebaseapp.com'
+    // (lowercase). Nobody can write it from the site; you add it by hand in Firestore > Data.
+    match /unreleased/{game} {
+      allow read: if request.auth != null && request.auth.token.email in [
+        'cousincrewstudios@ccstudios-arcade.firebaseapp.com'
+      ];
+    }
   }
 }

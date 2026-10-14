@@ -80,6 +80,47 @@ Messages are sent through FormSubmit (https://formsubmit.co), which needs no acc
 - There's no "forgot password". To reset someone, delete their account in Firebase under **Authentication > Users** so they can sign up again.
 - Each account can like a game once, so like counts are real. Play counts stay on Abacus and work without an account.
 
+## Unreleased games (early access)
+
+A game can be on the site before it's out, playable only by early-access accounts. Atlas works this way right now,
+for the account **cousincrewstudios**. Everyone else doesn't see its card, and opening its link just shows a
+"not out yet" screen.
+
+How it works: the real game stays in `games/Atlas (dont load)/` (kept off the site by `publish-exclude.txt`).
+publish.bat runs `tools/lock-unreleased.mjs`, which writes a locked copy to `games/atlas/`: the game's code is
+encrypted, so even someone browsing the public GitHub repo can't run it. When an early-access player opens it,
+the page fetches the key from Firestore (only their account is allowed to read it) and unlocks the game in their
+browser. The textures, music and cover picture are not encrypted, only the code.
+
+It's set in `arcade.json`:
+
+```json
+"atlas": {
+  "title": "Atlas",
+  "unreleased": { "source": "Atlas (dont load)", "access": ["cousincrewstudios"] }
+}
+```
+
+### One-time setup for each unreleased game
+
+1. Firebase console > **Firestore Database > Rules**: paste in `tools/firestore.rules` again and click **Publish**.
+   The early-access account list is near the bottom of that file.
+2. **Firestore Database > Data**: click **Start collection** (or **Add document** in `unreleased` if it exists),
+   collection ID `unreleased`, document ID `atlas`, add a field `key` (type string) and paste the text from
+   `tools/keys/atlas.key`. Save.
+3. Make sure the account exists: sign up as **cousincrewstudios** on the site if you haven't. (Until it exists,
+   anyone could sign up with that name and get in.)
+
+Keep `tools/keys/atlas.key` safe and never share it: it's the only thing that unlocks the game. publish.bat
+never uploads `.key` files. If you lose it, delete it, run publish.bat (a new key is made) and paste the new one
+into Firestore.
+
+**To give someone else early access**, add their username to `"access"` in arcade.json and their
+`<username>@ccstudios-arcade.firebaseapp.com` to the list in `tools/firestore.rules` (then publish the rules).
+
+**To release the game**, rename `games/Atlas (dont load)` to `games/atlas` (delete the locked one first), remove
+the `"unreleased"` part and the `"Atlas (dont load)"` entry from arcade.json, and run publish.bat.
+
 ## What never gets uploaded
 
 publish.bat copies `CCStudios Arcade` into a separate repo folder (`%USERPROFILE%\CCStudios-Arcade-site`) and leaves these out:

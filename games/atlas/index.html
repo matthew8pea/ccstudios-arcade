@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!-- Made by tools/lock-unreleased.mjs - edits here are overwritten. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Atlas</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07080d; color: #e9ecf5; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { min-height: 100%; display: grid; place-items: center; text-align: center; padding: 24px; box-sizing: border-box; }
+  .tag { display: inline-block; font: 800 11px/1 system-ui, sans-serif; letter-spacing: .16em; padding: 6px 9px; border-radius: 6px;
+    background: #a78bfa; color: #160b33; margin-bottom: 14px; }
+  h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: .02em; }
+  p { margin: 0 auto; max-width: 420px; color: #9aa3b8; }
+  a { color: #f5b942; }
+  .spin { width: 22px; height: 22px; margin: 18px auto 0; border: 3px solid #2a2f40; border-top-color: #f5b942; border-radius: 50%;
+    animation: s .8s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<main><div>
+  <span class="tag">UNRELEASED</span>
+  <h1>Atlas</h1>
+  <p id="msg">Checking your early access…</p>
+  <div class="spin" id="spin"></div>
+</div></main>
+<script src="../../firebase-config.js"></script>
+<script type="module">
+const GAME = "atlas";
+const HOME = '../../';
+const $ = (id) => document.getElementById(id);
+function show(html) { $('msg').innerHTML = html; $('spin').hidden = true; }
+const notOut = 'Atlas isn\'t out yet. ';
+
+function saveKey(entry) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('cca-unreleased', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('keys');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result, tx = db.transaction('keys', 'readwrite');
+      tx.objectStore('keys').put(entry, GAME);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+  });
+}
+
+async function unlock() {
+  if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey) return show(notOut + 'Come back when it launches!');
+  if (!('serviceWorker' in navigator) || !window.indexedDB || !crypto.subtle) {
+    return show('This browser can\'t open early-access games. Try Chrome, Edge or Firefox, outside a private window.');
+  }
+  const [{ initializeApp }, A, F] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'), import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'), import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-lite.js')
+  ]);
+  const app = initializeApp(firebaseConfig);
+  const auth = A.getAuth(app);
+  await auth.authStateReady();
+  if (!auth.currentUser) return show(notOut + 'Early-access players: <a href="' + HOME + '" target="_top">log in on the arcade</a>, then open it again.');
+  let snap;
+  try { snap = await F.getDoc(F.doc(F.getFirestore(app), 'unreleased', GAME)); }
+  catch (e) {
+    if (e.code === 'permission-denied') return show(notOut + 'This account doesn\'t have early access.');
+    throw e;
+  }
+  const raw = snap.exists() && snap.data().key;
+  if (!raw) return show('Early access for ' + document.title + ' isn\'t switched on yet. (Its key still needs adding in Firestore, see README.md.)');
+  const bytes = Uint8Array.from(atob(String(raw).trim()), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['decrypt']);
+  await saveKey({ key, exp: Date.now() + 12 * 3600e3 });
+  await navigator.serviceWorker.register('sw.js', { scope: './', updateViaCache: 'none' });
+  await navigator.serviceWorker.ready;
+  location.replace('play.html' + location.search + location.hash);
+}
+unlock().catch((e) => { console.error(e); show('Couldn\'t unlock ' + document.title + '. Check your connection and <a href="">try again</a>.'); });
+</script>
+</body>
+</html>
