@@ -172,9 +172,7 @@ window.SnapIntro = (function () {
     // players a different game, not a calmer one. They get the end state, with
     // none of the shake, flash or dust that the setting is actually about.
     if (document.body.classList.contains('reduced-motion')) {
-      if (CFG.permanent && mount()) {
-        settleAftermath();   // marks it seen itself, and honours CFG.once doing it
-      }
+      skip();
       return;
     }
     if (!mount()) return;
@@ -184,6 +182,24 @@ window.SnapIntro = (function () {
     // keep their showing and get the whole sequence again next time.
     if (CFG.trigger === 'click') armTrigger();
     else setTimeout(play, CFG.startDelay);
+  }
+
+  /*  The end state with none of the sequence. Reduced motion takes this road
+   *  from maybePlay() above, and game.js takes it on every showing while the
+   *  intro is vaulted (SNAP_INTRO_VAULTED there): the menu the Snap leaves
+   *  behind, from the first paint, with no click owed to anybody.
+   *
+   *  It never arms the trigger, so the tiles are live straight away. play() is
+   *  not touched by any of this and still runs the whole sequence on request,
+   *  which is how the THANOS code and the dev menu bring him back.
+   *
+   *  settleAftermath() marks the save as having had its Snap, and that is on
+   *  purpose: snapHasHappened() in game.js is what retires the Zero Point arena
+   *  and renames the creator Kamino, so a skipped save has to read as snapped or
+   *  the menu and the screens behind it would disagree.                     */
+  function skip() {
+    disarm();
+    if (CFG.permanent && mount()) settleAftermath();
   }
 
   /*  The permanent end state, applied either instantly (a save that has already
@@ -517,6 +533,6 @@ window.SnapIntro = (function () {
     ctx.restore();
   }
 
-  return { maybePlay: maybePlay, applyIfSnapped: applyIfSnapped,
+  return { maybePlay: maybePlay, applyIfSnapped: applyIfSnapped, skip: skip,
            play: function () { reset(); setTimeout(play, 120); }, reset: reset, cfg: CFG };
 })();

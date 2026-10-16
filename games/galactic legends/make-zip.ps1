@@ -28,7 +28,7 @@ if (-not $downloads) { $downloads = Join-Path $env:USERPROFILE 'Downloads' }
 $zipPath = Join-Path $downloads 'GalacticLegends.zip'
 
 $files   = @('index.html', 'game.js', 'styles.css', 'sprite-kit.js', 'snap-intro.js', 'favicon.png')
-$folders = @('sounds', 'music', 'aurebesh')
+$folders = @('sounds', 'music', 'aurebesh', 'fonts')
 
 function Fail($msg) {
     Write-Host ''

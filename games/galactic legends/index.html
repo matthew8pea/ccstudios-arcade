@@ -6,7 +6,7 @@
     <!-- itch.io / static host: re-upload this file to ship updates; if players see a stale build, bump ?v= on the page or embed URL. -->
     <title>Galactic Legends</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="styles.css?v=15">
+    <link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
     <div id="statCard"></div>
@@ -93,6 +93,11 @@
                     <span>Dossier<span class="splash-btn-tag" id="dossierReadyTag" style="display:none;"></span></span>
                     <span class="splash-btn-sub">Contracts · mastery · match history</span>
                 </button>
+                <!-- Full width like Freeplay, last in the list. Locked until the first
+                     series win; refreshHalloweenTile() sets the class and the tag. -->
+                <button class="splash-btn splash-btn-halloween" id="btnHalloween">
+                    <span>Halloween Event<span class="splash-btn-tag" id="halloweenLockTag" style="display:none;">🔒 Win a series first</span></span>
+                </button>
             </div>
         </div>
 
@@ -103,14 +108,17 @@
                  headings: it is one control that was drawn four times over,
                  and a heading is a label rather than somewhere to put a
                  button. Both copies carry .marvel-faction-toggle, which is
-                 what paintToggle() and the click wiring select on. -->
+                 what paintToggle() and the click wiring select on. The
+                 Halloween season's switch sits beside it on the same terms,
+                 as .halloween-faction-toggle. -->
             <div class="search-container">
                 <!-- The only way back from here to the splash (Shop, Armory, Kamino,
                      Dossier). Without it a keyboard or touch player who pressed
                      Freeplay had to reload the page; only a gamepad's B got out. -->
                 <button type="button" id="rosterBaseBtn" class="back-button roster-base-btn" title="Back to the main menu">← Base</button>
                 <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search characters...">
-                <button type="button" id="marvelToggleMain" class="marvel-faction-toggle" aria-pressed="false">🦸 Marvel</button>
+                <button type="button" id="marvelToggleMain" class="marvel-faction-toggle" aria-pressed="false" aria-label="Marvel season">🦸<span class="season-toggle-label"> Marvel</span></button>
+                <button type="button" id="halloweenToggleMain" class="halloween-faction-toggle" aria-pressed="false" aria-label="Halloween season">🎃<span class="season-toggle-label"> Halloween</span></button>
             </div>
             <div class="faction-wrapper">
                 <div class="faction-section">
@@ -186,7 +194,8 @@
 
             <div class="search-container">
                 <input type="text" id="oppSearchInput" class="search-input" placeholder="🔍 Search opponents...">
-                <button type="button" id="marvelToggleOpp" class="marvel-faction-toggle" aria-pressed="false">🦸 Marvel</button>
+                <button type="button" id="marvelToggleOpp" class="marvel-faction-toggle" aria-pressed="false" aria-label="Marvel season">🦸<span class="season-toggle-label"> Marvel</span></button>
+                <button type="button" id="halloweenToggleOpp" class="halloween-faction-toggle" aria-pressed="false" aria-label="Halloween season">🎃<span class="season-toggle-label"> Halloween</span></button>
             </div>
 
             <div class="faction-wrapper">
@@ -286,6 +295,9 @@
             <div class="message-box">
                 <h2 id="messageText" class="message-text"></h2>
                 <div id="seriesScoreDisplay" style="font-family:'Orbitron',sans-serif;font-size:0.9rem;margin-bottom:16px;letter-spacing:3px;color:rgba(255,255,255,0.5);display:none;"></div>
+                <!-- The Halloween event's team, one line each, between its rounds.
+                     Filled by endHalloweenRound(); endGame() hides it. -->
+                <div id="halloweenTeamSummary" class="hw-summary" style="display:none;"></div>
                 <div class="end-stats">
                     <div class="end-stat-box"><div class="end-stat-label">Time</div><div class="end-stat-val" id="endTime">0:00</div></div>
                     <div class="end-stat-box"><div class="end-stat-label">Kills</div><div class="end-stat-val" id="endKills">0</div></div>
@@ -705,6 +717,54 @@
             </div>
         </div>
 
+        <!-- HALLOWEEN EVENT: the two cards between the splash tile and the first
+             round. Built like the season card above (one card on a dimmed layer),
+             recoloured orange and black. Card 1 warns that deaths are permanent and
+             shows every time; card 2 picks the team of six. See THE HALLOWEEN EVENT
+             in game.js. -->
+        <div id="halloweenDisclaimer" class="season-overlay halloween-overlay" style="display:none;">
+            <div class="season-card halloween-card" role="dialog" aria-modal="true" aria-labelledby="halloweenDisclaimerTitle">
+                <p class="season-card-eyebrow">Halloween Event</p>
+                <h2 class="season-card-title" id="halloweenDisclaimerTitle">Before you go in</h2>
+                <div class="season-card-rule"></div>
+
+                <p class="season-card-lead">The fighters you take into this event are the REAL characters in your roster. Any of them can die here, and a fighter who dies is removed from your roster.</p>
+                <ul class="season-card-list">
+                    <li>Six rounds against the Burnt Legion. General Wheen holds the third, Lord Trick the last.</li>
+                    <li>Health carries from round to round. Everyone still standing is healed when a boss falls.</li>
+                    <li>If your fighter dies you take over a teammate. The run ends when the whole team is down, and nothing is saved if you leave.</li>
+                </ul>
+                <p class="season-card-note">Fallen fighters can be bought back in the Shop. Skeleton Warriors are already dead: one that falls is out for the run and back for the next.</p>
+
+                <div class="season-card-choice">
+                    <div class="season-card-actions">
+                        <button type="button" class="season-card-btn season-card-btn-hw" id="halloweenAckBtn">Acknowledge</button>
+                        <button type="button" class="season-card-btn season-card-btn-ghost" id="halloweenDisclaimerBackBtn">Back</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="halloweenTeamOverlay" class="season-overlay halloween-overlay" style="display:none;">
+            <div class="season-card halloween-card hw-team-card" role="dialog" aria-modal="true" aria-labelledby="halloweenTeamTitle">
+                <p class="season-card-eyebrow">Halloween Event</p>
+                <h2 class="season-card-title" id="halloweenTeamTitle">Pick your team</h2>
+                <div class="season-card-rule"></div>
+
+                <p class="season-card-lead">Six fighters go in: you and five allies. Tap a fighter to add them, then tap a slot to mark who you play as.</p>
+                <div class="hw-counter"><span id="halloweenTeamCount">Team 0/6</span><span>Skeleton Warriors can fill more than one slot</span></div>
+                <div class="hw-slots" id="halloweenSlots"></div>
+                <div class="hw-pool" id="halloweenPool"></div>
+
+                <div class="season-card-choice">
+                    <div class="season-card-actions">
+                        <button type="button" class="season-card-btn season-card-btn-hw" id="halloweenStartBtn" disabled>Start the Run</button>
+                        <button type="button" class="season-card-btn season-card-btn-ghost" id="halloweenTeamBackBtn">Back</button>
+                    </div>
+                    <p class="season-card-footnote">Fallen fighters are greyed out until you buy them back in the Shop.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- CONTROLS OVERLAY -->
         <div id="controlsOverlay">
             <div class="controls-box">
@@ -794,8 +854,8 @@
     </div>
 
 
-    <script src="sprite-kit.js?v=17"></script>
-    <script src="game.js?v=80"></script>
-    <script src="snap-intro.js?v=2"></script>
+    <script src="sprite-kit.js?v=18"></script>
+    <script src="game.js?v=89"></script>
+    <script src="snap-intro.js?v=3"></script>
 </body>
 </html>

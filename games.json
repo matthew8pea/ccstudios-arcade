@@ -1,10 +1,29 @@
 {
-  "generated": 1792022632547,
+  "generated": 1792114932509,
   "site": {
     "title": "CCStudios Arcade",
     "tagline": ""
   },
   "games": [
+    {
+      "slug": "galactic-legends",
+      "title": "Galactic Legends",
+      "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
+      "folder": "galactic legends",
+      "url": "games/galactic%20legends/index.html",
+      "cover": null,
+      "icon": "games/galactic%20legends/favicon.png",
+      "author": null,
+      "authorUrl": null,
+      "tags": [
+        "Fighting",
+        "Arena"
+      ],
+      "order": null,
+      "added": 0,
+      "updated": 1792113794575,
+      "released": 1787530184029
+    },
     {
       "slug": "atlas",
       "title": "Atlas",
@@ -48,25 +67,6 @@
       "added": 1791828616510,
       "updated": 1791828500841,
       "released": 1791828616510
-    },
-    {
-      "slug": "galactic-legends",
-      "title": "Galactic Legends",
-      "description": "Arena fighting game: pick a legend, pick a weapon, last one standing wins.",
-      "folder": "galactic legends",
-      "url": "games/galactic%20legends/index.html",
-      "cover": null,
-      "icon": "games/galactic%20legends/favicon.png",
-      "author": null,
-      "authorUrl": null,
-      "tags": [
-        "Fighting",
-        "Arena"
-      ],
-      "order": null,
-      "added": 0,
-      "updated": 1791828142552,
-      "released": 1787530184029
     },
     {
       "slug": "galactic-tower-defense",

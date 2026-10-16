@@ -3,7 +3,7 @@
  * Galactic Legends — runtime smoke test
  * =====================================
  *
- *   node smoke.js               # boot, play the Snap, fight 20s, report
+ *   node smoke.js               # boot, play the Snap by code, fight 20s, report
  *   node smoke.js --seconds=40  # fight for longer
  *   node smoke.js --shipped     # ?debug=0: the itch.io error handling
  *
@@ -26,8 +26,9 @@
  * with --dump-dom. The probe then plays the game the way a brand-new player
  * does, on a fresh profile with no save at all:
  *
- *   splash click → the Snap → season card → Freeplay → Anakin → Normal →
- *   Mustafar → Darth Maul → "Your First Fight" card → fight
+ *   menu already settled (the Snap is vaulted) → THANOS code → the Snap →
+ *   no season card (vaulted too) → Freeplay → Anakin → Normal → Mustafar →
+ *   Darth Maul → "Your First Fight" card → fight
  *
  * and during the fight it holds fire and walks around. It fails on any
  * uncaught error or console.error, on any step whose button never shows up,
@@ -35,7 +36,7 @@
  * (the loop died). The result goes back out through the dumped DOM.
  *
  * The fresh profile is deliberate: a seeded save can steer around the exact
- * branch a new player hits (the Snap and the season card only happen once).
+ * branch a new player hits (a save only settles the Snap's end state once).
  *
  * Served from 127.0.0.1, so debugStrictErrors is ON by default and a throw in
  * the loop freezes the game, which the frozen clock catches. --shipped
@@ -162,17 +163,34 @@ function probe(FIGHT_SECONDS) {
     }
 
     async function run() {
-        // The splash tiles are locked until the first click, which summons the Snap.
+        // The Snap is vaulted (SNAP_INTRO_VAULTED in game.js): a fresh save opens
+        // straight to the menu it leaves behind, tiles live, no card, no click owed.
         await wait(1500);
-        const splash = await waitFor('splash menu', () => $v('#splashMenu'), 10000);
-        splash.click();
-        R.steps.push('splash click');
-        await waitFor('Snap to finish (Freeplay unlocked)',
-            () => !document.getElementById('btnFreeplay').hasAttribute('aria-disabled'), 30000);
-        R.steps.push('Snap finished');
-        await wait(800);
-        // Season card only on a save that has not seen it — which a fresh profile hasn't.
-        if ($v('#seasonCardStarWarsBtn')) await click('season card', '#seasonCardStarWarsBtn');
+        await waitFor('splash menu', () => $v('#splashMenu'), 10000);
+        await waitFor('Snap end state without the Snap (Kamino landed, tiles live)', () =>
+            document.getElementById('btnKamino').classList.contains('is-landed') &&
+            !document.getElementById('btnFreeplay').hasAttribute('aria-disabled'), 5000);
+        if ($v('#seasonCardStarWarsBtn')) throw new Error('season card is up without the Snap having played');
+        R.steps.push('Snap vaulted: menu already settled');
+
+        // The THANOS code is the way back in, and it plays the whole thing. The
+        // Settings button is position:fixed, so it has no offsetParent and $v()
+        // cannot see it — these three go by id.
+        document.getElementById('settingsBtn').click();
+        if (document.getElementById('settingsPanel').style.display !== 'flex') throw new Error('Settings did not open');
+        document.getElementById('redeemCodeInput').value = 'thanos';
+        document.getElementById('redeemCodeBtn').click();
+        R.steps.push('redeem code THANOS');
+        await waitFor('the Snap to start (tiles locked)',
+            () => document.getElementById('btnFreeplay').hasAttribute('aria-disabled'), 5000);
+        await waitFor('the Snap to finish (Kamino landed, tiles live)', () =>
+            document.getElementById('btnKamino').classList.contains('is-landed') &&
+            !document.getElementById('btnFreeplay').hasAttribute('aria-disabled'), 30000);
+        R.steps.push('Snap played');
+        // The season card is vaulted (SEASON_CARD_VAULTED): the Snap ends on the menu.
+        await wait(1500);
+        if ($v('#seasonCardStarWarsBtn')) throw new Error('season card came up after the Snap; it is vaulted');
+        R.steps.push('no season card');
         await click('Freeplay', '#btnFreeplay');
         await click('pick Anakin', '.hero-button[data-character="anakin"]');
         await click('Normal', '.diff-btn[data-diff="normal"]');
@@ -271,7 +289,7 @@ async function main() {
     const url = `http://127.0.0.1:${server.address().port}/index.html${SHIPPED ? '?debug=0' : ''}`;
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'gl-smoke-'));
 
-    // Boot + Snap + menus is ~15s of game time; the budget leaves room over that.
+    // Boot + the Snap by code + menus is ~15s of game time; the budget leaves room over that.
     const budgetMs = (FIGHT_SECONDS + 45) * 1000;
     const flags = [
         '--headless', '--disable-gpu', '--mute-audio', '--no-first-run',

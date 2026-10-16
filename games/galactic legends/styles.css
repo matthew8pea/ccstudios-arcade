@@ -1,5 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Orbitron&display=swap');
 
+/* Creepster, the Halloween event's dripping horror face. SIL Open Font License,
+   so it ships in the fonts folder like Aurebesh rather than loading from Google
+   (make-zip.ps1 packs that folder). Used on the splash tile and the two cards. */
+@font-face {
+    font-family: 'Creepster';
+    src: url('./fonts/Creepster-Regular.ttf') format('truetype');
+    font-display: swap;
+    font-weight: 400;
+    font-style: normal;
+}
 @font-face {
     font-family: 'Aurebesh';
     src: url('./aurebesh/Aurebesh.otf') format('opentype');
@@ -854,7 +864,8 @@ body.aurebesh-mode th {
            columns on purpose: it is one switch shown twice, not a blue one and a
            red one, and it should not read as part of the faction it sits on. */
         .pack-faction-toggle,
-        .marvel-faction-toggle {
+        .marvel-faction-toggle,
+        .halloween-faction-toggle {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.5rem;
             letter-spacing: 1.5px;
@@ -900,6 +911,26 @@ body.aurebesh-mode th {
             background: #e23636;
             border-color: #e23636;
             box-shadow: 0 0 10px rgba(226, 54, 54, 0.55);
+        }
+
+        /* The Halloween season's toggle: the same control again, in pumpkin
+           orange. Lit, it goes orange with black text, which is the Halloween
+           event button's colouring in the plan, so the two read as one season. */
+        .halloween-faction-toggle {
+            color: #ff9a3c;
+            background: rgba(255, 122, 26, 0.12);
+            border-color: rgba(255, 122, 26, 0.45);
+        }
+        .halloween-faction-toggle:hover {
+            color: #ffe2c4;
+            background: rgba(255, 122, 26, 0.3);
+            border-color: #ff7a1a;
+        }
+        .halloween-faction-toggle.active {
+            color: #000000;
+            background: #ff7a1a;
+            border-color: #ff7a1a;
+            box-shadow: 0 0 10px rgba(255, 122, 26, 0.55);
         }
 
         /* EQUAL ROWS AND COLUMNS FOR BUTTONS */
@@ -1027,10 +1058,25 @@ body.aurebesh-mode th {
             so it takes the field’s height and a size that reads as a button. The
             colours and the .active state are inherited from the rule further down
             — this only restates what changes out here. */
-        .search-container .marvel-faction-toggle {
+        .search-container .marvel-faction-toggle,
+        .search-container .halloween-faction-toggle {
             font-size: 0.62rem;
             padding: 0 16px;
             flex-shrink: 0;
+        }
+
+        /*  On a phone the row holds Base, the field and two season switches, and
+            with both switches spelled out the field was squeezed to nothing and
+            the row ran off the right edge. Below 560px the switches drop to their
+            emoji: each still carries its name as a title and an aria-label, and
+            turning one on announces the season by name anyway. */
+        @media (max-width: 560px) {
+            .search-container .season-toggle-label { display: none; }
+            .search-container .marvel-faction-toggle,
+            .search-container .halloween-faction-toggle {
+                font-size: 0.95rem;
+                padding: 0 12px;
+            }
         }
 
         /*  The way back to the splash. Same row and height as the field and the
@@ -3511,4 +3557,237 @@ body.reduced-motion .snap-layer-shade { display: none; }
    drops the entrance. */
 @media (prefers-reduced-motion: reduce) {
     .season-overlay, .season-card { animation: none; }
+}
+
+/* ── HALLOWEEN EVENT ──────────────────────────────────────────────
+   The splash tile and the two cards in front of a run. Orange on black is the
+   event's colouring throughout — the season toggle picked it up first (see
+   .halloween-faction-toggle).
+
+   The tile is Freeplay's twin: full width, last in the list, the same font,
+   size, padding, border weight, glow and hover lift. Only the hue changes —
+   orange where Freeplay is blue — built the way every other tile is: a dark
+   gradient of the colour under a bright label of it. It opened as a solid
+   orange slab with black Creepster text and the owner said it did not feel
+   like the others, which is exactly what a bright fill under dark text on a
+   row of dark fills under bright text looks like. Creepster now lives on the
+   two cards' titles, where the event has the screen to itself.
+
+   Pumpkin, not amber: Armory's orange (#ff8c42 on brown) was a near match,
+   so this one is the redder pumpkin orange over a brown that cools into
+   plum-black — the owner's "pumpkin tone" — and the two tiles read apart. */
+.splash-btn-halloween {
+    grid-column: 1 / -1;
+    width: 100%;
+    padding-left: 3px;                 /* the same letter-spacing correction Freeplay makes */
+    background: linear-gradient(135deg, #5a1e00 0%, #2a0d12 100%);
+    color: #ff7518;
+    border-color: rgba(255, 117, 24, 0.45);
+    box-shadow: 0 0 18px rgba(255, 117, 24, 0.14);
+}
+.splash-btn-halloween:not(.is-locked):hover {
+    border-color: #ff7518;
+    box-shadow: 0 0 28px rgba(255, 117, 24, 0.38);
+    transform: translateY(-2px);
+}
+/* Locked until the first series win. Dimmed rather than disabled: a disabled tile
+   is unreachable by gamepad (see snap-intro.js), and the tag says why. */
+.splash-btn-halloween.is-locked {
+    filter: saturate(0.3) brightness(0.65);
+    cursor: not-allowed;
+}
+/* Label colour as the fill, background colour as the text, like the other tiles' pills. */
+.splash-btn-halloween .splash-btn-tag { background: #ff7518; color: #2a0d12; }
+
+/* The two cards share the season card's shell and swap its red for orange. */
+.halloween-overlay {
+    background: radial-gradient(circle at 50% 40%, rgba(44, 14, 0, 0.84) 0%, rgba(0, 0, 0, 0.94) 70%);
+}
+.halloween-card {
+    background: linear-gradient(160deg, #1b0e05 0%, #0a0f1a 60%, #0a0f1a 100%);
+    border-color: rgba(255, 122, 0, 0.45);
+    box-shadow: 0 0 44px rgba(255, 122, 0, 0.16), 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.halloween-card .season-card-title {
+    font-family: 'Creepster', 'Orbitron', sans-serif;
+    font-weight: 400;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: #ff9d3f;
+}
+.halloween-card .season-card-rule { background: linear-gradient(90deg, #ff7a00 0%, #c24e00 100%); }
+.halloween-card .season-card-list li::before { background: #ff7a00; }
+.season-card-btn-hw {
+    background: linear-gradient(135deg, #ff7a00 0%, #c24e00 100%);
+    color: #000;
+    border-color: rgba(255, 140, 26, 0.6);
+}
+.season-card-btn-hw:not(:disabled):hover {
+    border-color: #ffb066;
+    box-shadow: 0 0 24px rgba(255, 122, 0, 0.4);
+    transform: translateY(-2px);
+}
+.season-card-btn-hw:disabled { opacity: 0.35; cursor: not-allowed; }
+/* The quiet way out, under the orange one. */
+.season-card-btn-ghost {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+.season-card-btn-ghost:hover { border-color: rgba(255, 255, 255, 0.5); color: #fff; }
+
+/* Card 2: six slots over the pool of fighters. */
+.hw-team-card { width: min(640px, 100%); }
+.hw-counter {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+}
+.hw-counter span:last-child { font-family: 'Inter', sans-serif; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.35); font-size: 0.65rem; }
+.hw-slots {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.hw-slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 46px;
+    padding: 6px 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+.hw-slot.is-filled {
+    border-style: solid;
+    border-left-width: 3px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+}
+.hw-slot.is-lead { border-color: #ff9d3f; background: rgba(255, 122, 0, 0.12); }
+.hw-slot-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.hw-slot-main > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-slot-lead {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.5rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+}
+.hw-slot.is-lead .hw-slot-lead { color: #ff9d3f; }
+.hw-slot-remove {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.hw-slot-remove:hover { border-color: #ff6b6b; color: #ff6b6b; }
+.hw-pool {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+}
+.hw-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-left: 3px solid;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1a1326 0%, #0d0a14 100%);
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.hw-tile-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.hw-tile-sub { font-family: 'Inter', sans-serif; font-size: 0.62rem; color: rgba(255, 255, 255, 0.5); }
+.hw-tile:not(:disabled):hover { border-color: #ff9d3f; filter: brightness(1.2); }
+.hw-tile.is-picked {
+    background: linear-gradient(135deg, #3a1d00 0%, #1a0d05 100%);
+    border-color: rgba(255, 140, 26, 0.6);
+}
+.hw-tile:disabled { opacity: 0.4; cursor: not-allowed; }
+.hw-tile-count {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: #ff7a00;
+    color: #000;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+}
+.hw-tile:focus-visible, .hw-slot-main:focus-visible, .hw-slot-remove:focus-visible {
+    outline: 2px solid #ff9d3f;
+    outline-offset: 2px;
+}
+@media (max-width: 460px) {
+    .hw-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hw-pool { grid-template-columns: 1fr; }
+    .hw-counter { flex-direction: column; gap: 2px; }
+}
+
+/* Between rounds: the team on the results box, one line each. */
+.hw-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 14px;
+    margin: -10px 0 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    text-align: left;
+}
+.hw-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 8px;
+    border-left: 3px solid;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+}
+.hw-summary-row.is-fallen { opacity: 0.45; }
+.hw-summary-hp { color: rgba(255, 255, 255, 0.7); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 460px) {
+    .hw-summary { grid-template-columns: 1fr; }
 }

@@ -169,6 +169,7 @@ const TABLES = [
     ['cloneBackupArmy',       'const cloneBackupArmy = {'],
     ['cloneTrooperBattalion', 'const cloneTrooperBattalion = {'],
     ['MARVEL_SEASON',         'const MARVEL_SEASON = {'],
+    ['HALLOWEEN_SEASON',      'const HALLOWEEN_SEASON = {'],
     // Read for the vault report below — see THE VAULT — INDEX in game.js.
     ['SPRITE_CATALOG',        'const SPRITE_CATALOG = ['],
     ['FORGE_PATTERNS',        'const FORGE_PATTERNS = ['],
@@ -200,7 +201,7 @@ if (errors.length) {
 
 const { characters, WEAPON_LIBRARY, ARENAS, shopItems, achievements, gameUnlocks, ELITE_BASE_IDS,
         weaponEmoji, ARENA_HAZARDS, cloneBackupArmy, cloneTrooperBattalion,
-        MARVEL_SEASON, SPRITE_CATALOG, FORGE_PATTERNS } = data;
+        MARVEL_SEASON, HALLOWEEN_SEASON, SPRITE_CATALOG, FORGE_PATTERNS } = data;
 
 // Every character across every faction, tagged with the faction it came from.
 const allChars = [];
@@ -501,6 +502,35 @@ if (!MARVEL_SEASON || typeof MARVEL_SEASON !== 'object') {
     }
 }
 
+// 10c. The Halloween season, on the same rule as 10b with `halloween: true` in
+//      place of `marvel: true`. Written out again rather than folded into one
+//      loop so each season's errors name the season, the way 10b's always have.
+if (!HALLOWEEN_SEASON || typeof HALLOWEEN_SEASON !== 'object') {
+    err('HALLOWEEN_SEASON is missing — the Halloween toggle has no columns to build');
+} else {
+    const halloweenCharIds = new Set(allChars.filter(e => e.char && e.char.halloween).map(e => e.char.id));
+    if (!HALLOWEEN_SEASON.label) err('HALLOWEEN_SEASON — no label, which the toggle names the season with');
+
+    const placed = new Map();
+    for (const side of ['heroes', 'villains']) {
+        const col = HALLOWEEN_SEASON[side];
+        if (!col || !col.title || !Array.isArray(col.ids)) {
+            err(`HALLOWEEN_SEASON.${side} — needs a title and an ids array`);
+            continue;
+        }
+        for (const id of col.ids) {
+            if (!charIds.has(id)) err(`HALLOWEEN_SEASON.${side} lists "${id}", which is not a character id`);
+            else if (!halloweenCharIds.has(id)) err(`HALLOWEEN_SEASON.${side} lists "${id}", who has no \`halloween: true\` — the column only ever shows with the season on`);
+            if (placed.has(id)) err(`HALLOWEEN_SEASON lists "${id}" on both sides (${placed.get(id)} and ${side})`);
+            else placed.set(id, side);
+        }
+    }
+
+    for (const id of halloweenCharIds) {
+        if (!placed.has(id)) err(`HALLOWEEN_SEASON does not place "${id}" on either side — the Halloween faction view will not show them at all`);
+    }
+}
+
 
 // 11. Retirement. A character with `retiredBy` leaves every roster the moment
 //     that flag is set, so a typo in it is a character who never leaves — or,
@@ -608,6 +638,8 @@ if (!QUIET) {
      *  list of vaults is THE VAULT — INDEX at the top of game.js; this prints
      *  what those flags are actually set to. */
     const poisonSpitVaulted = readVaultSwitch(src, 'POISON_SPIT_VAULTED');
+    const snapIntroVaulted = readVaultSwitch(src, 'SNAP_INTRO_VAULTED');
+    const seasonCardVaulted = readVaultSwitch(src, 'SEASON_CARD_VAULTED');
     const state = (v) => v === null ? '? (switch not found — renamed?)' : (v ? 'VAULTED' : 'live');
 
     // Characters carrying a flat `vaulted: true` — out unconditionally, as
@@ -623,6 +655,8 @@ if (!QUIET) {
     const packLoaded = html && html.indexOf('fortnite-pack.js') >= 0;
     console.log(`  Content pack        ${fs.existsSync(packPath) ? (packLoaded ? 'LOADED by index.html' : 'present, NOT loaded') : 'no pack file'}`);
     console.log(`  Poison Spit         ${state(poisonSpitVaulted)}  — POISON_SPIT_VAULTED`);
+    console.log(`  Snap intro          ${state(snapIntroVaulted)}  — SNAP_INTRO_VAULTED (THANOS code plays it)`);
+    console.log(`  Season card         ${state(seasonCardVaulted)}  — SEASON_CARD_VAULTED`);
     console.log(`  Characters          ${vaultedChars.length} vaulted outright` +
                 (vaultedChars.length ? `  — ${vaultedChars.map(e => e.char.id).join(', ')}` : ''));
     console.log(`  Sprites             ${vaultedSprites.length} of ${(SPRITE_CATALOG || []).length} vaulted` +

@@ -279,12 +279,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Ant-Man's fists cannot be thrown, but the same button is how a
                 // touch player grows him (Q on a keyboard).
                 const antGrow = canAntManResize(p);
-                const canThrow = !!(p && p.isAlive && ((p.weaponConfig && p.weaponConfig.melee && !p.weaponConfig.noThrow) || hasSidearm || antGrow));
-                const throwReady = !!(canThrow && (antGrow ? p.antForm !== 'giant' : hasSidearm
+                // And how a Halloween commander raises his skeletons. Once a round,
+                // so the button stays up and greys out once it has been spent
+                // rather than vanishing and leaving the player to wonder.
+                const summoner = !!(p && p.isAlive && p.isMainEntity && HALLOWEEN_SUMMONS[p.characterId]);
+                const canThrow = !!(p && p.isAlive && ((p.weaponConfig && p.weaponConfig.melee && !p.weaponConfig.noThrow) || hasSidearm || antGrow || summoner));
+                const throwReady = !!(canThrow && (summoner ? canHalloweenSummon(p) : antGrow ? p.antForm !== 'giant' : hasSidearm
                     ? gameNow() - p.lastSidearmShotTime > getSidearmConfig(p).cooldown
                     : gameNow() >= (p.throwReadyAt || 0) && !hasBladeInFlight(p)));
 
-                const stateKey = `${canDodge}|${canReload}|${canInteract}|${interactReady}|${canSnap}|${dodgeReady}|${canThrow}|${throwReady}|${hasSidearm}|${antGrow}`;
+                const stateKey = `${canDodge}|${canReload}|${canInteract}|${interactReady}|${canSnap}|${dodgeReady}|${canThrow}|${throwReady}|${hasSidearm}|${antGrow}|${summoner}`;
                 if (stateKey === lastTouchActionState) return;
                 lastTouchActionState = stateKey;
 
@@ -477,6 +481,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Above every menu it covers, below confirm: the card is modal, but
                 // a confirmation raised over it would still have to win.
                 'confirmOverlay', 'seasonCardOverlay',
+                // The Halloween event's two cards sit over the splash like the
+                // season card does, and a confirm over them still wins.
+                'halloweenDisclaimer', 'halloweenTeamOverlay',
                 'pauseOverlay', 'controlsOverlay', 'shopOverlay',
                 'armoryOverlay', 'creatorOverlay',
                 'creditsOverlay', 'dossierOverlay', 'spritesOverlay',
@@ -691,6 +698,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 switch (layer.id) {
                     case 'confirmOverlay':      clickById('confirmCancelBtn'); break;
+                    case 'halloweenDisclaimer':  clickById('halloweenDisclaimerBackBtn'); break;
+                    case 'halloweenTeamOverlay': clickById('halloweenTeamBackBtn'); break;
                     case 'pauseOverlay':        closePauseMenu(); break;
                     case 'controlsOverlay':     closeControlsOverlay(); break;
                     case 'shopOverlay':         clickById('shopCloseBtn'); break;
@@ -1071,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // ── WEAPON EMOJI MAP ───────────────────────────────────────
-            const weaponEmoji = { lightsaber:'⚔️', darksaber:'🖤', blaster:'🔫', zap:'⚡', staff:'🪄', bowcaster:'🏹', wrench:'🔧', lightning:'🌩️', computer:'💻', minigun:'💥', beam:'🔆', guards:'🛡️', sniper:'🎯', vibroblade:'🗡️', flamethrower:'🔥', submachine:'🔫', unarmed:'✋', iceblast:'❄️', repulsor:'💠', webshooter:'🕸️', claws:'🦠', zeroenergy:'🌀', mjolnir:'🔨', laevateinn:'🗡️', icedagger:'🗡️', glock:'🔫', gammafists:'👊', thingfists:'👊', pantherclaws:'🐾', scimitar:'🗡️', grootfists:'🌳', stormbreaker:'🪓', lasercannon:'☄️', destroyergun:'🔆', bow:'🏹', dualglocks:'🔫', shield:'🛡️', sonictaser:'⚡', mongerfists:'👊', abomfists:'👊', gauntletfists:'👊', realitystaff:'🔮', antmanfists:'👊', antbite:'🐜', poisonspit:'☣️', quadblaster:'💥', hydrapistol:'🔫', katanas:'⚔️' };
+            const weaponEmoji = { lightsaber:'⚔️', darksaber:'🖤', blaster:'🔫', zap:'⚡', staff:'🪄', bowcaster:'🏹', wrench:'🔧', lightning:'🌩️', computer:'💻', minigun:'💥', beam:'🔆', guards:'🛡️', sniper:'🎯', vibroblade:'🗡️', flamethrower:'🔥', submachine:'🔫', unarmed:'✋', iceblast:'❄️', repulsor:'💠', webshooter:'🕸️', claws:'🦠', zeroenergy:'🌀', mjolnir:'🔨', laevateinn:'🗡️', icedagger:'🗡️', glock:'🔫', gammafists:'👊', thingfists:'👊', pantherclaws:'🐾', scimitar:'🗡️', grootfists:'🌳', stormbreaker:'🪓', lasercannon:'☄️', destroyergun:'🔆', bow:'🏹', dualglocks:'🔫', shield:'🛡️', sonictaser:'⚡', mongerfists:'👊', abomfists:'👊', gauntletfists:'👊', realitystaff:'🔮', antmanfists:'👊', antbite:'🐜', poisonspit:'☣️', quadblaster:'💥', hydrapistol:'🔫', katanas:'⚔️', skeletonsword:'🗡️', halloweenblaster:'🎃' };
             const factionEmoji = { heroes:'🔵', villains:'🔴', secret:'🟣' };
 
 
@@ -1124,6 +1133,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 villains: { title: 'Symbiotes, Rings & Stolen Thrones', ids: ['venom', 'mandarin', 'loki', 'killmonger', 'laufey', 'stane', 'blonsky', 'redskull', 'ragnarok', 'thanos'] }
             };
             function marvelSeason() { return MARVEL_SEASON; }
+
+            /*  ── THE HALLOWEEN SEASON ────────────────────────────────────────
+             *  Built on MARVEL_SEASON's exact shape, so everything that already
+             *  knows how to show a season — the two columns, the opponent screen,
+             *  Surprise Me, the secret row standing down — shows this one simply
+             *  by being handed it. The fighters live in characters.secret with
+             *  `halloween: true`, the way the Marvel cast carries `marvel`, and
+             *  validate.js checks the flag and this list against each other.
+             *
+             *  Four of the six are free with the toggle. Lord Treat and Lord Trick
+             *  are earned, each by five round wins as the general below them — see
+             *  HALLOWEEN_LORD_UNLOCKS. Neither is sold in the Shop: the general is
+             *  the price.
+             *
+             *  The Halloween event (THE HALLOWEEN EVENT, further down) draws its
+             *  good guys from the heroes column here, so a fighter added to it later
+             *  is eligible for the event without its code having to learn his name.*/
+            const HALLOWEEN_SEASON = {
+                id: 'halloween',
+                label: 'Halloween',
+                heroes:   { title: 'The Bone Guard',   ids: ['skeleton', 'hawlo', 'lordtreat'] },
+                villains: { title: 'The Burnt Legion', ids: ['burntskeleton', 'wheen', 'lordtrick'] }
+            };
+            function halloweenSeason() { return HALLOWEEN_SEASON; }
 
             // ── DIFFICULTY ─────────────────────────────────────────────
             let currentDifficulty = 'normal';
@@ -2421,6 +2454,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 hazardWind.targetAngle = hazardWind.angle;
                 hazardWind.nextShiftAt = 0;
                 if (!hazardsEnabled) return;
+                // The Halloween event promises that only an enemy can kill a team
+                // fighter, and Endor's log trap would make a liar of it.
+                if (halloweenRun) return;
 
                 const cfg = currentHazardConfig();
                 if (!cfg) return;
@@ -2871,7 +2907,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 bazeUnlock:     { id:'bazeUnlock',      label:'Guardian of the Whills', desc:'Defeat Director Krennic as Admiral Raddus on the Death Star', done: false },
             };
 
-            let gameUnlocks = { ultimatePalpatine: false, charredAnakin: false, senatorPalpatine: false, jabbaUnlock: false, devTeam: false, tarffulUnlock: false, thorn: false, pazvizsla: false, fox_elite: false, shaagi: false, sithAnakin: false, zeroEventCleared: false, zeroUnit: false, starlord: false, thanos: false, eternity: false };
+            let gameUnlocks = { ultimatePalpatine: false, charredAnakin: false, senatorPalpatine: false, jabbaUnlock: false, devTeam: false, tarffulUnlock: false, thorn: false, pazvizsla: false, fox_elite: false, shaagi: false, sithAnakin: false, zeroEventCleared: false, zeroUnit: false, starlord: false, thanos: false, eternity: false, lordtreat: false, lordtrick: false };
+
+            /*  ── THE HALLOWEEN EVENT: THE FALLEN ─────────────────────────────────
+             *  A fighter killed on the Halloween team is dead until bought back in
+             *  the Shop. Kept apart from gameUnlocks because that table means "the
+             *  player has this", and a flag meaning the opposite would read wrong in
+             *  every loop over it. It lives under the galacticDuel prefix, so Clear
+             *  Data and the save download pick it up with everything else.
+             *
+             *  Declared here, next to gameUnlocks, because isCharacterRetired()
+             *  reads it and that runs during boot — long before the event's own
+             *  block further down the file (THE HALLOWEEN EVENT) would have
+             *  declared it. The Skeleton Warrior never lands in here: see
+             *  HALLOWEEN_EXPENDABLE_IDS there.                                    */
+            let halloweenFallen = {};   // id -> true while that fighter is dead
+
+            function isHalloweenFallen(id) { return !!halloweenFallen[id]; }
+            function persistHalloweenFallen() {
+                saveVersioned('galacticDuelHalloween', { fallen: halloweenFallen });
+            }
+            function loadHalloweenFallen() {
+                halloweenFallen = {};
+                try {
+                    const saved = loadVersioned('galacticDuelHalloween', {});
+                    const fallen = saved && saved.fallen;
+                    if (fallen && typeof fallen === 'object') {
+                        Object.keys(fallen).forEach(id => { if (fallen[id]) halloweenFallen[id] = true; });
+                    }
+                } catch (e) { halloweenFallen = {}; }
+            }
+
+            /*  What a revive costs: 5% under what the fighter is worth, as the plan
+             *  priced it. Fox and Cody are free, so their worth comes from the Shop:
+             *  Thorn (160 HP, minigun) sells for 200; the Armory prices a minigun at
+             *  300 and a blaster at 150, so swapping it for their blaster takes off
+             *  150, and Paz Vizsla's 250 for 35 more HP puts a point of health at
+             *  about 1.4 credits. The Halloween heroes are priced the same way, with
+             *  something on top for a shield and a gun that explodes.             */
+            const HALLOWEEN_WORTH = { fox: 36, cody: 43, skeleton: 60, hawlo: 100, lordtreat: 170 };
+            function halloweenRevivePrice(id) {
+                const worth = HALLOWEEN_WORTH[id];
+                return worth ? Math.round(worth * 0.95) : 50;
+            }
 
             // Elite/reskinned characters count as their base character for achievement
             // and unlock-condition purposes (e.g. Darth Vader (Elite) still counts as
@@ -2975,6 +3053,18 @@ document.addEventListener('DOMContentLoaded', () => {
              *      row's own flag is what makes that independent of the weapon's.
              *      getForgePattern() must still resolve them, or a weapon already
              *      forged from one prices at ∞.
+             *
+             *  ── VAULTED: THE SNAP INTRO ──  flip: SNAP_INTRO_VAULTED = false
+             *      Thanos no longer walks on by himself. A new save opens to the
+             *      menu the Snap leaves behind, settled through SnapIntro.skip(),
+             *      and the THANOS redeem code (or the dev menu) plays the whole
+             *      sequence on request. snap-intro.js is otherwise unchanged. See
+             *      offerSnapIntro() / replaySnapIntro().
+             *
+             *  ── VAULTED: THE SEASON CARD ──  flip: SEASON_CARD_VAULTED = false
+             *      The After the Snap card and its soundtrack question. The Snap
+             *      ends on the menu now; the soundtrack is chosen in Settings.
+             *      Filtered in openSeasonCard(); markup and styles untouched.
              *
              *  ── VAULTED: TWO MUSIC TRACKS ──  flip: put the 2 files in music/
              *      The only vault whose data is genuinely absent: the .mp3/.m4a
@@ -3089,6 +3179,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // answers "not in the game any more, record retained". Hulk is the
                 // first, because Bruce Banner is now the only door to him.
                 if (char && char.vaulted) return true;
+                // FALLEN: killed on the Halloween team and not yet bought back. One
+                // line here is what takes them off every roster, the opponent
+                // picker and the team card at once, until the Shop puts them back.
+                if (char && isHalloweenFallen(char.id)) return true;
                 if (!char || !char.retiredBy) return false;
                 const keys = Array.isArray(char.retiredBy) ? char.retiredBy : [char.retiredBy];
                 return keys.some(k => !!gameUnlocks[k]);
@@ -3114,7 +3208,7 @@ document.addEventListener('DOMContentLoaded', () => {
              *  below the roster no longer changes shape when it is flipped. */
             function visibleSecretChars() {
                 return characters.secret.filter(c =>
-                    isSecretCharUnlocked(c) && !isCharacterRetired(c) && !c.packId && !c.marvel);
+                    isSecretCharUnlocked(c) && !isCharacterRetired(c) && !c.packId && !c.marvel && !c.halloween);
             }
 
             /*  The secret row sits under the two faction columns, and it lists the
@@ -3652,6 +3746,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 'ultimatePalpatine': 'Special unlock: Defeat Sith C-3PO',
                                 'geno': 'Special unlock: Win as The Visitor vs Vengeance Jones at the Zero Point — and The Visitor is spent doing it',
                                 'wrixel': 'Free with the Zero Event: clear the event and he is on the roster, at no cost and from no shop',
+                                // Read off the table that grants them, so the hint
+                                // cannot quote a different number from the rule.
+                                'lordtreat': `Special unlock: Win ${HALLOWEEN_LORD_UNLOCKS.lordtreat.wins} rounds as General Hawlo`,
+                                'lordtrick': `Special unlock: Win ${HALLOWEEN_LORD_UNLOCKS.lordtrick.wins} rounds as General Wheen`,
                             };
                             hint = unlockHints[char.secretUnlock] || 'Unlock through special conditions';
                         }
@@ -4225,6 +4323,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 renderSpriteShopItems();
+                renderHalloweenReviveItems();
             }
 
             // Sprites are NOT normally on sale. This block is purely a buy-back
@@ -4302,6 +4401,78 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rarity = spriteRarity(sprite);
                 showAnnouncement(`${sprite.name} is yours. Equip it in Settings ▸ Sprites.`,
                     rarity.color, 5000, `${sprite.icon} ${rarity.label.toUpperCase()} SPRITE ACQUIRED`, 100);
+            }
+
+            /*  Fallen Halloween fighters. Like the sprite buy-back above, the block
+             *  is empty — heading and all — until a run has cost someone, and empties
+             *  again the moment they are bought back. Not a shopItems entry: those
+             *  are unlocks keyed to secretUnlock, and a revive is neither. Prices
+             *  are HALLOWEEN_WORTH less 5%, worked out up by gameUnlocks.          */
+            function renderHalloweenReviveItems() {
+                const fallen = Object.keys(halloweenFallen).map(findRosterChar).filter(Boolean);
+                if (!fallen.length) return;
+
+                const heading = document.createElement('div');
+                heading.style.cssText = `font-family:${getUiFontStack()};font-size:0.7rem;letter-spacing:2px;color:rgba(255,255,255,0.35);margin-top:8px;`;
+                heading.textContent = '🎃 REVIVE A FALLEN FIGHTER';
+                shopItemsContainer.appendChild(heading);
+
+                fallen.forEach(char => {
+                    const cost = halloweenRevivePrice(char.id);
+                    const canAfford = credits >= cost;
+                    const el = document.createElement('div');
+                    el.style.cssText = `
+                        background: rgba(255,255,255,0.05);
+                        border: 1px solid ${canAfford ? '#ff8c1a' : '#666'};
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 12px;
+                    `;
+                    el.innerHTML = `
+                        <div style="flex:1;">
+                            <div style="font-family:${getUiFontStack()};font-size:0.9rem;color:#fff;margin-bottom:4px;">
+                                💀 ${char.name}
+                                <span style="font-size:0.65rem;letter-spacing:1px;color:#ff8c1a;">— FELL IN THE HALLOWEEN EVENT</span>
+                            </div>
+                            <div style="font-size:0.75rem;color:rgba(255,255,255,0.6);">Buy them back and they return to every roster, ready for the next run.</div>
+                        </div>
+                        <button
+                            class="revive-purchase-btn"
+                            style="
+                                background: ${canAfford ? '#ff8c1a' : '#666'};
+                                color: ${canAfford ? '#000' : '#888'};
+                                border: none;
+                                border-radius: 6px;
+                                padding: 8px 16px;
+                                font-family:${getUiFontStack()};
+                                font-size: 0.8rem;
+                                cursor: ${canAfford ? 'pointer' : 'not-allowed'};
+                                font-weight: bold;
+                            "
+                        >${cost} CR</button>
+                    `;
+                    if (canAfford) {
+                        el.querySelector('.revive-purchase-btn').addEventListener('click', () => reviveHalloweenFighter(char));
+                    }
+                    shopItemsContainer.appendChild(el);
+                });
+            }
+
+            function reviveHalloweenFighter(char) {
+                const cost = halloweenRevivePrice(char.id);
+                if (!isHalloweenFallen(char.id) || credits < cost) return;
+                credits -= cost;
+                delete halloweenFallen[char.id];
+                persistHalloweenFallen();
+                saveGameSettings();
+                updateCreditsDisplay();
+                renderShopItems();
+                rebuildAllRosters();
+                updateSecretFactionSectionVisibility();
+                showAnnouncement(`${char.name} is back on the roster.`, char.color, 4000, '🎃 REVIVED', 100);
             }
 
             // Shop id → how the unlock is announced. Keyed off the shop entry
@@ -4474,6 +4645,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // "which season" string so a save written before this reads as off
             // without a migration.
             let marvelFactionsEnabled = false;
+            // And the Halloween season, on its own flag for the same reason.
+            let halloweenFactionsEnabled = false;
             let aurebeshEnabled = false;
             let aurebeshUnlocked = false;
             let musicVolume = 0.55;
@@ -4765,6 +4938,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // writes the old key any more, so a save that came in under it
                     // is migrated the first time anything calls saveGameSettings().
                     marvelFactionsEnabled = !!saved.marvelFactionsEnabled;
+                    halloweenFactionsEnabled = !!saved.halloweenFactionsEnabled;
                     starkContractsClaimed = Math.max(0, Number(saved.starkContractsClaimed) || 0);
                     grootContractsClaimed = Math.max(0, Number(saved.grootContractsClaimed) || 0);
                     // The older name is still read so a save predating the rename
@@ -4871,6 +5045,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     marvelSoundtrackEnabled,
                     packFactionsEnabled,
                     marvelFactionsEnabled,
+                    halloweenFactionsEnabled,
                     starkContractsClaimed,
                     grootContractsClaimed,
                     aurebeshEnabled,
@@ -5582,11 +5757,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return !!marvelFactionsEnabled && ownsAnyMarvelCharacter();
             }
 
+            /** The same question for Halloween. Four of its six are free, so this
+             *  is again "does the season have a cast", not "has anything been won". */
+            function ownsAnyHalloweenCharacter() {
+                return characters.secret.some(c => c.halloween && !isCharacterRetired(c));
+            }
+
+            function halloweenFactionViewActive() {
+                return !!halloweenFactionsEnabled && ownsAnyHalloweenCharacter();
+            }
+
             /** Whichever season view is on, or null for the Galactic rosters. Marvel
-             *  wins if somehow both are set: it is the current season, and the two
-             *  toggles already turn each other off. */
+             *  wins if somehow more than one is set, then Halloween: the toggles
+             *  already turn each other off, so the order only settles an old save. */
             function activeSeason() {
                 if (marvelFactionViewActive()) return marvelSeason();
+                if (halloweenFactionViewActive()) return halloweenSeason();
                 if (packFactionViewActive()) return packSeason();
                 return null;
             }
@@ -5635,6 +5821,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             packFactionViewActive(), ps ? ps.label : '');
                 paintToggle('.marvel-faction-toggle', ownsAnyMarvelCharacter(),
                             marvelFactionViewActive(), marvelSeason().label);
+                paintToggle('.halloween-faction-toggle', ownsAnyHalloweenCharacter(),
+                            halloweenFactionViewActive(), halloweenSeason().label);
             }
 
             function togglePackFactions() {
@@ -5643,6 +5831,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // guard lives on the action rather than only on the display.
                 if (!packSeason() || !ownsAnyPackCharacter()) return;
                 packFactionsEnabled = !packFactionsEnabled;
+                // The other two seasons' toggles turn this one off, and this one
+                // turns them off in return — one cast in the columns at a time.
+                if (packFactionsEnabled) { marvelFactionsEnabled = false; halloweenFactionsEnabled = false; }
                 saveGameSettings();
                 updateFactionHeadings();
                 // Both columns and the secret row: the pack fighters move up into the
@@ -5669,7 +5860,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // activation can still reach a hidden button.
                 if (!ownsAnyMarvelCharacter()) return;
                 marvelFactionsEnabled = !marvelFactionsEnabled;
-                if (marvelFactionsEnabled) packFactionsEnabled = false;
+                if (marvelFactionsEnabled) { packFactionsEnabled = false; halloweenFactionsEnabled = false; }
                 saveGameSettings();
                 updateFactionHeadings();
                 // Both columns, the opponent screen and the secret row: the season
@@ -5685,6 +5876,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         '#e23636', 3500, '🦸 ' + season.label.toUpperCase() + ' SEASON', 100);
                 } else {
                     showAnnouncement('Back to the Grand Army and the Sith.', '#e23636', 3000, '⭐ GALACTIC ROSTER', 100);
+                }
+            }
+
+            /*  The Halloween third of the same switch, on the same terms: turning it
+             *  on turns the other two off.                                          */
+            function toggleHalloweenFactions() {
+                if (!ownsAnyHalloweenCharacter()) return;
+                halloweenFactionsEnabled = !halloweenFactionsEnabled;
+                if (halloweenFactionsEnabled) { packFactionsEnabled = false; marvelFactionsEnabled = false; }
+                saveGameSettings();
+                updateFactionHeadings();
+                rebuildAllRosters();
+                rebuildOpponentRosters();
+                updateSecretFactionSectionVisibility();
+
+                const season = halloweenSeason();
+                if (halloweenFactionsEnabled) {
+                    showAnnouncement(season.heroes.title + ' against ' + season.villains.title + '.',
+                        '#ff7a1a', 3500, '🎃 ' + season.label.toUpperCase() + ' SEASON', 100);
+                } else {
+                    showAnnouncement('Back to the Grand Army and the Sith.', '#ff7a1a', 3000, '⭐ GALACTIC ROSTER', 100);
                 }
             }
 
@@ -5715,8 +5927,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Arena-specific battle tracks
             const mustafar_music  = new Audio('music/BattleoftheHeroes.mp3');
             const deathstar_music = new Audio('music/ImperialMarch.mp3');
+            // The Halloween event's own battle track (the owner's pick), heard in
+            // event rounds and nowhere else: not on the menu, not on the season
+            // toggle, not in a Freeplay fight on Endor.
+            const halloweenBattleMusic = new Audio('music/ThisIsHalloween.mp3');
             mustafar_music.loop  = true;
             deathstar_music.loop = true;
+            halloweenBattleMusic.loop = true;
             menuMusic.volume = musicVolume;
             menuMusic.loop = true;
             battleMusic.volume = musicVolume;
@@ -5725,6 +5942,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cantinaBandAudio.loop = true;
             mustafar_music.volume = musicVolume;
             deathstar_music.volume = musicVolume;
+            halloweenBattleMusic.volume = musicVolume;
             bootStep(loadGameSettings);
             updateMarvelMusicButton();
             updateAurebeshToggleVisibility();
@@ -5732,6 +5950,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function applyMusicVolume() {
                 menuMusic.volume = musicVolume;
                 battleMusic.volume = musicVolume;
+                halloweenBattleMusic.volume = musicVolume;
                 cantinaBandAudio.volume = musicVolume;
                 mustafar_music.volume  = musicVolume;
                 deathstar_music.volume = musicVolume;
@@ -5784,6 +6003,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Measured ~20% hotter than Blaster.mp3 over its loudest 150ms, so
                 // it sits that much under the blaster to land at the same weight.
                 quadBlasterShot:      0.11,
+                // Measured 1dB over Blaster.mp3 and 1dB under the Quad over the
+                // same loudest 150ms, so it sits between the two.
+                halloweenBlasterShot: 0.12,
                 bowcasterShot:        0.12,
                 gunshot:              0.13,
                 // Ten shots a second makes this the most-repeated sample in the
@@ -5857,6 +6079,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // shipped. 0.68s against a 620ms cooldown, so a held trigger barely
                 // overlaps itself and it needs no entry in sfxMaxDurations.
                 quadBlasterShot:      new Audio(SFX_DIR + 'QuadBlasterShot.mp3'),
+                // The Halloween Blaster's own shot. 0.73s against an 850ms
+                // cooldown, so it never overlaps itself and needs no entry in
+                // sfxMaxDurations either.
+                halloweenBlasterShot: new Audio(SFX_DIR + 'Halloween%20Blaster%20Shot.mp3'),
                 bowcasterShot:        new Audio(SFX_DIR + 'Bowcaster.mp3'),
                 gunshot:              new Audio(SFX_DIR + 'Gunshot.mp3'),
                 // Both were borrowing other samples until now — the minigun fired
@@ -6021,7 +6247,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // a disc of vibranium is the least saber-like object on the roster.
                 'shield',
                 // Deadpool's katanas. Steel, so the same rule as the scimitar.
-                'katanas'
+                'katanas',
+                // The Skeleton Warriors' swords, burnt or not. Same rule again.
+                'skeletonsword'
             ]);
             function isBluntWeapon(weaponKey) {
                 return BLUNT_WEAPON_KEYS.has(weaponKey);
@@ -6234,8 +6462,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             // The first time the splash is genuinely visible. It is up
                             // from the first paint, but behind this screen until now,
                             // and the intro measures live tile rects — so it cannot
-                            // start any earlier than this.
-                            if (window.SnapIntro) SnapIntro.maybePlay();
+                            // start any earlier than this. Vaulted, it only settles
+                            // the menu: see offerSnapIntro().
+                            offerSnapIntro();
                         }, 600);
                     }, Math.max(500, introLeft));
                 }
@@ -6636,6 +6865,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // throttle, so no pull is dropped.
                 if (wk === 'blaster' || wk === 'hydrapistol') playSound('blasterShot', 60);
                 else if (wk === 'quadblaster') playSound('quadBlasterShot', 60);
+                // The Halloween Blaster has its own sample. Its 850ms trigger never
+                // comes near the throttle.
+                else if (wk === 'halloweenblaster') playSound('halloweenBlasterShot', 60);
                 else if (wk === 'minigun') playSound('minigun', 60);
                 else if (wk === 'flamethrower') pulseFlamethrower();
                 else if (wk === 'sniper' || wk === 'boomsniper') playSound('sniper', 200);
@@ -6742,6 +6974,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             function playBattleMusic() {
+                // The Halloween event plays its own track over everything, the
+                // Marvel switch included: the player chose the event, which is a
+                // stronger ask than a preference set some other day. Every round
+                // of a run calls this (setupGame does), and the early return keeps
+                // the song running through the result screen between rounds
+                // instead of restarting it; leaving the event goes through
+                // showMainMenu, whose playMenuMusic() puts the lobby track back.
+                if (halloweenRun) {
+                    if (currentMusic === halloweenBattleMusic) return;
+                    stopCurrentMusic();
+                    currentMusic = halloweenBattleMusic;
+                    if (musicStarted) halloweenBattleMusic.play().catch(() => {});
+                    return;
+                }
+
                 // Season override: takes priority over all arena-specific music.
                 // A season ships a single battle track, so updateMusicSources() has
                 // already pointed battleMusic at it and there is nothing to pick —
@@ -6801,14 +7048,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
+            /*  AUTOPLAY. The music tries to start the moment the page opens. Chrome
+             *  allows that on sites you already play media on a lot (that is why
+             *  YouTube can), and refuses it everywhere else until the player has
+             *  clicked, tapped or pressed a key. So the load attempt is backed by
+             *  listeners on the first input of any kind, anywhere on the page.
+             *
+             *  The listeners stay until a play() actually succeeds. They used to
+             *  be { once: true } and set musicStarted up front, so a first input
+             *  the browser does not count as a gesture (Escape, a bare Shift) used
+             *  them up and left the game silent for the rest of the session.     */
+            const MUSIC_START_EVENTS = ['pointerdown', 'click', 'keydown', 'touchend'];
+            function stopListeningForMusicStart() {
+                MUSIC_START_EVENTS.forEach(ev => document.removeEventListener(ev, tryStartMusic, true));
+            }
             function tryStartMusic() {
                 if (musicStarted) return;
+                // Whatever screen we are on decides the track; at boot that is
+                // the splash, which uses the menu music.
+                if (!currentMusic) currentMusic = menuMusic;
+                const track = currentMusic;
                 musicStarted = true;
-                playMenuMusic();
+                let attempt;
+                try { attempt = track.play(); } catch (e) { attempt = Promise.reject(e); }
+                Promise.resolve(attempt).then(() => {
+                    stopListeningForMusicStart();
+                }, () => {
+                    // Blocked. Only stand down if the screen has not changed
+                    // track in the meantime, then wait for the next input.
+                    if (currentMusic === track) musicStarted = false;
+                });
             }
-            document.addEventListener('click', tryStartMusic, { once: true });
-            document.addEventListener('keydown', tryStartMusic, { once: true });
-            document.addEventListener('pointerdown', tryStartMusic, { once: true });
+            MUSIC_START_EVENTS.forEach(ev => document.addEventListener(ev, tryStartMusic, true));
+            tryStartMusic();
 
             const settingsBtn = document.getElementById('settingsBtn');
             const settingsPanel = document.getElementById('settingsPanel');
@@ -6964,7 +7236,19 @@ document.addEventListener('DOMContentLoaded', () => {
              *  while implying it had been chosen.                                  */
             const seasonCardOverlay = document.getElementById('seasonCardOverlay');
 
+            /*  VAULTED: THE SEASON CARD. The Snap now ends on the menu and nothing
+             *  else: no card, no soundtrack question. The Snap only plays when it is
+             *  asked for (the THANOS code), and a player who typed a code to watch
+             *  a cutscene does not want a form at the end of it. The soundtrack is
+             *  still chosen in Settings, which is where it always lived; the card
+             *  only ever asked the same question in a second place.
+             *
+             *  Flip to false to bring it back. The markup, the styles, both buttons
+             *  and the snapintro:done listener below are all still in place.     */
+            const SEASON_CARD_VAULTED = true;
+
             function openSeasonCard() {
+                if (SEASON_CARD_VAULTED) return;
                 if (!seasonCardOverlay) return;
                 seasonCardOverlay.style.display = 'flex';
                 // Focus an exit as soon as the layer is up so the keyboard and the pad
@@ -7248,6 +7532,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             ? 'The Zero Point is already open to you.'
                             : 'Something walked out of the Zero Point. Zero has joined your roster.',
                             '#a274ff', 4500, '⬢ ZERO', 100);
+                    } else if (code === 'THANOS') {
+                        /*  VAULTED: THE SNAP INTRO. The way back in now that the Snap
+                         *  no longer plays by itself. Works every time it is entered,
+                         *  not once per save: it changes nothing the Snap has not
+                         *  already changed, so watching it again costs nothing. */
+                        setSettingsOpen(false);
+                        if (!replaySnapIntro()) {
+                            showAnnouncement('The Snap is not loaded in this build.', '#ff6666', 3000, '❌ INVALID CODE');
+                        }
                     } else if (code) {
                         showAnnouncement(`Code "${code}" is not recognized.`, '#ff6666', 3000, '❌ INVALID CODE');
                     }
@@ -7382,10 +7675,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     { key: 'Mouse',     wide: true,  desc: 'Aim — you fire toward the crosshair' },
                     { key: `${b('fire')} / LMB`, action: 'fire', wide: true, desc: 'Shoot — melee weapons swing. A swing commits: it locks to the direction you started it in, and slows you until it finishes' },
                     { key: `${b('fire')} / LMB`, wide: true, desc: 'DEFLECT — swing a lightsaber, darksaber or electrostaff as a shot arrives and the blade knocks it back at whoever fired it' },
-                    { key: `${b('throw')} / RMB`, action: 'throw', wide: true, desc: 'Throw your blade (melee) — or fire your blaster (droids with a sidearm)' },
+                    { key: `${b('throw')} / RMB`, action: 'throw', wide: true, desc: 'Throw your blade (melee) — or fire your blaster (droids with a sidearm), or raise skeletons as a Halloween general or lord, once a round' },
                     { key: b('dodge'),  action: 'dodge',  wide: true,  desc: 'Dodge — you are invulnerable for the first part of the roll, not all of it. Also cancels a swing you have committed to' },
                     { key: b('reload'), action: 'reload', wide: false, desc: 'Reload' },
-                    { key: b('interact'), action: 'interact', wide: true, desc: 'Interact — Force Choke as Vader; press again mid-choke to snap a neck at 50% HP or below. Switches weapons as Deadpool' },
+                    { key: b('interact'), action: 'interact', wide: true, desc: 'Interact — Force Choke as Vader; press again mid-choke to snap a neck at 50% HP or below. Switches weapons as Deadpool. As a Halloween fighter, hold it to keep your shield up' },
                     { key: 'Esc',       wide: false, desc: 'Pause' },
                     { key: 'Enter',     wide: false, desc: 'Confirm' },
                 ];
@@ -7395,10 +7688,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 { key: 'Joystick',  wide: true,  desc: 'Move' },
                 { key: '🔫',        wide: true,  desc: 'Shoot / Attack — aims for you automatically. A swing commits: it locks to the direction you started it in, and slows you until it finishes' },
                 { key: '🔫',        wide: true,  desc: 'DEFLECT — swing a lightsaber, darksaber or electrostaff as a shot arrives and the blade knocks it back at whoever fired it' },
-                { key: '🌀 / 🔫',   wide: true,  desc: 'Throw your blade (melee) — or fire your blaster (droids with a sidearm)' },
+                { key: '🌀 / 🔫',   wide: true,  desc: 'Throw your blade (melee) — or fire your blaster (droids with a sidearm), or raise skeletons as a Halloween general or lord, once a round' },
                 { key: '💨',        wide: true,  desc: 'Dodge — you are invulnerable for the first part of the roll, not all of it. Also cancels a swing you have committed to' },
                 { key: '🔄',        wide: false, desc: 'Reload — appears for magazine weapons' },
-                { key: '✋ / 💀',   wide: true,  desc: 'Interact — Force Choke as Vader; tap again mid-choke to snap a neck at 50% HP or below. Switches weapons as Deadpool' },
+                { key: '✋ / 💀',   wide: true,  desc: 'Interact — Force Choke as Vader; tap again mid-choke to snap a neck at 50% HP or below. Switches weapons as Deadpool. As a Halloween fighter, hold it to keep your shield up' },
                 { key: '⏸',        wide: false, desc: 'Pause' },
             ];
 
@@ -7408,10 +7701,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 { key: 'Right Stick', wide: true,  desc: 'Aim — you fire toward the crosshair' },
                 { key: 'A / RT',      wide: true,  desc: 'Shoot — melee weapons swing. A swing commits: it locks to the direction you started it in, and slows you until it finishes' },
                 { key: 'A / RT',      wide: true,  desc: 'DEFLECT — swing a lightsaber, darksaber or electrostaff as a shot arrives and the blade knocks it back at whoever fired it' },
-                { key: 'LT',          wide: true,  desc: 'Throw your blade (melee) — or fire your blaster (droids with a sidearm)' },
+                { key: 'LT',          wide: true,  desc: 'Throw your blade (melee) — or fire your blaster (droids with a sidearm), or raise skeletons as a Halloween general or lord, once a round' },
                 { key: 'B / LB / RB', wide: true,  desc: 'Dodge — you are invulnerable for the first part of the roll, not all of it. Also cancels a swing you have committed to' },
                 { key: 'X',           wide: false, desc: 'Reload' },
-                { key: 'Y',           wide: true,  desc: 'Interact — Force Choke as Vader; press again mid-choke to snap a neck at 50% HP or below. Switches weapons as Deadpool' },
+                { key: 'Y',           wide: true,  desc: 'Interact — Force Choke as Vader; press again mid-choke to snap a neck at 50% HP or below. Switches weapons as Deadpool. As a Halloween fighter, hold it to keep your shield up' },
                 { key: 'Start',       wide: false, desc: 'Pause / Resume' },
                 { header: 'In menus' },
                 { key: 'Left Stick / D-Pad', wide: true,  desc: 'Move selection' },
@@ -8681,6 +8974,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 // in the half of the loadout he chose to be in. No `deflects` — worked
                 // steel, the same line the Vibroblade and the scimitar sit on.
                 katanas:    { key: 'katanas',    label: 'Dual Katanas',    damage: 26, variance: 0.12, speed: 8.5, cooldown: 400, spin: true,  draw: 'blade',  color: '#d8dee6', length: 32, returnable: true, melee: true, reach: 34, twinBlade: true },
+
+                // ── HALLOWEEN ─────────────────────────────────────────────────
+                // Both Skeleton Warriors'. A Vibroblade a step slower and a point
+                // lighter (19 every 450ms against 21 every 420ms), because the
+                // fighter holding it also carries a shield the Vibroblade's owners
+                // never had — and because a Lord can put three of them on the
+                // field at once. Steel, so it is in BLUNT_WEAPON_KEYS and in
+                // sprite-kit's blade family; thrown and caught like any blade.
+                skeletonsword: { key: 'skeletonsword', label: 'Skeleton Sword', damage: 19, variance: 0.12, speed: 8, cooldown: 450, spin: true, draw: 'blade', color: '#d9dde2', length: 30, returnable: true, melee: true, reach: 30 },
+                /*  The generals' and the lords', and "it gives off the boom boom
+                 *  effect" is meant literally: `explodes` routes every hit through
+                 *  detonateBoomBoom(), the Boom Boom sprite's own machinery, the
+                 *  same one flag the Quad Blasters use. So the blast does NOT hit
+                 *  the fighter it struck a second time; it reaches everyone else
+                 *  within 110px — the skeletons around a general, the backup
+                 *  around you.
+                 *
+                 *  One round a pull, so it can afford a blast much nearer the
+                 *  sprite's (130px, 0.55) than Star-Lord's four-round 74px. The
+                 *  price is the trigger: 30 every 850ms is about 35 dps in a
+                 *  straight line, a little over half the Blaster's 63. "Fires
+                 *  relatively slowly" is that number. In a duel it is a slow gun;
+                 *  in a crowd it is the reason to bring one.
+                 *
+                 *  A round that lands on a raised shield still goes off — see
+                 *  applyStatusAndDamage — so a wall of shields is not safe from
+                 *  it, only the fighter holding the one it hit.               */
+                halloweenblaster: { key: 'halloweenblaster', label: 'Halloween Blaster', damage: 30, variance: 0.10, speed: 9, cooldown: 850, spin: false, draw: 'bolt', color: '#ff7a1a', length: 22, explodes: { radius: 110, fraction: 0.5 } },
                 // Obadiah Stane's, and the mechanic is the Mandarin's rather than a
                 // new one: `freezeMs` is read by applyFreeze() and by nothing else, and
                 // it is the only thing in the game that stops a fighter instead of
@@ -10288,6 +10609,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 try { return localStorage.getItem('gl-snap-intro') === '1'; } catch (e) { return false; }
             }
 
+            /*  VAULTED: THE SNAP INTRO. Thanos no longer walks onto the splash on
+             *  his own. A save that has never seen him opens to the menu the Snap
+             *  leaves behind (Kamino in the slot, the Zero Point tile and arena
+             *  gone) with none of the sequence, which is exactly what reduced motion
+             *  already gave the players who asked for less movement. snap-intro.js
+             *  is untouched apart from offering that road as SnapIntro.skip().
+             *
+             *  It is still in the game, just not on by itself: the THANOS redeem code
+             *  and the dev menu's Play Snap Cutscene both run it from the top through
+             *  replaySnapIntro(). The season card that used to follow it is vaulted
+             *  separately (SEASON_CARD_VAULTED).
+             *
+             *  Flip to false to bring the automatic showing back. It only reaches a
+             *  save that has not loaded while this was true: skipping still marks
+             *  the Snap as having happened, because snapHasHappened() is what
+             *  retires the Zero Point arena and renames the creator Kamino, and a
+             *  menu showing Kamino over a creator titled The Zero Point would be
+             *  two menus at once.                                                */
+            const SNAP_INTRO_VAULTED = true;
+
+            /** The splash is on screen: offer the Snap, or settle straight to its
+             *  end state while it is vaulted. Every automatic showing comes through
+             *  here (boot, the loading screen lifting, every return to the splash),
+             *  which is what makes this the vault's one point of use. */
+            function offerSnapIntro() {
+                if (!window.SnapIntro) return;
+                if (SNAP_INTRO_VAULTED && typeof window.SnapIntro.skip === 'function') {
+                    window.SnapIntro.skip();
+                    return;
+                }
+                window.SnapIntro.maybePlay();
+            }
+
+            /** Plays the Snap from the top, on request. SnapIntro.play() resets its
+             *  own state first, so this is a true replay rather than a second
+             *  showing stacked on the first, and it ignores the vault — asking for
+             *  it is the point. The intro mounts inside #splashMenu and animates the
+             *  tiles there, so it goes back to the splash and gives it one frame to
+             *  be on screen before it is measured. Returns false when the intro
+             *  script is not loaded, so each caller can say so in its own words. */
+            function replaySnapIntro() {
+                if (!window.SnapIntro || typeof window.SnapIntro.play !== 'function') return false;
+                showSplashMenu();
+                requestAnimationFrame(() => window.SnapIntro.play());
+                return true;
+            }
+
             /*  The Zero Point tile has no handler on purpose. It is scenery for
              *  the Snap and nothing else now: Kamino opens the creator, and this
              *  tile exists to be disintegrated in front of the player.
@@ -11802,6 +12170,37 @@ document.addEventListener('DOMContentLoaded', () => {
                      *  #c0392b, which is the other red in this column.           */
                     { id: 'deadpool', name: 'Deadpool', color: '#d4142a', hp: 150, weapon: 'katanas', saberColor: '#d8dee6', marvel: true, tacticalProfile: 'duelist', bio: 'Wade Wilson. Two swords, one Glock, no filter. Interact to switch between them.' },
 
+                    /*  ── THE HALLOWEEN SEASON ─────────────────────────────────
+                     *  Six fighters in two mirrored lines — a skeleton, a general
+                     *  and a lord on each side — with the villains' half burnt.
+                     *  Every one of them carries a shield, up while Interact is
+                     *  held and back down the moment it is let go (see
+                     *  HALLOWEEN_SHIELD_IDS), and the four commanders raise
+                     *  skeletons on Q once a round (see HALLOWEEN_SUMMONS).
+                     *
+                     *  The two sides are the same numbers on purpose, the way Thor
+                     *  and Ragnarok are: retune a line and retune its mirror. What
+                     *  tells them apart is the look and Wheen's 2% call.
+                     *
+                     *  110 for a skeleton is low because a skeleton is mostly what
+                     *  the generals bring with them: three at once off a Lord is
+                     *  330 health of extra bodies, and the shield is most of what
+                     *  keeps one standing. The generals sit at 190, a shade over a
+                     *  clone commander, and the lords at 230 — the extra 40 and the
+                     *  third skeleton are the whole of what five wins buy.
+                     *
+                     *  `arenaName` is for the name plate: it cuts at sixteen
+                     *  characters, and "Skeleton Warrior" is exactly sixteen, but
+                     *  three Burnt Skeleton Warriors would all read "Burnt
+                     *  Skeleto…". The Shop, roster and announcements keep the
+                     *  full name. */
+                    { id: 'skeleton', name: 'Skeleton Warrior', color: '#e8e2cf', hp: 110, weapon: 'skeletonsword', saberColor: '#d9dde2', halloween: true, tacticalProfile: 'brawler', bio: 'Bone, a sword and a shield, and nothing left to lose. Hold Interact to raise the shield.' },
+                    { id: 'hawlo', name: 'General Hawlo', color: '#ff8c1a', hp: 190, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'disciplined', bio: 'Commands the Bone Guard from behind a shield. Hold Interact to block, and Q raises two Skeleton Warriors once a round.' },
+                    { id: 'lordtreat', name: 'Lord Treat', color: '#ffc21a', hp: 230, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'calculated', secretUnlock: 'lordtreat', bio: 'Lord of the Bone Guard. Hold Interact to block, and Q raises three Skeleton Warriors once a round.' },
+                    { id: 'burntskeleton', name: 'Burnt Skeleton Warrior', arenaName: 'Burnt Skeleton', color: '#3c3c40', hp: 110, weapon: 'skeletonsword', saberColor: '#b9b2aa', halloween: true, tacticalProfile: 'brawler', bio: 'A Skeleton Warrior that went through the fire and kept the heat. Hold Interact to raise the shield.' },
+                    { id: 'wheen', name: 'General Wheen', color: '#7a2fbf', hp: 190, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'disciplined', bio: 'Commands the Burnt Legion. Hold Interact to block, and Q raises two Burnt Skeleton Warriors once a round. Now and then Lord Trick answers too.' },
+                    { id: 'lordtrick', name: 'Lord Trick', color: '#9b1b4a', hp: 230, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'calculated', secretUnlock: 'lordtrick', bio: 'Lord of the Burnt Legion. Hold Interact to block, and Q raises three Burnt Skeleton Warriors once a round.' },
+
                     /*  Reachable only by redeeming ZERO in Settings, which is also the
                      *  only door left to the event he is named for. No `marvel` flag on
                      *  purpose — he is what the Zero Point left behind, not part of the
@@ -12050,6 +12449,7 @@ document.addEventListener('DOMContentLoaded', () => {
              *  for them the whole roster is fair game.                              */
             function surpriseRosterOf(playerChar) {
                 const season = playerChar && playerChar.marvel ? marvelSeason()
+                             : playerChar && playerChar.halloween ? halloweenSeason()
                              : playerChar && playerChar.packId && packSeason() ? packSeason()
                              : null;
                 const heroes = season
@@ -12157,9 +12557,15 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.marvel-faction-toggle').forEach(btn => {
                 btn.addEventListener('click', toggleMarvelFactions);
             });
+            document.querySelectorAll('.halloween-faction-toggle').forEach(btn => {
+                btn.addEventListener('click', toggleHalloweenFactions);
+            });
 
             const secretContainer = document.getElementById('secret-roster');
 
+            // Before the unlocks: loadGalacticUnlocks() ends by refreshing the secret
+            // section, which asks isCharacterRetired(), which reads the fallen list.
+            bootStep(loadHalloweenFallen);
             bootStep(loadGalacticUnlocks);
             // Creations first: they splice themselves into characters.heroes /
             // characters.villains, and loadArmory() below needs that roster in
@@ -12344,6 +12750,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     gameUnlocks.wrixel = true;
                     // Zero is otherwise behind the ZERO code.
                     gameUnlocks.zeroUnit = true;
+                    // The two Halloween lords, otherwise five wins as their general.
+                    gameUnlocks.lordtreat = true;
+                    gameUnlocks.lordtrick = true;
                     persistGalacticUnlocks();
                     rebuildAllRosters();
                     updateSecretFactionSectionVisibility();
@@ -12444,14 +12853,10 @@ document.addEventListener('DOMContentLoaded', () => {
              *  splash, and plays from there.                                  */
             const devPlaySnap = document.getElementById('devPlaySnap');
             if (devPlaySnap) devPlaySnap.addEventListener('click', () => {
-                if (!window.SnapIntro || typeof window.SnapIntro.play !== 'function') {
-                    showAnnouncement('The Snap intro is not loaded.', '#ff6666', 2600, '\u26a0\ufe0f DEV');
-                    return;
-                }
                 devMenuPanel.style.display = 'none';
-                showSplashMenu();
-                // One frame for the splash to be on screen before it is measured.
-                requestAnimationFrame(() => window.SnapIntro.play());
+                if (!replaySnapIntro()) {
+                    showAnnouncement('The Snap intro is not loaded.', '#ff6666', 2600, '\u26a0\ufe0f DEV');
+                }
             });
 
             const devGrootSlider = document.getElementById('devGrootSlider');
@@ -13617,6 +14022,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // about to be snapped out of existence in front of the player.
                 setSub('kaminoSub',  `Clone a fighter · ${createdCharacters.length} created`);
                 setTag('dossierReadyTag', contractsReadyCount(), 'ready');
+
+                // ── Halloween ─────────────────────────────────────────────
+                refreshHalloweenTile();
             }
 
             /** Shop listings the player has not been shown yet. Seeded on first run
@@ -13640,8 +14048,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 splashMenu.style.display = 'flex';
                 refreshSplashState();
                 // Guarded internally by its own once-per-session flag, so this is
-                // just "the splash is on screen" rather than "play it now".
-                if (window.SnapIntro) SnapIntro.maybePlay();
+                // just "the splash is on screen" rather than "play it now" — and
+                // while the Snap is vaulted it never plays from here at all.
+                offerSnapIntro();
                 // restore dev/settings visibility when showing menus
                 const devMenuToggleEl = document.getElementById('devMenuToggle');
                 const settingsBtnEl = document.getElementById('settingsBtn');
@@ -14028,6 +14437,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         spritePhase = swingPhase;
                     }
 
+                    // Halloween: the burnt aura and the slung shield go UNDER the
+                    // body; a raised shield goes over it, below.
+                    drawBurntAura(this);
+                    drawHalloweenShield(this, 'back');
+
                     SpriteKit.drawFighter(ctx, {
                         x: this.x, y: this.y,
                         scale: bodyScale(this),
@@ -14059,6 +14473,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         hitFlash: frameNow < this.hitFlashUntil ? 1 : 0,
                         t: frameNow
                     });
+
+                    drawHalloweenShield(this, 'front');
 
                     // Sith dark aura pulse. Villain membership carries it for the
                     // shipped roster; CUSTOM_SITH_IDS carries it for creations,
@@ -14169,6 +14585,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (this.health < 0.5) this.health = 0;
                     if (this.health === 0 && this.isAlive) {
                         this.isAlive = false;
+                        // A Halloween team fighter's death is saved the moment it
+                        // happens, so quitting the fight cannot take it back.
+                        if (halloweenRun && this.team === 'player' && this.halloweenSlot != null) onHalloweenTeamDeath(this);
                         // death explosion with screen shake
                         triggerScreenShake(8, 15);
                         for (let k = 0; k < 22; k++) {
@@ -14191,7 +14610,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             // Check if this was the final kill for slow motion
                             const aliveEnemies = entities.filter(e => e.team === 'enemy' && e.isAlive && e !== this);
-                            if (aliveEnemies.length === 0) {
+                            // Not between waves: a Halloween round's board empties
+                            // many times before the round is actually over.
+                            if (aliveEnemies.length === 0 && !halloweenWaveHasMore()) {
                                 triggerSlowMotion(0.3, 40);
                             }
                         }
@@ -14558,6 +14979,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // opposite case.
                 if (packFactionViewActive() && char.packId) return isCharacterUnlocked(char);
                 if (marvelFactionViewActive() && char.marvel) return isCharacterUnlocked(char);
+                if (halloweenFactionViewActive() && char.halloween) return isCharacterUnlocked(char);
                 if (char.alwaysOpponent) return true;
                 const isGated = !!(char.unlockAchievement || char.secretUnlock);
                 if (!isGated) return true;
@@ -15260,6 +15682,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Deadpool's swap, for the side with no key to press. See
                 // WEAPON_SWAP_IDS.
                 if (mainEnemy) updateWeaponSwapAI(mainEnemy);
+                // The Halloween commanders' skeletons, for the same side. See
+                // HALLOWEEN_SUMMONS.
+                if (mainEnemy) updateHalloweenSummonAI(mainEnemy);
             }
 
 
@@ -16522,6 +16947,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     spawnDodgeNegation(target);
                     return;
                 }
+
+                // A raised Halloween shield, facing the hit. Below the dodge for the
+                // same reason the pickup shield is, and above the pickup so a hit the
+                // held shield stopped does not also spend the one-hit pickup.
+                //
+                // An exploding round still goes off on the shield: the fighter
+                // holding it is spared, everyone standing round them is not. The
+                // epicentre is never re-hit by detonateBoomBoom, so this cannot leak
+                // through the shield it just struck.
+                if (shieldBlocksHit(target, projectile)) {
+                    spawnShieldBlock(target);
+                    const blockedCfg = projectile.weaponConfig || WEAPON_LIBRARY[projectile.type];
+                    if (blockedCfg && blockedCfg.explodes) {
+                        detonateBoomBoom(target, damage, projectile.owner, blockedCfg.explodes);
+                    }
+                    return;
+                }
                 // Reads the weapon's own melee flag rather than re-listing the melee
                 // keys here. The three hardcoded lists this replaced had drifted
                 // apart — vibroblade was in one of them and missing from the other
@@ -16771,6 +17213,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const dist = Math.hypot(e.x - epicentre.x, e.y - epicentre.y);
                     if (dist > radius) continue;
+
+                    // A raised Halloween shield facing the blast takes it.
+                    if (shieldFaces(e, epicentre.x, epicentre.y)) {
+                        spawnShieldBlock(e);
+                        continue;
+                    }
 
                     // Linear falloff from the epicentre out to the rim, floored so
                     // a target clipped by the edge still takes something.
@@ -17771,13 +18219,960 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (swapWeapon(e)) e.weaponSwapAIReadyAt = frameNow + WEAPON_SWAP_AI_COOLDOWN;
             }
 
+            /*  ── HALLOWEEN: THE SHIELD ──────────────────────────────────────
+             *  All six Halloween fighters carry one, and it is the only Interact in
+             *  the game that is HELD rather than pressed: up for as long as the key
+             *  is down, and back down the frame it comes up. No timer and no
+             *  cooldown, because that is the mechanic as it was asked for — what
+             *  keeps it from being a wall the round can be waited out behind is
+             *  everything it costs while it is up:
+             *
+             *    · it covers the FRONT only, 75° either side of where the fighter
+             *      is facing. Anything that comes round the side still lands, so
+             *      backup, summons and a second attacker all get through it;
+             *    · nothing gets fired, swung or thrown while it is up — the weapon
+             *      block in update() is skipped outright;
+             *    · the fighter walks at 55%;
+             *    · it cannot come up mid-swing. A committed cut stays committed,
+             *      and a shield that cancelled one would be a second way out of
+             *      the recovery that the dodge is meant to own.
+             *
+             *  What it stops: bolts, thrown blades, melee swings and the splash of
+             *  an explosion — every hit that comes through applyStatusAndDamage or
+             *  detonateBoomBoom from in front. What it does not stop: anything that
+             *  is not a hit — a choke, a burn already lit, poison, a hazard — which
+             *  is the same line the shield pickup draws.
+             *
+             *  `shieldRaised` is the whole of the state, and it is per entity, so a
+             *  new round wipes it by building new Characters. Distinct from
+             *  `shieldActive`, which is the one-hit pickup and has nothing to do
+             *  with this.                                                         */
+            const HALLOWEEN_SHIELD_IDS = new Set(['skeleton', 'hawlo', 'lordtreat', 'burntskeleton', 'wheen', 'lordtrick']);
+            const HALLOWEEN_SHIELD_HALF_ARC = 75 * Math.PI / 180;
+            const HALLOWEEN_SHIELD_MOVE_SCALE = 0.55;
+            /*  The AI's half. It cannot see a key, so it raises the shield the way it
+             *  already dodges — at a bolt it has actually seen coming, or a swing
+             *  that has actually started — and rolls the difficulty's blockChance
+             *  once per bolt or swing, the same 25/40/60/75% the bolt clash uses.
+             *  It sees a little further ahead than its dodge does (380ms against
+             *  Normal's 320), because a shield is raised rather than dived into.
+             *
+             *  Then it holds for 650ms and has to wait 450 before it can raise it
+             *  again. Without that floor a Minigun or the Beam, which put a bolt on
+             *  the way every frame, would keep an AI skeleton behind its shield for
+             *  the whole round and it would never swing back.                   */
+            const HALLOWEEN_SHIELD_AI_SIGHT_MS = 380;
+            const HALLOWEEN_SHIELD_AI_HOLD_MS = 650;
+            const HALLOWEEN_SHIELD_AI_REST_MS = 450;
+            // Which side's shields are burnt. Read off the season rather than listed
+            // again, so a villain added to that column later is drawn to match.
+            const HALLOWEEN_BURNT_IDS = new Set(HALLOWEEN_SEASON.villains.ids);
+            // The red aura is the Burnt Skeleton Warriors' alone, as asked — Wheen
+            // and Lord Trick are burnt by allegiance, not by fire.
+            const HALLOWEEN_AURA_IDS = new Set(['burntskeleton']);
+
+            function canRaiseShield(e) {
+                return !!(e && e.isAlive && HALLOWEEN_SHIELD_IDS.has(e.characterId));
+            }
+
+            function shieldMoveScale(e) {
+                return e && e.shieldRaised ? HALLOWEEN_SHIELD_MOVE_SCALE : 1;
+            }
+
+            function setShieldRaised(e, up) {
+                const want = !!up && canRaiseShield(e);
+                if (!!e.shieldRaised === want) return;
+                e.shieldRaised = want;
+            }
+
+            /** Does a raised shield on `target` face the point (sx, sy)? Measured
+             *  against lastAimAngle, which draw() keeps pointed at whoever the
+             *  fighter is facing — the same angle the shield is painted on, so what
+             *  the player sees covered is what is covered. */
+            function shieldFaces(target, sx, sy) {
+                if (!target || !target.shieldRaised || !canRaiseShield(target)) return false;
+                const toSrc = Math.atan2(sy - target.y, sx - target.x);
+                const facing = target.lastAimAngle || 0;
+                const delta = Math.atan2(Math.sin(toSrc - facing), Math.cos(toSrc - facing));
+                return Math.abs(delta) <= HALLOWEEN_SHIELD_HALF_ARC;
+            }
+
+            /** Where a hit is arriving from. A bolt is asked which way it is flying
+             *  rather than where its owner stands, so a thrown blade on its way home
+             *  or a shot that came round cover is judged by its real approach; a
+             *  swing has no flight, so it comes from the swordsman. */
+            function shieldBlocksHit(target, projectile) {
+                if (!target || !target.shieldRaised) return false;
+                if (!projectile.isSwing && Number.isFinite(projectile.dx) && (projectile.dx || projectile.dy)) {
+                    return shieldFaces(target, target.x - projectile.dx, target.y - projectile.dy);
+                }
+                const src = projectile.owner;
+                return !!src && shieldFaces(target, src.x, src.y);
+            }
+
+            function spawnShieldBlock(target) {
+                const a = target.lastAimAngle || 0;
+                const r = bodyRadius(target) + 7;
+                const burnt = HALLOWEEN_BURNT_IDS.has(target.characterId);
+                spawnHitSparks(target.x + Math.cos(a) * r, target.y + Math.sin(a) * r,
+                               burnt ? '#ff3b2f' : '#ffcf7a', 10);
+                playSound('bluntHit', 120);
+            }
+
+            /** The AI's shield. Called from the AI branch of update() for every
+             *  Halloween fighter it drives, ahead of movement so the 55% walk applies
+             *  on the same frame the shield comes up. */
+            function updateShieldAI(e, target, now) {
+                if (e.shieldRaised) {
+                    if (now < (e.shieldAIHoldUntil || 0)) return;
+                    setShieldRaised(e, false);
+                    e.shieldAIReadyAt = now + HALLOWEEN_SHIELD_AI_REST_MS;
+                    return;
+                }
+                if (now < (e.shieldAIReadyAt || 0) || isCommittedToSwing(e, now)) return;
+
+                // A bolt on its way, or a swing already wound up within reach.
+                // Each one is rolled for once, keyed on the bolt itself or on the
+                // moment the swing lands, so a bolt seen across six frames is still
+                // one roll and not six.
+                let seen = null;
+                const threat = findIncomingThreat(e, HALLOWEEN_SHIELD_AI_SIGHT_MS);
+                if (threat) {
+                    seen = threat.bullet;
+                } else if (target && target.pendingSwingAt && frameNow < target.pendingSwingAt
+                           && Math.hypot(target.x - e.x, target.y - e.y) <= getSwingReach(target) + bodyRadius(e) + 10) {
+                    seen = target.pendingSwingAt;
+                }
+                if (seen === null || e.shieldAIRolledFor === seen) return;
+                e.shieldAIRolledFor = seen;
+                if (Math.random() >= diffSettings[currentDifficulty].blockChance) return;
+                setShieldRaised(e, true);
+                e.shieldAIHoldUntil = now + HALLOWEEN_SHIELD_AI_HOLD_MS;
+            }
+
+            /*  Two layers, because the shield is in two places. Lowered, it is slung
+             *  on the back — "the shield goes back" — and painted BEFORE the body so
+             *  the body covers most of it. Raised, it is a curved face in front of
+             *  the fighter, painted AFTER the body, spanning the middle of the arc it
+             *  actually blocks.                                                    */
+            function drawHalloweenShield(e, layer) {
+                if (!canRaiseShield(e)) return;
+                const raised = !!e.shieldRaised;
+                if ((layer === 'front') !== raised) return;
+                const burnt = HALLOWEEN_BURNT_IDS.has(e.characterId);
+                const face = burnt ? '#2a2628' : '#8a5a2b';
+                const rim  = burnt ? '#ff3b2f' : '#e8c070';
+                const boss = burnt ? '#ff6a3d' : '#ff8c1a';
+                const s = bodyScale(e);
+                ctx.save();
+                ctx.translate(e.x, e.y);
+                ctx.rotate(e.lastAimAngle || 0);
+                if (raised) {
+                    const r = (CHARACTER_SIZE + 7) * s;
+                    const half = HALLOWEEN_SHIELD_HALF_ARC * 0.62;
+                    ctx.lineCap = 'round';
+                    if (burnt) { ctx.shadowBlur = 12; ctx.shadowColor = '#ff2a1a'; }
+                    ctx.strokeStyle = rim;
+                    ctx.lineWidth = 10 * s;
+                    ctx.beginPath(); ctx.arc(0, 0, r, -half, half); ctx.stroke();
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = face;
+                    ctx.lineWidth = 6.5 * s;
+                    ctx.beginPath(); ctx.arc(0, 0, r, -half * 0.94, half * 0.94); ctx.stroke();
+                    ctx.fillStyle = boss;
+                    ctx.beginPath(); ctx.arc(r, 0, 2.6 * s, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    // Far enough back that a third of it shows past the body.
+                    const bx = -CHARACTER_SIZE * 0.95 * s;
+                    ctx.fillStyle = face;
+                    ctx.strokeStyle = rim;
+                    ctx.lineWidth = 2 * s;
+                    ctx.beginPath(); ctx.arc(bx, 0, 8 * s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = boss;
+                    ctx.beginPath(); ctx.arc(bx, 0, 1.8 * s, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            /** The Burnt Skeleton Warriors' red aura. Painted under the body, so it
+             *  reads as heat coming off them rather than as a disc laid over them —
+             *  the Sith aura's flat fill on top would hide how dark they are, which
+             *  is the other half of the look. */
+            function drawBurntAura(e) {
+                if (!HALLOWEEN_AURA_IDS.has(e.characterId)) return;
+                const s = bodyScale(e);
+                const pulse = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(Date.now() / 260 + e.x * 0.01);
+                const r = (CHARACTER_SIZE + 13 + pulse * 4) * s;
+                const g = ctx.createRadialGradient(e.x, e.y, CHARACTER_SIZE * 0.45 * s, e.x, e.y, r);
+                g.addColorStop(0, 'rgba(255, 45, 20, 0.62)');
+                g.addColorStop(0.55, 'rgba(255, 30, 10, 0.30)');
+                g.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                ctx.save();
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+
+            /*  ── HALLOWEEN: THE SUMMONS ─────────────────────────────────────
+             *  The four commanders raise skeletons on Q, which their blasters left
+             *  with nothing to do. Once a ROUND: the Characters are rebuilt every
+             *  round, so `halloweenSummonUsed` resets with them, and a skeleton
+             *  raised in round one is not still standing in round two.
+             *
+             *  The skeletons come up in a ring around whoever raised them and fight
+             *  on that side, whoever it is — the player, or the opponent. They do
+             *  NOT crumble when their general falls. A round is won when every enemy
+             *  is down, so an opposing Wheen's two burnt skeletons are two more
+             *  fighters to beat, which is the whole of what makes the summon matter.
+             *
+             *  Wheen's `callIn` is the 2% asked for: on the same press, once in
+             *  fifty, Lord Trick comes up with her skeletons. He arrives as a plain
+             *  fighter on her side — shield, Halloween Blaster — but he is not a
+             *  main entity, so he cannot raise skeletons of his own. That would turn
+             *  a 2% surprise into three more bodies on top of it.                 */
+            const HALLOWEEN_SUMMONS = {
+                hawlo:     { unitId: 'skeleton',      count: 2 },
+                lordtreat: { unitId: 'skeleton',      count: 3 },
+                wheen:     { unitId: 'burntskeleton', count: 2, callIn: { id: 'lordtrick', chance: 0.02 } },
+                lordtrick: { unitId: 'burntskeleton', count: 3 }
+            };
+            // How far from the summoner the ring is raised. Clear of the body and
+            // close enough that the skeletons read as having come up at his feet.
+            const HALLOWEEN_SUMMON_RING = 46;
+            // When an AI commander raises his: as soon as he is hurt below 70%, and
+            // otherwise somewhere 3 to 7 seconds into the round, so it does not land
+            // on the opening frame every time and the player gets a moment first.
+            const HALLOWEEN_SUMMON_AI_HEALTH = 0.7;
+            const HALLOWEEN_SUMMON_AI_DELAY_MS = 3000;
+            const HALLOWEEN_SUMMON_AI_JITTER_MS = 4000;
+            let halloweenSummonInputLatched = false;
+
+            function canHalloweenSummon(e) {
+                return !!(e && e.isAlive && e.isMainEntity && HALLOWEEN_SUMMONS[e.characterId] && !e.halloweenSummonUsed);
+            }
+
+            /** One fighter, raised on the summoner's side. spawnBackupAlly() is the
+             *  near miss: it always spawns next to the player and always on the
+             *  player's team, and these have to come up next to an AI general on
+             *  the enemy's just as well. */
+            function spawnSummonedUnit(summoner, data, angle) {
+                const x = Math.min(canvasLogicalW - CHARACTER_SIZE, Math.max(CHARACTER_SIZE, summoner.x + Math.cos(angle) * HALLOWEEN_SUMMON_RING));
+                const y = Math.min(canvasLogicalH - CHARACTER_SIZE, Math.max(CHARACTER_SIZE, summoner.y + Math.sin(angle) * HALLOWEEN_SUMMON_RING));
+                const ent = new Character(
+                    x, y, data.color, data.arenaName || data.name, data.hp, data.weapon,
+                    data.saberColor, data.isDroid, data.isWookiee, summoner.team, false,
+                    data.isClone, data.weaponDamage, data.id
+                );
+                ent.tacticalProfileOverride = data.tacticalProfile || null;
+                ent.speedMult = data.speedMult || 1;
+                // Facing out of the ring, so the first frame does not have every
+                // shield on the field pointed east.
+                ent.lastAimAngle = angle;
+                entities.push(ent);
+                spawnBoomBlast(x, y, 40);
+                return ent;
+            }
+
+            function performHalloweenSummon(e) {
+                if (!canHalloweenSummon(e)) return false;
+                const def = HALLOWEEN_SUMMONS[e.characterId];
+                const unit = findRosterChar(def.unitId);
+                if (!unit) return false;
+                e.halloweenSummonUsed = true;
+
+                const start = Math.random() * Math.PI * 2;
+                for (let i = 0; i < def.count; i++) {
+                    spawnSummonedUnit(e, unit, start + (i / def.count) * Math.PI * 2);
+                }
+                const lord = def.callIn && Math.random() < def.callIn.chance ? findRosterChar(def.callIn.id) : null;
+                if (lord) spawnSummonedUnit(e, lord, start + Math.PI / def.count);
+
+                const burnt = HALLOWEEN_BURNT_IDS.has(e.characterId);
+                const color = burnt ? '#ff3b2f' : '#ff8c1a';
+                const many = (def.count === 3 ? 'Three ' : 'Two ') + unit.name + 's';
+                if (lord) {
+                    showAnnouncement(`${many} rise for ${e.name} — and ${lord.name} answers the call!`,
+                        '#ff3b2f', 4500, '🎃 ' + lord.name.toUpperCase(), 90, true);
+                } else {
+                    showAnnouncement(`${many} rise for ${e.name}.`, color, 3500, '💀 RISE', 90, true);
+                }
+                playSound('bluntHit', 120);
+                if (e === mainPlayer) matchSpecialsUsed++;
+                return true;
+            }
+
+            /** The opponent's summon, for the side with no Q to press. Runs once a
+             *  frame from updateShapelessTransform(), beside Deadpool's swap. */
+            function updateHalloweenSummonAI(e) {
+                if (!e || e === mainPlayer || !canHalloweenSummon(e)) return;
+                const now = gameNow();
+                if (now < e.stunnedUntil || now < e.knockedOutUntil || now < e.chokedUntil) return;
+                if (!e.halloweenSummonAIAt) {
+                    e.halloweenSummonAIAt = frameNow + HALLOWEEN_SUMMON_AI_DELAY_MS + Math.random() * HALLOWEEN_SUMMON_AI_JITTER_MS;
+                }
+                const hurt = e.health < e.maxHealth * HALLOWEEN_SUMMON_AI_HEALTH;
+                if (!hurt && frameNow < e.halloweenSummonAIAt) return;
+                if (!getClosestEnemy(e)) return;
+                performHalloweenSummon(e);
+            }
+
+            /*  ── HALLOWEEN: THE LORDS ───────────────────────────────────────
+             *  Lord Treat is earned by winning five rounds as General Hawlo, and
+             *  Lord Trick by five as General Wheen. "Matches" is rounds here for the
+             *  same reason it is for the Jedi Hunter: a round is the unit the game
+             *  records, in the per-fighter stats this reads.
+             *
+             *  The grants are written out flag by flag rather than through
+             *  gameUnlocks[flag], because validate.js finds a secret's grant by
+             *  searching for `gameUnlocks.<flag> = true`. A computed key would pass
+             *  every test and still read to it as a fighter nobody can unlock.   */
+            const HALLOWEEN_LORD_UNLOCKS = {
+                lordtreat: { general: 'hawlo', wins: 5 },
+                lordtrick: { general: 'wheen', wins: 5 }
+            };
+
+            function checkHalloweenLordUnlocks() {
+                if (!pCharData) return;
+                const pid = achievementCharId(pCharData);
+                const earned = flag => {
+                    const rule = HALLOWEEN_LORD_UNLOCKS[flag];
+                    return pid === rule.general && !gameUnlocks[flag] && fighterStats(pid).wins >= rule.wins;
+                };
+                let lord = null;
+                if (earned('lordtreat')) { gameUnlocks.lordtreat = true; lord = 'lordtreat'; }
+                else if (earned('lordtrick')) { gameUnlocks.lordtrick = true; lord = 'lordtrick'; }
+                if (!lord) return;
+                persistGalacticUnlocks();
+                rebuildAllRosters();
+                const data = findRosterChar(lord);
+                const rule = HALLOWEEN_LORD_UNLOCKS[lord];
+                showAnnouncement(`${rule.wins} wins as ${pCharData.name} have called up their lord. ${data ? data.name : 'A new lord'} has joined your roster.`,
+                    lord === 'lordtrick' ? '#ff3b2f' : '#ff8c1a', 6000, '🔓 CHARACTER UNLOCKED', 100);
+            }
+
+            /*  ══ THE HALLOWEEN EVENT ═══════════════════════════════════════════
+             *  Six rounds against the Burnt Legion with a team of six real roster
+             *  fighters: the player and five allies. The order is the owner's —
+             *  5 Burnt Skeletons three at a time, 7 four at a time, General Wheen
+             *  with 4, the first two again, then Lord Trick with 7. (It opened at
+             *  15 / 20 / 10 / 20 and a full team died in round two; the owner cut
+             *  rounds one and two to a third and had the rest scaled to match.)
+             *
+             *  It borrows what the Zero Event left behind (the full-width splash
+             *  tile, the first-series lock, the renamed result buttons) and adds two
+             *  cards in front of the fight (a warning and the team pick), waves that
+             *  refill as skeletons fall, a take-over when the player's fighter dies,
+             *  and deaths that stick until the Shop undoes them.
+             *
+             *  A run lives in halloweenRun and nowhere else: leaving the event, or
+             *  the page, throws the run away. Deaths are the one thing written to
+             *  the save, and they are written the moment they happen (see
+             *  onHalloweenTeamDeath). The fallen store itself is declared up by
+             *  gameUnlocks, because isCharacterRetired() reads it during boot.   */
+            const HALLOWEEN_EVENT = {
+                // Endor: the one arena that reads as woods at night. The event turns
+                // the arena hazard off (spawnHazards), so an enemy is the only thing
+                // that can kill a team fighter — which is the rule the warning card
+                // states.
+                arena: 'endor',
+                minionId: 'burntskeleton',
+                teamSize: 6,
+                // `atOnce` is how many skeletons stand on the field at a time; a new
+                // one walks in as each falls, until `total` have come. A boss is on
+                // the field from the first second and does not count against atOnce.
+                rounds: [
+                    { total: 5, atOnce: 3 },
+                    { total: 7, atOnce: 4 },
+                    { boss: 'wheen',     total: 4, atOnce: 3 },
+                    { total: 5, atOnce: 3 },
+                    { total: 7, atOnce: 4 },
+                    { boss: 'lordtrick', total: 7, atOnce: 4 }
+                ],
+                // Clearing it: 2,500 credits with nobody lost, 350 less per fighter
+                // lost, never under 750 — five lost is the most a run can survive.
+                reward: { full: 2500, perLoss: 350, min: 750 },
+                // Gap between one skeleton falling and the next walking in, so a
+                // wave reads as reinforcements arriving rather than respawns.
+                spawnGapMs: 450
+            };
+            // Who the team card offers: Fox and Cody by name, then the Bone Guard
+            // column, so a hero added to HALLOWEEN_SEASON turns up here by existing.
+            function halloweenPoolIds() { return ['fox', 'cody', ...HALLOWEEN_SEASON.heroes.ids]; }
+            // Fighters who may fill more than one slot and are not retired when they
+            // fall. The pool has fewer names than the team has slots, so somebody
+            // has to be rank and file — and Skeleton Warriors are already dead.
+            const HALLOWEEN_EXPENDABLE_IDS = new Set(['skeleton']);
+
+            let halloweenRun = null;        // see startHalloweenRun() for the shape
+            let halloweenPrevArena = null;  // the player's own arena pick, put back on leaving
+            const halloweenPick = { team: [], lead: 0 };
+
+            const btnHalloween = document.getElementById('btnHalloween');
+            const halloweenDisclaimer = document.getElementById('halloweenDisclaimer');
+            const halloweenTeamOverlay = document.getElementById('halloweenTeamOverlay');
+
+            function focusHalloweenButton(id) {
+                const b = document.getElementById(id);
+                if (!b) return;
+                // Deferred past showSplashMenu()'s own deferred focus, which would
+                // otherwise land on the splash underneath the card a tick later.
+                setTimeout(() => { try { b.focus({ preventScroll: true }); } catch (e) { b.focus(); } }, 0);
+            }
+
+            /*  ── THE TILE ──────────────────────────────────────────────────────
+             *  Locked until the first series win, as the Zero Event's was: a new
+             *  player should not be able to lose Fox before playing a match. The
+             *  lock is a class and aria-disabled rather than `disabled`, for the
+             *  reason snap-intro.js gives — a disabled tile is unreachable by pad. */
+            function refreshHalloweenTile() {
+                if (!btnHalloween) return;
+                const locked = !hasWonSeries;
+                btnHalloween.classList.toggle('is-locked', locked);
+                btnHalloween.setAttribute('aria-disabled', locked ? 'true' : 'false');
+                const tag = document.getElementById('halloweenLockTag');
+                if (tag) tag.style.display = locked ? '' : 'none';
+            }
+            if (btnHalloween) {
+                btnHalloween.addEventListener('click', () => {
+                    if (!hasWonSeries) return;
+                    openHalloweenDisclaimer();
+                });
+            }
+
+            /*  ── CARD 1: THE WARNING ───────────────────────────────────────────
+             *  Shown every time, not once: the risk is permanent, so the reminder
+             *  is too. Acknowledge goes on to the team card; Back goes nowhere.  */
+            function openHalloweenDisclaimer() {
+                if (!halloweenDisclaimer) return;
+                halloweenDisclaimer.style.display = 'flex';
+                focusHalloweenButton('halloweenAckBtn');
+            }
+            function closeHalloweenDisclaimer() {
+                if (halloweenDisclaimer) halloweenDisclaimer.style.display = 'none';
+            }
+            const halloweenAckBtn = document.getElementById('halloweenAckBtn');
+            if (halloweenAckBtn) halloweenAckBtn.addEventListener('click', () => { closeHalloweenDisclaimer(); openHalloweenTeamCard(); });
+            const halloweenDisclaimerBackBtn = document.getElementById('halloweenDisclaimerBackBtn');
+            if (halloweenDisclaimerBackBtn) halloweenDisclaimerBackBtn.addEventListener('click', () => { closeHalloweenDisclaimer(); setTimeout(() => focusFirstVisibleButton(splashMenu), 0); });
+
+            /*  ── CARD 2: THE TEAM ──────────────────────────────────────────────
+             *  Six slots. Tapping a pool tile fills the next one; tapping a named
+             *  fighter's tile again takes them off, while a Skeleton Warrior tile
+             *  adds another skeleton each tap. Each slot can be tapped to make that
+             *  fighter the one the player controls ("Play as"), or crossed off.
+             *  Start waits for a full team. Fallen and locked fighters are shown
+             *  greyed with the reason, so the player can see who they are missing.*/
+            function halloweenPoolChars() {
+                return halloweenPoolIds().map(findRosterChar).filter(Boolean);
+            }
+            function openHalloweenTeamCard() {
+                if (!halloweenTeamOverlay) return;
+                halloweenPick.team = [];
+                halloweenPick.lead = 0;
+                renderHalloweenTeamCard();
+                halloweenTeamOverlay.style.display = 'flex';
+                const firstTile = halloweenTeamOverlay.querySelector('.hw-tile:not(:disabled)');
+                if (firstTile) setTimeout(() => { try { firstTile.focus({ preventScroll: true }); } catch (e) { firstTile.focus(); } }, 0);
+            }
+            function closeHalloweenTeamCard() {
+                if (halloweenTeamOverlay) halloweenTeamOverlay.style.display = 'none';
+            }
+            function renderHalloweenTeamCard() {
+                const pool = document.getElementById('halloweenPool');
+                const slots = document.getElementById('halloweenSlots');
+                const count = document.getElementById('halloweenTeamCount');
+                const startBtn = document.getElementById('halloweenStartBtn');
+                if (!pool || !slots) return;
+                const team = halloweenPick.team;
+                const size = HALLOWEEN_EVENT.teamSize;
+                if (halloweenPick.lead >= team.length) halloweenPick.lead = 0;
+
+                pool.replaceChildren();
+                halloweenPoolChars().forEach(char => {
+                    const tile = document.createElement('button');
+                    tile.type = 'button';
+                    tile.className = 'hw-tile';
+                    tile.dataset.character = char.id;
+                    tile.style.borderLeftColor = char.color;
+                    const picked = team.filter(id => id === char.id).length;
+                    const expendable = HALLOWEEN_EXPENDABLE_IDS.has(char.id);
+                    const fallen = isHalloweenFallen(char.id);
+                    const locked = !isCharacterUnlocked(char);
+                    let sub;
+                    if (fallen) sub = 'Fallen · buy back in the Shop';
+                    else if (locked) sub = 'Locked';
+                    else if (expendable) sub = `${char.hp} HP · ${getWeapon(char).label} · can fill several slots`;
+                    else sub = `${char.hp} HP · ${getWeapon(char).label}`;
+                    tile.innerHTML = `<span class="hw-tile-name">${rosterWeaponEmoji(char)} ${char.name}</span><span class="hw-tile-sub">${sub}</span>`;
+                    if (picked) {
+                        tile.classList.add('is-picked');
+                        if (expendable) {
+                            const n = document.createElement('span');
+                            n.className = 'hw-tile-count';
+                            n.textContent = `×${picked}`;
+                            tile.appendChild(n);
+                        }
+                    }
+                    if (fallen || locked) {
+                        tile.disabled = true;
+                        tile.classList.add('is-fallen');
+                    } else {
+                        tile.addEventListener('click', () => {
+                            if (picked && !expendable) {
+                                const at = team.indexOf(char.id);
+                                team.splice(at, 1);
+                                if (halloweenPick.lead > at) halloweenPick.lead--;
+                            } else if (team.length < size) {
+                                team.push(char.id);
+                            }
+                            renderHalloweenTeamCard();
+                        });
+                    }
+                    pool.appendChild(tile);
+                });
+
+                slots.replaceChildren();
+                for (let i = 0; i < size; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'hw-slot';
+                    const id = team[i];
+                    const char = id ? findRosterChar(id) : null;
+                    if (!char) {
+                        slot.textContent = `Slot ${i + 1}`;
+                        slots.appendChild(slot);
+                        continue;
+                    }
+                    slot.classList.add('is-filled');
+                    slot.style.borderLeftColor = char.color;
+                    const isLead = i === halloweenPick.lead;
+                    if (isLead) slot.classList.add('is-lead');
+                    const main = document.createElement('button');
+                    main.type = 'button';
+                    main.className = 'hw-slot-main';
+                    main.title = isLead ? 'You play as this fighter' : 'Play as this fighter';
+                    main.innerHTML = `<span>${char.name}</span><span class="hw-slot-lead">${isLead ? '▶ Play as' : 'Ally'}</span>`;
+                    main.addEventListener('click', () => { halloweenPick.lead = i; renderHalloweenTeamCard(); });
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'hw-slot-remove';
+                    remove.title = 'Remove from the team';
+                    remove.setAttribute('aria-label', `Remove ${char.name}`);
+                    remove.textContent = '✕';
+                    remove.addEventListener('click', () => {
+                        team.splice(i, 1);
+                        if (halloweenPick.lead > i) halloweenPick.lead--;
+                        renderHalloweenTeamCard();
+                    });
+                    slot.appendChild(main);
+                    slot.appendChild(remove);
+                    slots.appendChild(slot);
+                }
+
+                if (count) count.textContent = `Team ${team.length}/${size}`;
+                if (startBtn) startBtn.disabled = team.length < size;
+            }
+            const halloweenStartBtn = document.getElementById('halloweenStartBtn');
+            if (halloweenStartBtn) halloweenStartBtn.addEventListener('click', () => {
+                if (halloweenPick.team.length < HALLOWEEN_EVENT.teamSize) return;
+                startHalloweenRun();
+            });
+            const halloweenTeamBackBtn = document.getElementById('halloweenTeamBackBtn');
+            if (halloweenTeamBackBtn) halloweenTeamBackBtn.addEventListener('click', () => { closeHalloweenTeamCard(); openHalloweenDisclaimer(); });
+
+            /*  ── THE RUN ───────────────────────────────────────────────────────
+             *  halloweenRun = {
+             *      round: 0..5,                 index into HALLOWEEN_EVENT.rounds
+             *      team:  [{ id, hp, alive }],  hp null = full; carried between rounds
+             *      lead:  slot index the player is controlling
+             *      lost:  team fighters killed so far (sets the reward)
+             *      over:  true once the run has ended either way
+             *      wave:  the live round, see setupHalloweenRound()
+             *  }                                                                  */
+            function startHalloweenRun() {
+                closeHalloweenTeamCard();
+                halloweenRun = {
+                    round: 0,
+                    team: halloweenPick.team.map(id => ({ id, hp: null, alive: true })),
+                    lead: halloweenPick.lead,
+                    lost: 0,
+                    over: false,
+                    cleared: false,
+                    wave: null
+                };
+                if (halloweenPrevArena == null) halloweenPrevArena = currentArena;
+                // The result and pause buttons are shared with every other fight.
+                // endGame() restores these from BORROWED_BTN_DEFAULTS; the event's
+                // own round end re-applies them each time.
+                const pauseQuit = document.getElementById('pauseQuitBtn');
+                if (pauseQuit) pauseQuit.textContent = '✕ Abandon the Run';
+                splashMenu.style.display = 'none';
+                setupHalloweenRound();
+            }
+
+            /** Put everything the event changed back. Safe to call when no run is
+             *  on: Return to Base and the pause menu's Quit call it unconditionally. */
+            function leaveHalloweenEvent() {
+                const wasOn = !!halloweenRun || halloweenPrevArena != null;
+                halloweenRun = null;
+                if (halloweenPrevArena != null) {
+                    currentArena = halloweenPrevArena;
+                    halloweenPrevArena = null;
+                }
+                if (!wasOn) return false;
+                resetBorrowedButtonLabels();
+                const summary = document.getElementById('halloweenTeamSummary');
+                if (summary) summary.style.display = 'none';
+                // A fighter who fell this run is off every roster from here on.
+                rebuildAllRosters();
+                updateSecretFactionSectionVisibility();
+                refreshSplashState();
+                return true;
+            }
+
+            function describeHalloweenRound(def) {
+                const skel = `${def.total} Burnt Skeleton Warriors`;
+                if (def.boss) {
+                    const boss = findRosterChar(def.boss);
+                    return `${boss ? boss.name : def.boss} with ${skel}`;
+                }
+                return `${skel}, ${def.atOnce} at a time`;
+            }
+
+            /** Build one round on top of setupGame(). setupGame stands up the lead
+             *  and one opponent and nothing else, so the board is rebuilt around
+             *  them here: the allies beside the player, the boss (if any) kept, and
+             *  the first wave of skeletons walked in on the far side. All of it is
+             *  synchronous, so the 3-2-1 countdown already draws the full board. */
+            function setupHalloweenRound() {
+                const run = halloweenRun;
+                if (!run) return;
+                const def = HALLOWEEN_EVENT.rounds[run.round];
+                const lead = run.team[run.lead];
+                currentArena = HALLOWEEN_EVENT.arena;
+                setupGame(lead.id, def.boss || HALLOWEEN_EVENT.minionId, { halloween: true });
+
+                mainPlayer.halloweenSlot = run.lead;
+                if (lead.hp != null) mainPlayer.health = Math.max(1, Math.min(mainPlayer.maxHealth, lead.hp));
+
+                // Allies stand in a loose arc on the player's side of the field.
+                const arc = [[-70, -95], [-70, 95], [-135, -35], [-135, 35], [-40, -165], [-40, 165]];
+                const allies = [];
+                run.team.forEach((slot, i) => {
+                    if (i === run.lead || !slot.alive) return;
+                    const data = findRosterChar(slot.id);
+                    if (!data) return;
+                    const [dx, dy] = arc[allies.length % arc.length];
+                    const m = CHARACTER_SIZE * 2;
+                    const x = Math.max(m, Math.min(canvasLogicalW - m, mainPlayer.x + dx));
+                    const y = Math.max(m, Math.min(canvasLogicalH - m, mainPlayer.y + dy));
+                    const ent = new Character(x, y, data.color, data.arenaName || data.name, data.hp, data.weapon,
+                        data.saberColor, data.isDroid, data.isWookiee, 'player', false, data.isClone, data.weaponDamage, data.id);
+                    ent.tacticalProfileOverride = data.tacticalProfile || null;
+                    ent.speedMult = data.speedMult || 1;
+                    ent.halloweenSlot = i;
+                    if (slot.hp != null) ent.health = Math.max(1, Math.min(ent.maxHealth, slot.hp));
+                    allies.push(ent);
+                });
+
+                const wave = { total: def.total, atOnce: def.atOnce, spawned: 0, nextSpawnAt: 0, boss: null };
+                run.wave = wave;
+                entities = [mainPlayer, ...allies];
+                if (def.boss) {
+                    // setupGame's opponent IS the boss, with the difficulty's health
+                    // multiplier already on it. The owner's rule: a boss in the event
+                    // cannot call backup — the skeletons walking in are its backup.
+                    mainEnemy.halloweenSummonUsed = true;
+                    wave.boss = mainEnemy;
+                    entities.push(mainEnemy);
+                } else {
+                    // The opponent setupGame built is dropped: in a wave round every
+                    // skeleton is rank and file, and mainEnemy is simply whichever one
+                    // is standing (updateHalloweenWave keeps it pointed at a live one).
+                    mainEnemy = null;
+                }
+                while (wave.spawned < wave.total && halloweenMinionsAlive() < wave.atOnce) spawnHalloweenMinion(true);
+                if (!def.boss) setHalloweenWaveHud();
+
+                showAnnouncement(describeHalloweenRound(def), '#ff8c1a', 5000,
+                    `🎃 ROUND ${run.round + 1} OF ${HALLOWEEN_EVENT.rounds.length}`, 100, true);
+            }
+
+            function halloweenMinionsAlive() {
+                let n = 0;
+                for (let i = 0; i < entities.length; i++) {
+                    const e = entities[i];
+                    if (e.isAlive && e.halloweenMinion) n++;
+                }
+                return n;
+            }
+            function halloweenWaveHasMore() {
+                return !!(halloweenRun && halloweenRun.wave && halloweenRun.wave.spawned < halloweenRun.wave.total);
+            }
+
+            /** Somewhere on the far third of the field, clear of cover and at least
+             *  150px from every living team fighter, so a skeleton never appears on
+             *  top of someone. Falls back to the right edge if the field is full. */
+            function halloweenSpawnPoint() {
+                const w = canvasLogicalW, h = canvasLogicalH, m = CHARACTER_SIZE * 2;
+                for (let t = 0; t < 14; t++) {
+                    const x = w * 0.66 + Math.random() * (w * 0.34 - m);
+                    const y = m + Math.random() * (h - 2 * m);
+                    let bad = false;
+                    for (const c of coverObjects) {
+                        if (c.alive && Math.abs(x - c.x) < c.w / 2 + CHARACTER_SIZE * 1.5 && Math.abs(y - c.y) < c.h / 2 + CHARACTER_SIZE * 1.5) { bad = true; break; }
+                    }
+                    if (!bad) {
+                        for (const e of entities) {
+                            if (e.isAlive && e.team === 'player' && Math.hypot(e.x - x, e.y - y) < 150) { bad = true; break; }
+                        }
+                    }
+                    if (!bad) return { x, y };
+                }
+                return { x: w - m, y: h / 2 };
+            }
+
+            function spawnHalloweenMinion(initial) {
+                const run = halloweenRun;
+                const data = findRosterChar(HALLOWEEN_EVENT.minionId);
+                if (!run || !run.wave || !data) return null;
+                const p = halloweenSpawnPoint();
+                // Raw roster health, like every other spawned unit: the difficulty's
+                // hpMult is for the one opponent setupGame builds, and a wave of
+                // skeletons at 1.45x would be a different event on Legend.
+                const ent = new Character(p.x, p.y, data.color, data.arenaName || data.name, data.hp, data.weapon,
+                    data.saberColor, data.isDroid, data.isWookiee, 'enemy', false, data.isClone, data.weaponDamage, data.id);
+                ent.tacticalProfileOverride = data.tacticalProfile || null;
+                ent.speedMult = data.speedMult || 1;
+                ent.halloweenMinion = true;
+                ent.lastShotTime = frameNow + Math.random() * 400;
+                entities.push(ent);
+                run.wave.spawned++;
+                if (!run.wave.boss && (!mainEnemy || !mainEnemy.isAlive)) mainEnemy = ent;
+                if (!initial) spawnBoomBlast(ent.x, ent.y, 40);
+                return ent;
+            }
+
+            /** Per frame, from gameLoop: refill the field as skeletons fall, and in
+             *  a wave round keep mainEnemy pointed at a living one, since the HUD,
+             *  the sprite race and a few other places read it directly. */
+            function updateHalloweenWave() {
+                const run = halloweenRun;
+                if (!run || !run.wave) return;
+                const wave = run.wave;
+                if (!wave.boss && (!mainEnemy || !mainEnemy.isAlive)) {
+                    for (let i = 0; i < entities.length; i++) {
+                        const e = entities[i];
+                        if (e.isAlive && e.halloweenMinion) { mainEnemy = e; break; }
+                    }
+                }
+                if (wave.spawned >= wave.total) return;
+                if (halloweenMinionsAlive() >= wave.atOnce) { wave.nextSpawnAt = 0; return; }
+                if (!wave.nextSpawnAt) { wave.nextSpawnAt = frameNow + HALLOWEEN_EVENT.spawnGapMs; return; }
+                if (frameNow < wave.nextSpawnAt) return;
+                spawnHalloweenMinion(false);
+                wave.nextSpawnAt = 0;
+            }
+
+            /** The enemy panel in a wave round: there is no single opponent, so the
+             *  card is the Legion itself and the bar is how much of the wave is
+             *  left (updateHUD draws that part). */
+            function setHalloweenWaveHud() {
+                const data = findRosterChar(HALLOWEEN_EVENT.minionId);
+                if (!data || !mainEnemy) return;
+                setEnemyHud(data, mainEnemy);
+                enemyLabel.textContent = 'THE BURNT LEGION';
+                const portrait = document.getElementById('enemyPortrait');
+                if (portrait) portrait.textContent = '💀';
+            }
+            function halloweenWaveLeft() {
+                const wave = halloweenRun && halloweenRun.wave;
+                if (!wave) return 0;
+                return wave.total - wave.spawned + halloweenMinionsAlive();
+            }
+
+            /*  ── DEATHS ────────────────────────────────────────────────────────
+             *  Called from Character.updateHealth the moment a team fighter's health
+             *  reaches zero. A named fighter is written to the save right here, so
+             *  quitting the fight — or the page — cannot undo it. Rosters are
+             *  rebuilt when the fight is over (endHalloweenRound), not mid-frame. */
+            function onHalloweenTeamDeath(ent) {
+                const run = halloweenRun;
+                if (!run || ent.halloweenSlot == null) return;
+                const slot = run.team[ent.halloweenSlot];
+                if (!slot || !slot.alive) return;
+                slot.alive = false;
+                slot.hp = 0;
+                run.lost++;
+                const expendable = HALLOWEEN_EXPENDABLE_IDS.has(slot.id);
+                if (!expendable) {
+                    halloweenFallen[slot.id] = true;
+                    persistHalloweenFallen();
+                }
+                showAnnouncement(expendable
+                    ? `${ent.name} has fallen. Skeletons do not stay down for good — this one is out for the run.`
+                    : `${ent.name} has fallen, and stays fallen until bought back in the Shop.`,
+                    '#ff3b2f', 4500, '💀 FALLEN', 100, true);
+            }
+
+            /** The player's fighter is dead: hand them the healthiest living
+             *  teammate. Returns false when there is nobody left, which is the run
+             *  ending. The old body keeps its slot (it is dead, and stays counted). */
+            function halloweenTakeOver() {
+                const run = halloweenRun;
+                if (!run) return false;
+                let best = null;
+                for (let i = 0; i < entities.length; i++) {
+                    const e = entities[i];
+                    if (e.isAlive && e.team === 'player' && e.halloweenSlot != null && (!best || e.health > best.health)) best = e;
+                }
+                if (!best) return false;
+                const fallen = mainPlayer;
+                fallen.isMainEntity = false;
+                best.isMainEntity = true;
+                // An AI body may have its shield up or a swing in flight; the player's
+                // first frame of input takes over from here, so only the grip has to
+                // be let go — the input branch holds it only while Interact is held.
+                best.shieldRaised = false;
+                mainPlayer = best;
+                run.lead = best.halloweenSlot;
+                pCharData = findRosterChar(best.characterId) || pCharData;
+                syncPlayerHudCard();
+                showAnnouncement(`${fallen.name} is down. You fight on as ${best.name}.`, '#ff8c1a', 4000, '🎃 TAKE OVER', 100, true);
+                return true;
+            }
+
+            /*  ── ROUND END ─────────────────────────────────────────────────────
+             *  Takes endGame's place for an event round: no series, no match
+             *  history, no mastery, no achievements — a wave of skeletons is not a
+             *  duel and should not count as thirty of them. It shares the results
+             *  overlay, with its buttons renamed the way the Zero Event's were. */
+            function endHalloweenRound(playerWon) {
+                const run = halloweenRun;
+                if (!run) return;
+                const rounds = HALLOWEEN_EVENT.rounds;
+                const def = rounds[run.round];
+                stopBattleSystems();
+
+                // Bank the team: health for the living, and a death the hook missed
+                // (there should be none) for anyone else.
+                for (const e of entities) {
+                    if (e.team !== 'player' || e.halloweenSlot == null) continue;
+                    const slot = run.team[e.halloweenSlot];
+                    if (!slot) continue;
+                    if (e.isAlive) slot.hp = e.health;
+                    else if (slot.alive) onHalloweenTeamDeath(e);
+                }
+
+                resetBorrowedButtonLabels();
+                const nextRoundBtn = document.getElementById('nextRoundButton');
+                const rematchBtn   = document.getElementById('rematchButton');
+                const restartBtn   = document.getElementById('restartButton');
+                const seriesDisplay = document.getElementById('seriesScoreDisplay');
+                const pauseQuit = document.getElementById('pauseQuitBtn');
+                if (pauseQuit) pauseQuit.textContent = '✕ Abandon the Run';
+                const last = run.round === rounds.length - 1;
+                let title, color, sub, healed = false;
+
+                if (playerWon) {
+                    if (def.boss) {
+                        // Everyone still standing heals fully after a boss: the three
+                        // rounds before it are one stage, and the next three another.
+                        run.team.forEach(s => { if (s.alive) s.hp = null; });
+                        healed = true;
+                    }
+                    if (last) {
+                        run.over = true;
+                        run.cleared = true;
+                        const pay = Math.max(HALLOWEEN_EVENT.reward.min,
+                            HALLOWEEN_EVENT.reward.full - HALLOWEEN_EVENT.reward.perLoss * run.lost);
+                        const gained = awardCredits(pay);
+                        saveGameSettings();
+                        title = '★ THE BURNT LEGION IS BROKEN ★';
+                        color = '#ff8c1a';
+                        sub = `EVENT CLEARED · ${run.lost} LOST · +${gained} CREDITS`;
+                        nextRoundBtn.style.display = 'none';
+                        rematchBtn.style.display = 'inline-block';
+                        rematchBtn.textContent = '🎃 Run It Again';
+                        restartBtn.textContent = 'Return to Base';
+                        spawnVictoryConfetti();
+                    } else {
+                        run.round++;
+                        title = `ROUND ${run.round} CLEARED`;
+                        color = '#ff8c1a';
+                        sub = `NEXT · ROUND ${run.round + 1} OF ${rounds.length} · ${describeHalloweenRound(rounds[run.round]).toUpperCase()}`;
+                        nextRoundBtn.style.display = 'inline-block';
+                        nextRoundBtn.textContent = 'Continue ▶';
+                        rematchBtn.style.display = 'none';
+                        restartBtn.textContent = 'Quit the Event';
+                    }
+                } else {
+                    run.over = true;
+                    title = 'THE TEAM HAS FALLEN';
+                    color = '#ff3b2f';
+                    sub = `THE RUN ENDS IN ROUND ${run.round + 1} OF ${rounds.length}`;
+                    nextRoundBtn.style.display = 'none';
+                    rematchBtn.style.display = 'inline-block';
+                    rematchBtn.textContent = '🎃 Try Again';
+                    restartBtn.textContent = 'Quit the Event';
+                }
+
+                messageText.textContent = title;
+                messageText.style.color = color;
+                messageText.style.textShadow = `0 0 15px ${color}`;
+                document.querySelector('.message-box').style.borderColor = color;
+                seriesDisplay.textContent = sub;
+                seriesDisplay.style.display = 'block';
+
+                // The team, one line each: who is standing and on how much.
+                const summary = document.getElementById('halloweenTeamSummary');
+                if (summary) {
+                    summary.replaceChildren();
+                    run.team.forEach(slot => {
+                        const data = findRosterChar(slot.id);
+                        const row = document.createElement('div');
+                        row.className = 'hw-summary-row' + (slot.alive ? '' : ' is-fallen');
+                        row.style.borderLeftColor = data ? data.color : '#888';
+                        const hp = slot.alive ? (slot.hp == null ? (data ? data.hp : 0) : Math.max(1, Math.round(slot.hp))) : 0;
+                        row.innerHTML = `<span class="hw-summary-name">${data ? data.name : slot.id}</span>`
+                            + `<span class="hw-summary-hp">${slot.alive ? (healed ? `${hp} HP · HEALED` : `${hp} HP`) : 'FALLEN'}</span>`;
+                        summary.appendChild(row);
+                    });
+                    summary.style.display = 'grid';
+                }
+
+                const elapsed = Math.round((gameNow() - gameStartTime) / 1000);
+                const endTimeEl = document.getElementById('endTime');
+                const endKillsEl = document.getElementById('endKills');
+                const endHPEl = document.getElementById('endHP');
+                if (endTimeEl) { endTimeEl.textContent = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')}`; endTimeEl.style.color = color; }
+                if (endKillsEl) { endKillsEl.textContent = killCount; endKillsEl.style.color = color; }
+                if (endHPEl) { endHPEl.textContent = mainPlayer && mainPlayer.isAlive ? Math.max(0, Math.round(mainPlayer.health * 10) / 10) : 0; endHPEl.style.color = color; }
+                const accPct = playerShotsFired > 0 ? Math.min(100, Math.round((playerHitsLanded / playerShotsFired) * 100)) : 0;
+                const endDamageEl = document.getElementById('endDamage');
+                const endHitsEl = document.getElementById('endHits');
+                const endAccuracyEl = document.getElementById('endAccuracy');
+                if (endDamageEl) { endDamageEl.textContent = playerDamageDealt; endDamageEl.style.color = color; }
+                if (endHitsEl) { endHitsEl.textContent = playerHitsLanded; endHitsEl.style.color = color; }
+                if (endAccuracyEl) { endAccuracyEl.textContent = playerShotsFired > 0 ? accPct + '%' : '—'; endAccuracyEl.style.color = color; }
+
+                // Anyone who fell this round is off the rosters from here, so the
+                // Shop and the team card both tell the truth the moment they open.
+                rebuildAllRosters();
+                updateSecretFactionSectionVisibility();
+
+                flushAnnouncementQueue();
+                messageOverlay.style.display = 'flex';
+                updateMobileControlsVisibility();
+                setTimeout(() => focusFirstVisibleButton(messageOverlay), 0);
+            }
+
             /*  What the Interact button should say about itself. */
             function hasInteractAbility(e) {
                 return canForceChoke(e) || canUnibeam(e) || canWebGrenade(e)
                     || canFlameBlast(e) || canZeroShock(e) || canGodBlast(e) || canShapeshift(e)
                     || canHulkSmash(e) || canClobberin(e) || canIronMonger(e)
                     || canInfinitySnap(e) || canEternitySummon(e) || canAntManResize(e)
-                    || canWeaponSwap(e);
+                    || canWeaponSwap(e) || canRaiseShield(e);
             }
 
             function interactAbilityReady(e) {
@@ -18841,6 +20236,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         // that is currently being electrocuted, and the stun stops
                         // being a real interrupt.
                         cancelMeleeSwing(e);
+                        // A stun knocks a held shield down with the blade — the
+                        // hold is a grip, and a choked fighter has none.
+                        e.shieldRaised = false;
                         return;
                     }
 
@@ -19056,6 +20454,22 @@ document.addEventListener('DOMContentLoaded', () => {
                             antShrinkInputLatched = false;
                         }
 
+                        // Halloween shield: held, not pressed — see HALLOWEEN_SHIELD_IDS.
+                        // Once up it stays up for as long as the key does, but it
+                        // cannot be raised out of a committed swing.
+                        if (canRaiseShield(e)) {
+                            setShieldRaised(e, interactHeld && (e.shieldRaised || !isCommittedToSwing(e, now)));
+                        }
+
+                        // Halloween summons on Q, once a round. The four who have one
+                        // carry blasters, so the key had nothing else to do for them.
+                        if (canHalloweenSummon(e)) {
+                            if (throwHeld && !halloweenSummonInputLatched) performHalloweenSummon(e);
+                            halloweenSummonInputLatched = throwHeld;
+                        } else {
+                            halloweenSummonInputLatched = false;
+                        }
+
                         if (isCarboniteRescuePhase()) {
                             const han = entities.find(x => x.characterId === 'carbonite_han' && x.isAlive);
                             if (han && interactHeld && Math.hypot(han.x - e.x, han.y - e.y) < 80) {
@@ -19117,7 +20531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             // which is what lets a roll both cancel recovery and
                             // tear free of a slowing zone.
                             const speedMultiplier = e.isDodging ? 2.5
-                                : jabbaSlug * chargeSlug * swingMoveScale(e, now) * hazardMoveScale(e);
+                                : jabbaSlug * chargeSlug * swingMoveScale(e, now) * hazardMoveScale(e) * shieldMoveScale(e);
                             // e.speedMult is the per-entity movement override. The AI
                             // branch has always applied it; this one never did, so
                             // anything that made a fighter faster was silently
@@ -19133,7 +20547,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         // gates the entire block, so firing, charging, reloading and
                         // blade throws all stop together rather than leaving one
                         // action live; they all come back the moment it ends.
-                        if (e.characterId !== 'jabba' && !isCarboniteRescuePhase()) {
+                        // A raised Halloween shield holsters everything the same way:
+                        // nothing is fired, swung or thrown from behind it.
+                        if (e.characterId !== 'jabba' && !isCarboniteRescuePhase() && !e.shieldRaised) {
                             const ammoBoostActive = now < e.ammoBoostUntil;
                             const effectiveCooldown = ammoBoostedCooldown(e.weaponConfig, ammoBoostActive);
 
@@ -19321,8 +20737,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             // for it. Without this an archer would glide around at full
                             // speed with the string back, which is both unfair and
                             // unreadable — the slow is half the tell.
+                            // The shield decision comes first so its 55% walk lands on
+                            // the frame it goes up, the same as the player's.
+                            if (canRaiseShield(e)) updateShieldAI(e, target, now);
                             moveSpeed *= swingMoveScale(e, now) * hazardMoveScale(e)
-                                       * (aiIsDrawing(e) ? 0.45 : 1);
+                                       * (aiIsDrawing(e) ? 0.45 : 1) * shieldMoveScale(e);
                             let effMinRange = isMeleeFighter ? swingReach * 0.45 : tac.minRange;
                             let effMaxRange = isMeleeFighter ? swingReach * 0.85 : tac.maxRange;
 
@@ -19508,7 +20927,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             // *perpendicular* to the incoming bolt, which is both
                             // the correct evasion and legible as one.
                             let reacted = false;
-                            if (rx.threat && now > e.dodgeCooldown && !e.isDodging) {
+                            // A raised shield is already this fighter's answer to the
+                            // bolt, so it does not also roll out of the way of it.
+                            if (rx.threat && now > e.dodgeCooldown && !e.isDodging && !e.shieldRaised) {
                                 const threat = findIncomingThreat(e, rx.reactionMs);
                                 if (threat) {
                                     // Perpendicular to the bolt, toward whichever
@@ -19525,7 +20946,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Panic dodge when badly hurt — the original behaviour,
                             // kept as a fallback for difficulties with no threat
                             // scanning and for entities that have already reacted.
-                            if (!reacted && e.health < e.maxHealth * Math.max(tac.retreatHealthPct, 0.15) && now > e.dodgeCooldown && Math.random() < 0.02 * tac.dodgeMult) {
+                            if (!reacted && !e.shieldRaised && e.health < e.maxHealth * Math.max(tac.retreatHealthPct, 0.15) && now > e.dodgeCooldown && Math.random() < 0.02 * tac.dodgeMult) {
                                 e.dodgeCooldown = now + 2000;
                                 cancelMeleeSwing(e);
                                 const dodgeAngle = angleToTarget + (Math.random() - 0.5) * Math.PI;
@@ -19560,7 +20981,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             // throws to punish someone backing off — but only
                             // sometimes, so a duel doesn't become both fighters
                             // permanently disarmed with their blades in the air.
-                            if (isMeleeFighter) {
+                            if (e.shieldRaised) {
+                                // Behind the shield: no swing, no throw, no shot,
+                                // exactly as for the player.
+                            } else if (isMeleeFighter) {
                                 const armed = !hasBladeInFlight(e) && !isCommittedToSwing(e, now);
                                 const swingCooldown = meleeSwingCooldown(e, effectiveCooldown);
                                 if (armed && dist <= swingReach && now - e.lastShotTime > swingCooldown) {
@@ -19751,7 +21175,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                         // facing each other would machine-gun this
                                         // sample under the roar. The roar is the only
                                         // sound that weapon makes.
-                                        if (a.type !== 'flamethrower') playSound('lightsaberDeflect', 90);
+                                        //
+                                        // The Halloween weapons clang instead. Two
+                                        // Skeleton Swords meeting in the air are steel
+                                        // on steel, and the Halloween Blaster's round
+                                        // already lands on BluntHit when it explodes, so
+                                        // neither should ever ring like a lightsaber.
+                                        if (a.type === 'skeletonsword' || a.type === 'halloweenblaster') playSound('bluntHit', 90);
+                                        else if (a.type !== 'flamethrower') playSound('lightsaberDeflect', 90);
                                         for (let s = 0; s < 8; s++) {
                                             if (clashParticles.length >= MAX_CLASH_PARTICLES) break;
                                             const sparkAngle = Math.random() * Math.PI * 2;
@@ -20373,11 +21804,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // rescue hands it over to Jabba once Han is freed. See setEnemyHud().
                 const hudEnemy = hudEnemyEntity || mainEnemy;
                 const pPct = mainPlayer.health / mainPlayer.maxHealth;
-                const ePct = hudEnemy.health / hudEnemy.maxHealth;
                 setBarStyle(playerHealthBar, pPct);
-                setBarStyle(enemyHealthBar, ePct);
                 setTextCached(playerHealthText, hudStatusText(mainPlayer));
-                setTextCached(enemyHealthText, hudStatusText(hudEnemy));
+                if (halloweenRun && halloweenRun.wave && !halloweenRun.wave.boss) {
+                    // A wave round has no one opponent, so the enemy bar is the wave:
+                    // how many of the round's skeletons are still to be put down,
+                    // standing or yet to walk in.
+                    const left = halloweenWaveLeft();
+                    setBarStyle(enemyHealthBar, left / halloweenRun.wave.total);
+                    setTextCached(enemyHealthText, `${left} LEFT`);
+                } else {
+                    const ePct = hudEnemy.health / hudEnemy.maxHealth;
+                    setBarStyle(enemyHealthBar, ePct);
+                    setTextCached(enemyHealthText, hudStatusText(hudEnemy));
+                }
 
                 const timerEl = document.getElementById('hudTimer');
                 if (timerEl && timerEl.style.display !== 'none') {
@@ -20602,6 +22042,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             function endGame(playerWon, ending = 'knockout') {
+                // An event round has its own ending: no series, no history, no
+                // mastery. Everything below is for a duel.
+                if (halloweenRun && !halloweenRun.over) { endHalloweenRound(playerWon); return; }
                 const table = ROUND_ENDINGS[ending] || ROUND_ENDINGS.knockout;
                 const { message, color } = playerWon ? table.win : table.loss;
 
@@ -20705,6 +22148,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
+                    // Lord Treat and Lord Trick, off five round wins as their
+                    // general. recordMatchStats() has already counted this one.
+                    checkHalloweenLordUnlocks();
+
                 }
 
                 // A loss ends a run of consecutive Vader wins (Dark Lord's Reign).
@@ -20742,6 +22189,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // change them — is what stops one mode's wording leaking into the
                 // other's screens.
                 resetBorrowedButtonLabels();
+                // The event's team list shares this box too.
+                const teamSummary = document.getElementById('halloweenTeamSummary');
+                if (teamSummary) teamSummary.style.display = 'none';
 
                 const seriesOver = playerWins >= SERIES_WINS_NEEDED || enemyWins >= SERIES_WINS_NEEDED;
                 const nextRoundBtn = document.getElementById('nextRoundButton');
@@ -20853,6 +22303,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function startTimer() {
+                // An event round has no clock: it ends when the wave is dead or the
+                // team is. The timer element stays hidden, so updateHUD skips it.
+                if (halloweenRun) return;
                 const timerEl = document.getElementById('hudTimer');
                 if (timerEl) {
                     timerEl.style.display = 'block';
@@ -20931,7 +22384,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!Number.isFinite(tickScale)) tickScale = 1;
 
                 if (!mainPlayer.isAlive) {
-                    {
+                    // In the Halloween event a dead fighter hands the player a living
+                    // teammate; the round only ends when there is nobody to hand.
+                    if (!(halloweenRun && halloweenTakeOver())) {
                         // The old Snap! also unlocked here, from dying as Fox to Vader.
                         // Krk! is specifically the player performing the neck snap, so
                         // the only place it can unlock is performNeckSnap().
@@ -20961,12 +22416,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Existence test only, so it short-circuits instead of building and
                 // discarding an array of survivors every frame.
                 //
+                // The event's waves refill here, before the test below, so a board
+                // that is empty for the 450ms between one skeleton falling and the
+                // next walking in does not read as a cleared round.
+                updateHalloweenWave();
                 let anyEnemyAlive = false;
                 for (let i = 0; i < entities.length && !anyEnemyAlive; i++) {
                     const e = entities[i];
                     if (e.team === 'enemy' && e.isAlive && !e.hasFled) { anyEnemyAlive = true; break; }
                 }
-                if (!anyEnemyAlive) {
+                if (!anyEnemyAlive && !halloweenWaveHasMore()) {
                     if (eCharData && eCharData.id === 'sith_c3po') {
                         unlockUltimatePalpatine();
                     }
@@ -21010,7 +22469,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                {
+                // No clock in a Halloween round — see startTimer().
+                if (!halloweenRun) {
                     seriesTimeRemaining -= dt;
                     if (seriesTimeRemaining <= 0) {
                         seriesTimeRemaining = 0;
@@ -21101,6 +22561,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 hud.style.display = 'none';
                 opponentMenu.style.display = 'none';
                 stopBattleSystems();
+                // "Quit the Event", when the event has borrowed this button: the run
+                // is thrown away and the shared buttons get their words back.
+                leaveHalloweenEvent();
                 // "Return to Base" means the splash — Shop, Armory, Kamino and the
                 // Dossier live there. It used to stop at fighter select, which had no
                 // way onward to the splash, so credits won in a fight could not be
@@ -21122,6 +22585,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 nextRoundButton.addEventListener('click', () => {
                     messageOverlay.style.display = 'none';
                     updateMobileControlsVisibility();
+                    // "Continue" in the Halloween event: the next round of the run.
+                    if (halloweenRun && !halloweenRun.over) { setupHalloweenRound(); return; }
                     isNextRound = true;
                     setupGame(seriesPlayerCharId, seriesEnemyCharId);
                 });
@@ -21132,6 +22597,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 rematchButton.addEventListener('click', () => {
                     messageOverlay.style.display = 'none';
                     updateMobileControlsVisibility();
+                    // "Try Again" / "Run It Again" after a Halloween run: back to the
+                    // splash and straight into the team card, because a run is never
+                    // resumed and the team may have changed — someone may be dead.
+                    if (halloweenRun) {
+                        canvas.style.display = 'none';
+                        hud.style.display = 'none';
+                        stopBattleSystems();
+                        resetSeriesAndEffects();
+                        showMainMenu();
+                        showSplashMenu();
+                        leaveHalloweenEvent();
+                        openHalloweenTeamCard();
+                        return;
+                    }
                     // Start a fresh series with the same matchup and arena
                     resetSeriesAndEffects();
                     setupGame(seriesPlayerCharId, seriesEnemyCharId);
@@ -21309,6 +22788,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageOverlay.style.display = 'none';
                 stopBattleSystems();
                 showMainMenu();
+                // "Abandon the Run": the event started from the splash, so it ends
+                // there too, not on a fighter select the player never visited.
+                if (leaveHalloweenEvent()) showSplashMenu();
                 selectedPlayerCharId = null;
                 resetSeriesAndEffects();
                 resetTouchInput();
@@ -21424,8 +22906,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // the menu did nothing at all — and worse, that dead click still
             // started the lobby track, so the run-up below had already lost its
             // sync before the intro was even listening. Arming needs no
-            // measurements; only play() does.
-            if (window.SnapIntro) bootStep(() => SnapIntro.maybePlay());
+            // measurements; only play() does. While the Snap is vaulted there is
+            // nothing to arm: this settles a fresh save to the end state instead.
+            bootStep(offerSnapIntro);
             // The arena picker reads snapHasHappened() through isArenaRetired(), so
             // it has to be rebuilt once that flag is known.
             bootStep(refreshArenaButtons);

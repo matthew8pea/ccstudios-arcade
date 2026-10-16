@@ -1,0 +1,10 @@
+Creepster-Regular.ttf
+
+Copyright (c) 2011, Font Diner, Inc (diner@fontdiner.com), with Reserved Font Name "Creepster".
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+The licence text is available with a FAQ at: https://openfontlicense.org
+
+The font is bundled here unmodified so the game can load it offline, the same
+way the Aurebesh folder next door ships its font. Galactic Legends uses it for
+the Halloween Event tile and cards.

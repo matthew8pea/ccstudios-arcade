@@ -114,10 +114,10 @@
     rifle:  ['blaster', 'bowcaster', 'minigun', 'sniper', 'beam', 'assaultrifle',
              'submachine', 'warforgedar', 'enhancedar', 'deadeyear', 'excaliber',
              'boomsniper', 'burstrifle', 'iocannon', 'voidlance', 'guards',
-             'lasercannon', 'destroyergun', 'zeroenergy'],
+             'lasercannon', 'destroyergun', 'zeroenergy', 'halloweenblaster'],
     pistol: ['lancehead', 'zap', 'computer', 'cubebolt', 'glock', 'sonictaser', 'hydrapistol'],
     blade:  ['lightsaber', 'darksaber', 'vibroblade', 'seekerssword', 'minersword', 'wrench',
-             'laevateinn', 'scimitar', 'icedagger', 'katanas'],
+             'laevateinn', 'scimitar', 'icedagger', 'katanas', 'skeletonsword'],
     // Neither of these is an object the fighter holds — they are on the ends
     // of the arms and cannot be thrown (both are noThrow in WEAPON_LIBRARY),
     // so they get hands-forward poses with no hilt and no grip.
@@ -146,7 +146,7 @@
   });
   // Blades that are metal rather than plasma — a solid edge, not a beam.
   const SOLID_BLADES = { wrench: 1, vibroblade: 1, seekerssword: 1, minersword: 1, scimitar: 1,
-                       icedagger: 1, katanas: 1 };
+                       icedagger: 1, katanas: 1, skeletonsword: 1 };
   // Poses whose painter places its own hands, so the generic hand pass is skipped.
   const SELF_HANDED = { fists: 1, claws: 1, repulsor: 1, webshooter: 1,
                         shield: 1, dual: 1, spit: 1 };
@@ -188,6 +188,10 @@
     iocannon:     { st: 11, rc: 18, bl: 9,  bw: 6,   mg: 0, sc: 1, mz: 3 },
     voidlance:    { st: 12, rc: 16, bl: 14, bw: 4,   mg: 0, sc: 2, mz: 3 },
     guards:       { st: 10, rc: 13, bl: 7,  bw: 3.2, mg: 4, sc: 0, mz: 0, bar: 2 },
+    // The Halloween generals'. Short and fat with a drum and a flared mouth —
+    // a blunderbuss that fires something which goes off, so it should look
+    // like it throws a lump rather than a bolt.
+    halloweenblaster: { st: 10, rc: 15, bl: 7, bw: 6, mg: 3, sc: 0, mz: 2 },
     bowcaster:    { st: 12, rc: 14, bl: 7,  bw: 4,   mg: 0, sc: 0, mz: 0, lm: 14 },
     // pistols
     lancehead:    { sl: 13, bl: 7, mg: 1 },
@@ -211,6 +215,9 @@
     // Deadpool's pair. `twin` paints a second hilt in the off hand and
     // moves the grips apart; game.js draws the two beams to match.
     katanas:      { bl: 34, bw: 5.5, gd: 1, sol: 1, cv: 1, twin: 1 },
+    // The Skeleton Warriors'. A plain crossguard sword, a hand's length shorter
+    // than a lightsaber: footsoldier's steel.
+    skeletonsword: { bl: 30, bw: 6.5, gd: 2, sol: 1 },
     wrench:       { bl: 18, bw: 9,   gd: 0, sol: 1, fork: 1 },
     // spread
     focusshotgun: { st: 12, rc: 13, bl: 9, bw: 3.2, bar: 3 },
@@ -262,7 +269,7 @@
 
   /* ── kit slots ─────────────────────────────────────────────────────────
      body:     organic | armor | robe | fur | droid | mech
-     helmet:   none | trooper | hood | dome | horned | mask | antenna
+     helmet:   none | trooper | hood | dome | horned | mask | antenna | skull
      shoulder: none | pauldron | heavy | spike
      back:     none | cape | pack | jetpack  */
   const DEFAULT_KIT = { body: 'organic', helmet: 'none', shoulder: 'none', back: 'none' };
@@ -322,6 +329,20 @@
     // Full mask, and the pack is where the two scabbards ride. A preset rather
     // than the flag rules because those key off the weapon, and his changes.
     deadpool:   { body: 'organic', helmet: 'mask',   shoulder: 'none',  back: 'pack' },
+    // Halloween. The skeletons are bare — a skull, no shoulders, nothing on
+    // the back, because the shield rides there (game.js paints it) and the
+    // body colour is the bone. The blade family's fallback would have hooded
+    // and robed them like Jedi. `eyes` is read by the skull alone: the burnt
+    // ones have a coal in each socket. The generals and lords are dressed for
+    // rank: horns and a cape on the Bone Guard's side, the hood on the Burnt
+    // Legion's, and the lords one step heavier at the shoulder than their
+    // general.
+    skeleton:      { body: 'organic', helmet: 'skull',  shoulder: 'none',  back: 'none' },
+    burntskeleton: { body: 'organic', helmet: 'skull',  shoulder: 'none',  back: 'none', eyes: '#ff3b2f' },
+    hawlo:         { body: 'armor',   helmet: 'horned', shoulder: 'pauldron', back: 'cape' },
+    lordtreat:     { body: 'armor',   helmet: 'horned', shoulder: 'spike', back: 'cape' },
+    wheen:         { body: 'robe',    helmet: 'hood',   shoulder: 'pauldron', back: 'cape' },
+    lordtrick:     { body: 'robe',    helmet: 'hood',   shoulder: 'spike', back: 'cape' },
     // Not a roster id: the ants Ant-Man calls (characterId 'ant'). The
     // antenna helmet the droids wear is the nearest thing to feelers.
     ant:        { body: 'organic', helmet: 'antenna', shoulder: 'none', back: 'none' },
@@ -1158,6 +1179,25 @@
           ctx.strokeStyle = c.ink; ctx.lineWidth = 1; ctx.stroke();
         });
         rr(ctx, hx + 1.6, -4.8, 4, 9.6, 1.5, '#141a22');
+      } else if (kit.helmet === 'skull') {
+        // Bare bone: two sockets and a nose on the face side and a seam over
+        // the crown, which is what makes it read as a skull at fighter size
+        // rather than as a bald head the colour of bone.
+        [-2.7, 2.7].forEach(dy => {
+          ctx.beginPath(); ctx.ellipse(hx + 3.2, dy, 2.2, 1.8, 0, 0, TAU);
+          ctx.fillStyle = '#141a22'; ctx.fill();
+        });
+        ctx.beginPath();
+        ctx.moveTo(hx + 6.6, 0); ctx.lineTo(hx + 4.9, -1.1); ctx.lineTo(hx + 4.9, 1.1);
+        ctx.closePath(); ctx.fillStyle = '#141a22'; ctx.fill();
+        ctx.strokeStyle = c.deep; ctx.lineWidth = 0.9;
+        seg(ctx, hx - 6.2, 0, hx - 0.8, 0);
+        if (kit.eyes) {
+          ctx.save(); ctx.shadowBlur = 8; ctx.shadowColor = kit.eyes;
+          dot(ctx, hx + 3.5, -2.7, 1, kit.eyes);
+          dot(ctx, hx + 3.5, 2.7, 1, kit.eyes);
+          ctx.restore();
+        }
       } else if (kit.helmet === 'antenna') {
         ctx.strokeStyle = c.dark; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
         seg(ctx, hx - 4, -3.4, hx - 11, -11.5);
@@ -1301,7 +1341,7 @@
     FAMILIES: Object.keys(FAMILY_MEMBERS),
     FAMILY_MEMBERS: FAMILY_MEMBERS,
     BODIES: ['organic', 'armor', 'robe', 'fur', 'droid', 'mech'],
-    HELMETS: ['none', 'trooper', 'hood', 'dome', 'horned', 'mask', 'antenna'],
+    HELMETS: ['none', 'trooper', 'hood', 'dome', 'horned', 'mask', 'antenna', 'skull'],
     KIT_PRESETS: KIT_PRESETS,
     SHOULDERS: ['none', 'pauldron', 'heavy', 'spike'],
     BACKS: ['none', 'cape', 'pack', 'jetpack']
