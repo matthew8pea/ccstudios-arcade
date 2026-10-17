@@ -114,7 +114,8 @@
     rifle:  ['blaster', 'bowcaster', 'minigun', 'sniper', 'beam', 'assaultrifle',
              'submachine', 'warforgedar', 'enhancedar', 'deadeyear', 'excaliber',
              'boomsniper', 'burstrifle', 'iocannon', 'voidlance', 'guards',
-             'lasercannon', 'destroyergun', 'zeroenergy', 'halloweenblaster'],
+             'lasercannon', 'destroyergun', 'zeroenergy', 'halloweenblaster',
+             'pumpkinlauncher'],
     pistol: ['lancehead', 'zap', 'computer', 'cubebolt', 'glock', 'sonictaser', 'hydrapistol'],
     blade:  ['lightsaber', 'darksaber', 'vibroblade', 'seekerssword', 'minersword', 'wrench',
              'laevateinn', 'scimitar', 'icedagger', 'katanas', 'skeletonsword'],
@@ -192,6 +193,11 @@
     // a blunderbuss that fires something which goes off, so it should look
     // like it throws a lump rather than a bolt.
     halloweenblaster: { st: 10, rc: 15, bl: 7, bw: 6, mg: 3, sc: 0, mz: 2 },
+    // The Giants'. A fat short tube with a flared mouth, and `pumpkin` puts the
+    // round in that mouth until it is fired (game.js passes `loaded`), so an
+    // empty tube is the reload. Drawn at the Giant's 2x, so the numbers are a
+    // normal gun's.
+    pumpkinlauncher: { st: 9, rc: 14, bl: 16, bw: 9, mg: 0, sc: 0, mz: 2, pumpkin: 1 },
     bowcaster:    { st: 12, rc: 14, bl: 7,  bw: 4,   mg: 0, sc: 0, mz: 0, lm: 14 },
     // pistols
     lancehead:    { sl: 13, bl: 7, mg: 1 },
@@ -269,7 +275,7 @@
 
   /* ── kit slots ─────────────────────────────────────────────────────────
      body:     organic | armor | robe | fur | droid | mech
-     helmet:   none | trooper | hood | dome | horned | mask | antenna | skull
+     helmet:   none | trooper | hood | dome | horned | mask | antenna | skull | pumpkin
      shoulder: none | pauldron | heavy | spike
      back:     none | cape | pack | jetpack  */
   const DEFAULT_KIT = { body: 'organic', helmet: 'none', shoulder: 'none', back: 'none' };
@@ -343,6 +349,12 @@
     lordtreat:     { body: 'armor',   helmet: 'horned', shoulder: 'spike', back: 'cape' },
     wheen:         { body: 'robe',    helmet: 'hood',   shoulder: 'pauldron', back: 'cape' },
     lordtrick:     { body: 'robe',    helmet: 'hood',   shoulder: 'spike', back: 'cape' },
+    // The Giants: a jack-o'-lantern for a head, carved and lit (`eyes` is the
+    // candle). The Halloween Giant is a burlap brute with the spare pumpkins in a
+    // pack; the Twisted Giant's pumpkin is rotten (`twisted`), cracked and
+    // grinning crooked with a green light in it, over spikes and a ragged cape.
+    halloweengiant: { body: 'organic', helmet: 'pumpkin', shoulder: 'heavy', back: 'pack', eyes: '#ffd23a' },
+    twistedgiant:   { body: 'organic', helmet: 'pumpkin', shoulder: 'spike', back: 'cape', eyes: '#8dff3a', twisted: 1 },
     // Not a roster id: the ants Ant-Man calls (characterId 'ant'). The
     // antenna helmet the droids wear is the nearest thing to feelers.
     ant:        { body: 'organic', helmet: 'antenna', shoulder: 'none', back: 'none' },
@@ -412,6 +424,110 @@
     ctx.closePath();
   }
 
+  /* ── pumpkins (the Halloween Giants) ──────────────────────────────────── */
+  const PUMPKIN_RIPE = { hi: '#ffd58a', base: '#ff8a1c', deep: '#a8400a', ink: '#4a1a04',
+                         rib: 'rgba(110,35,0,0.6)', stem: '#3f5a1e', glow: '#ffd23a' };
+  const PUMPKIN_ROT  = { hi: '#c49a5a', base: '#8a4a16', deep: '#2a1206', ink: '#140802',
+                         rib: 'rgba(20,10,0,0.7)', stem: '#1a1f10', glow: '#8dff3a' };
+
+  /** A plain pumpkin: ribbed ball and a stem. The launcher's round. */
+  function paintPumpkin(ctx, px, py, r, rot) {
+    const P = rot ? PUMPKIN_ROT : PUMPKIN_RIPE;
+    const g = ctx.createRadialGradient(px - r * 0.35, py - r * 0.35, r * 0.1, px, py, r * 1.15);
+    g.addColorStop(0, P.hi); g.addColorStop(0.5, P.base); g.addColorStop(1, P.deep);
+    ctx.beginPath(); ctx.arc(px, py, r, 0, TAU);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 0.9; ctx.stroke();
+    ctx.strokeStyle = P.rib; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.ellipse(px, py, r * 0.45, r, 0, 0, TAU); ctx.stroke();
+    dot(ctx, px - r * 0.2, py, r * 0.22, P.stem);
+  }
+
+  /** The Giants' head. Seen from above a pumpkin is ribs running out from the
+   *  stem, which is what stops it reading as an orange ball; the face is cut
+   *  into the leading edge, eyes nearer the crown and the grin on the rim, and
+   *  lit from inside with the kit's `eyes`. `twisted` rots it: darker skin,
+   *  blotches and a crack, a curled thorny stem, slanted eyes of two sizes and
+   *  a jagged grin. */
+  function paintPumpkinHead(ctx, hx, hr, kit, lx, ly) {
+    const rot = !!kit.twisted;
+    const P = rot ? PUMPKIN_ROT : PUMPKIN_RIPE;
+    const glow = kit.eyes || P.glow;
+    const R = hr + 2.2;
+    const g = ctx.createRadialGradient(hx + lx * 4, ly * 4, 0.8, hx, 0, R * 1.25);
+    g.addColorStop(0, P.hi); g.addColorStop(0.45, P.base); g.addColorStop(1, P.deep);
+    ctx.beginPath(); ctx.ellipse(hx, 0, R * 0.92, R, 0, 0, TAU);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 1.5; ctx.stroke();
+
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(hx, 0, R * 0.92, R, 0, 0, TAU); ctx.clip();
+    ctx.strokeStyle = P.rib; ctx.lineWidth = 1.1;
+    for (let i = 0; i < 6; i++) {
+      const a = (TAU / 6) * i + 0.3;
+      ctx.beginPath(); ctx.moveTo(hx - 1.5, 0);
+      ctx.quadraticCurveTo(hx - 1.5 + Math.cos(a + 0.4) * R * 0.55, Math.sin(a + 0.4) * R * 0.55,
+                           hx - 1.5 + Math.cos(a) * R * 1.1, Math.sin(a) * R * 1.1);
+      ctx.stroke();
+    }
+    if (rot) {
+      dot(ctx, hx - 5, -4.5, 2.4, 'rgba(25,12,4,0.6)');
+      dot(ctx, hx - 2.5, 5.5, 1.7, 'rgba(25,12,4,0.55)');
+      dot(ctx, hx + 2, -7, 1.3, 'rgba(25,12,4,0.5)');
+      ctx.strokeStyle = 'rgba(10,4,0,0.85)'; ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(hx - 8, 3); ctx.lineTo(hx - 5, 1.2); ctx.lineTo(hx - 4, 4); ctx.lineTo(hx - 1, 2.6);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if (rot) {
+      ctx.strokeStyle = P.stem; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(hx - 1.5, 0);
+      ctx.quadraticCurveTo(hx - 8, -1, hx - 7, -6); ctx.quadraticCurveTo(hx - 6.5, -8.5, hx - 4, -8);
+      ctx.stroke();
+      ctx.lineWidth = 1; ctx.lineCap = 'butt';
+      seg(ctx, hx - 6.2, -2.5, hx - 8.6, -3.4);
+      seg(ctx, hx - 7.4, -5.6, hx - 9.4, -5);
+    } else {
+      rr(ctx, hx - 3.4, -1.7, 3.8, 3.4, 1.2, P.stem, P.ink, 0.8);
+    }
+
+    ctx.save();
+    ctx.shadowBlur = 9; ctx.shadowColor = glow; ctx.fillStyle = glow;
+    if (rot) {
+      [[-1, 1], [1, 1.3]].forEach(([sg, k]) => {
+        ctx.beginPath();
+        ctx.moveTo(hx + 2.0, sg * 1.3);
+        ctx.lineTo(hx + 3.0, sg * (1.6 + 3.4 * k));
+        ctx.lineTo(hx + 5.2, sg * 2.1);
+        ctx.closePath(); ctx.fill();
+      });
+      ctx.beginPath();
+      ctx.moveTo(hx + 5.4, -5);
+      ctx.lineTo(hx + 7.8, -3.6); ctx.lineTo(hx + 6.6, -2.2); ctx.lineTo(hx + 8.6, -0.6);
+      ctx.lineTo(hx + 7.0, 0.9); ctx.lineTo(hx + 8.4, 2.6); ctx.lineTo(hx + 6.8, 3.6);
+      ctx.lineTo(hx + 7.4, 5.2); ctx.lineTo(hx + 5.6, 4.4);
+      ctx.quadraticCurveTo(hx + 6.4, 0, hx + 5.4, -5);
+      ctx.fill();
+    } else {
+      [-1, 1].forEach(sg => {
+        ctx.beginPath();
+        ctx.moveTo(hx + 2.0, sg * 3.3);
+        ctx.lineTo(hx + 4.9, sg * 1.4);
+        ctx.lineTo(hx + 4.9, sg * 5.2);
+        ctx.closePath(); ctx.fill();
+      });
+      ctx.beginPath();
+      ctx.moveTo(hx + 5.8, -4.8);
+      ctx.quadraticCurveTo(hx + 9.4, 0, hx + 5.8, 4.8);
+      ctx.lineTo(hx + 6.4, 2.2); ctx.lineTo(hx + 7.2, 1.2); ctx.lineTo(hx + 6.8, -0.2);
+      ctx.lineTo(hx + 7.2, -1.4); ctx.lineTo(hx + 6.4, -2.4);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   /* Melee arc: wind up back, fast cut through, slow recover. Matches the
      commitment the hitbox already has (pendingSwingAt in game.js). */
   function swingCurve(p) {
@@ -445,7 +561,7 @@
      Local space: +X is forward, origin is the body centre. Each returns the
      two grip points the hands take, so the arms are posed by the weapon
      rather than by a table that has to be kept in step with it. */
-  function paintRifle(ctx, wcol, flash, p) {
+  function paintRifle(ctx, wcol, flash, p, load) {
     const y = -8.5;
     const recEnd = -6 + p.st + p.rc * 0.42;
     if (p.lm) {                                                    // crossbow limbs
@@ -493,6 +609,14 @@
     if (p.mz === 4) [-1, 1].forEach(sg =>                                 // prongs
       rr(ctx, mx, y + sg * p.bw * 0.7 - 1, 5, 2, 1, ST.hi));
     const tip = mx + (p.mz === 3 ? 7 : p.mz ? 4 : 1);
+    if (p.pumpkin) {
+      // The round sits in the flared mouth until it goes; nothing glows in an
+      // empty tube.
+      // Clear of the front hand (GRIPS.rifle, x 23), so it reads as held.
+      if (!load || load.loaded) paintPumpkin(ctx, mx + p.bw * 0.56, y, p.bw * 0.62, load && load.rot);
+      if (flash) muzzleFlash(ctx, tip + 1.5, y, wcol, 6 + p.bw);
+      return;
+    }
     glowDot(ctx, tip, y, 1.3 + p.bw * 0.14, wcol);
     if (flash) muzzleFlash(ctx, tip + 1.5, y, wcol, 6 + p.bw);
   }
@@ -1140,6 +1264,8 @@
       dot(ctx, hx + 3.4, -2.2, 1.5, c.glow);
       dot(ctx, hx + 3.4, 2.2, 1.5, c.glow);
       ctx.restore();
+    } else if (kit.helmet === 'pumpkin') {
+      paintPumpkinHead(ctx, hx, hr, kit, lx, ly);
     } else {
       const hg = ctx.createRadialGradient(hx + lx * 4, ly * 4, 0.8, hx, 0, hr * 1.35);
       hg.addColorStop(0, '#ffffff'); hg.addColorStop(0.28, c.hi);
@@ -1222,7 +1348,7 @@
     if (kick) { ctx.translate(6, 0); ctx.rotate(kick); ctx.translate(-6, 0); }
 
     const spec = specFor(wKey, o.weaponConfig);
-    if (fam === 'rifle') paintRifle(ctx, wcol, firing, spec);
+    if (fam === 'rifle') paintRifle(ctx, wcol, firing, spec, { loaded: o.loaded !== false, rot: !!kit.twisted });
     else if (fam === 'pistol') paintPistol(ctx, wcol, firing, spec);
     else if (fam === 'blade' && twin) {
       [-9.5, 9.5].forEach(dy => { ctx.save(); ctx.translate(0, dy); paintBlade(ctx, wcol, o.reach, solid, o.bladeless, spec); ctx.restore(); });
@@ -1341,7 +1467,7 @@
     FAMILIES: Object.keys(FAMILY_MEMBERS),
     FAMILY_MEMBERS: FAMILY_MEMBERS,
     BODIES: ['organic', 'armor', 'robe', 'fur', 'droid', 'mech'],
-    HELMETS: ['none', 'trooper', 'hood', 'dome', 'horned', 'mask', 'antenna', 'skull'],
+    HELMETS: ['none', 'trooper', 'hood', 'dome', 'horned', 'mask', 'antenna', 'skull', 'pumpkin'],
     KIT_PRESETS: KIT_PRESETS,
     SHOULDERS: ['none', 'pauldron', 'heavy', 'spike'],
     BACKS: ['none', 'cape', 'pack', 'jetpack']

@@ -6,6 +6,7 @@
  *   node smoke.js               # boot, play the Snap by code, fight 20s, report
  *   node smoke.js --seconds=40  # fight for longer
  *   node smoke.js --shipped     # ?debug=0: the itch.io error handling
+ *   node smoke.js --duo         # the same fight as a 2v2: Rex beside Anakin, Dooku beside Maul
  *
  * Exits 0 on PASS, 1 on FAIL, 2 if it could not run at all (no browser found).
  * Needs nothing but Node and an installed Edge or Chrome, same as validate.js
@@ -29,6 +30,12 @@
  *   menu already settled (the Snap is vaulted) → THANOS code → the Snap →
  *   no season card (vaulted too) → Freeplay → Anakin → Normal → Mustafar →
  *   Darth Maul → "Your First Fight" card → fight
+ *
+ * --duo takes the opponent screen's three-step pick instead (Duo switch →
+ * Captain Rex as partner → Darth Maul → Count Dooku as his partner) and checks
+ * both partners are on the HUD when the fight starts. It does not reach the
+ * take-over: that needs the player's fighter to die, which a 20-second walk
+ * does not arrange.
  *
  * and during the fight it holds fire and walks around. It fails on any
  * uncaught error or console.error, on any step whose button never shows up,
@@ -71,6 +78,7 @@ const argVal = (name, dflt) => {
 };
 const FIGHT_SECONDS = Math.max(3, Number(argVal('seconds', 20)) || 20);
 const SHIPPED = args.includes('--shipped');
+const DUO = args.includes('--duo');
 
 // ── Browser ────────────────────────────────────────────────────────────────
 // SMOKE_BROWSER wins; otherwise the usual install locations, Edge first since
@@ -105,7 +113,7 @@ function findBrowser() {
 // Runs in the page, first thing in <head>, so it is listening before game.js
 // throws anything. Written as a function and stringified so it can be read and
 // edited as ordinary code.
-function probe(FIGHT_SECONDS) {
+function probe(FIGHT_SECONDS, DUO) {
     const R = { steps: [], errors: [], frames: 0, pass: false };
     window.__smoke = R;
 
@@ -193,9 +201,21 @@ function probe(FIGHT_SECONDS) {
         R.steps.push('no season card');
         await click('Freeplay', '#btnFreeplay');
         await click('pick Anakin', '.hero-button[data-character="anakin"]');
+        if (DUO) {
+            // The Duo switch turns the one pick into three through the same two
+            // columns; the title says which step is live.
+            await click('Duo on', '#duoToggleBtn');
+            await waitFor('the partner step', () => text('opponentTitle') === 'Choose Your Partner', 3000);
+            await click('partner Captain Rex', '#opp-hero-roster [data-character="rex"]');
+            await waitFor('the opponent step', () => text('opponentTitle') === 'Choose Your Opponent', 3000);
+        }
         await click('Normal', '.diff-btn[data-diff="normal"]');
         await click('Mustafar', '.arena-btn[data-arena="mustafar"]');
         await click('opponent Darth Maul', '[data-character="maul"]');
+        if (DUO) {
+            await waitFor('their partner step', () => text('opponentTitle') === 'Choose Their Partner', 3000);
+            await click('their partner Count Dooku', '#opp-villain-roster [data-character="dooku"]');
+        }
         // "Your First Fight" coach card, first match on a fresh profile.
         await wait(800);
         if ($v('#controlsCloseBtn')) await click('first-fight card', '#controlsCloseBtn');
@@ -207,6 +227,16 @@ function probe(FIGHT_SECONDS) {
         const clock0 = text('hudTimer'), hp0 = text('enemyHealthText');
         const frames0 = R.frames;
         R.steps.push(`fight started (clock ${clock0}, enemy ${hp0})`);
+        if (DUO) {
+            // Both partners on the HUD: the name line under each card, and one
+            // backup bar a side (the partner is a non-principal on its team).
+            const pl = text('playerPartnerLabel'), el = text('enemyPartnerLabel');
+            const bars = id => document.querySelectorAll(`#${id} > div`).length;
+            if (!/Rex/.test(pl || '')) note(`player partner line reads "${pl}", expected Captain Rex`);
+            if (!/Dooku/.test(el || '')) note(`enemy partner line reads "${el}", expected Count Dooku`);
+            if (bars('playerSubBars') !== 1 || bars('enemySubBars') !== 1) note(`backup bars ${bars('playerSubBars')}/${bars('enemySubBars')}, expected 1/1`);
+            R.steps.push(`duo on the HUD (${pl} · ${el})`);
+        }
 
         // Hold fire, change direction every second, dodge now and then.
         key('keydown', ' ');
@@ -260,7 +290,7 @@ const TYPES = {
 };
 
 function startServer() {
-    const probeTag = `<script>(${probe.toString()})(${FIGHT_SECONDS});</script>`;
+    const probeTag = `<script>(${probe.toString()})(${FIGHT_SECONDS}, ${DUO});</script>`;
     const server = http.createServer((req, res) => {
         let rel = decodeURIComponent(req.url.split('?')[0]);
         if (rel === '/') rel = '/index.html';
@@ -301,7 +331,7 @@ async function main() {
     // Chromium refuses to start sandboxed as root (containers, CI).
     if (process.getuid && process.getuid() === 0) flags.unshift('--no-sandbox');
 
-    console.log(`Galactic Legends — smoke test${SHIPPED ? ' (shipped error handling)' : ''}`);
+    console.log(`Galactic Legends — smoke test${SHIPPED ? ' (shipped error handling)' : ''}${DUO ? ' (duo)' : ''}`);
     console.log('──────────────────────────────────');
     console.log(`  browser  ${browser}`);
 

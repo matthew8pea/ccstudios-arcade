@@ -1,0 +1,57 @@
+; Galactic Legends mouse pointers for Windows
+; Right-click this file and choose Install (say yes to the admin prompt).
+; Then open Settings > Bluetooth & devices > Mouse > Additional mouse settings,
+; Pointers tab, and pick "Galactic Legends" in the Scheme list.
+
+[Version]
+Signature="$CHICAGO$"
+
+[DefaultInstall]
+CopyFiles = Scheme.Cur
+AddReg    = Scheme.Reg
+
+[DestinationDirs]
+Scheme.Cur = 10,"%CUR_DIR%"
+
+[Scheme.Reg]
+HKCU,"Control Panel\Cursors\Schemes","%SCHEME_NAME%",,"%10%\%CUR_DIR%\%pointer%,%10%\%CUR_DIR%\%help%,%10%\%CUR_DIR%\%work%,%10%\%CUR_DIR%\%busy%,%10%\%CUR_DIR%\%cross%,%10%\%CUR_DIR%\%text%,%10%\%CUR_DIR%\%pen%,%10%\%CUR_DIR%\%unavailable%,%10%\%CUR_DIR%\%vert%,%10%\%CUR_DIR%\%horz%,%10%\%CUR_DIR%\%dgn1%,%10%\%CUR_DIR%\%dgn2%,%10%\%CUR_DIR%\%move%,%10%\%CUR_DIR%\%alternate%,%10%\%CUR_DIR%\%link%,%10%\%CUR_DIR%\%pin%,%10%\%CUR_DIR%\%person%"
+
+[Scheme.Cur]
+"arrow.cur"
+"help.cur"
+"working.ani"
+"busy.ani"
+"cross.cur"
+"text.cur"
+"pen.cur"
+"no.cur"
+"ns.cur"
+"ew.cur"
+"nwse.cur"
+"nesw.cur"
+"move.cur"
+"up.cur"
+"link.cur"
+"pin.cur"
+"person.cur"
+
+[Strings]
+CUR_DIR       = "Cursors\Galactic Legends"
+SCHEME_NAME   = "Galactic Legends"
+pointer       = "arrow.cur"
+help          = "help.cur"
+work          = "working.ani"
+busy          = "busy.ani"
+cross         = "cross.cur"
+text          = "text.cur"
+pen           = "pen.cur"
+unavailable   = "no.cur"
+vert          = "ns.cur"
+horz          = "ew.cur"
+dgn1          = "nwse.cur"
+dgn2          = "nesw.cur"
+move          = "move.cur"
+alternate     = "up.cur"
+link          = "link.cur"
+pin           = "pin.cur"
+person        = "person.cur"

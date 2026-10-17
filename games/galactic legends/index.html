@@ -6,7 +6,7 @@
     <!-- itch.io / static host: re-upload this file to ship updates; if players see a stale build, bump ?v= on the page or embed URL. -->
     <title>Galactic Legends</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="styles.css?v=19">
+    <link rel="stylesheet" href="styles.css?v=23">
 </head>
 <body>
     <div id="statCard"></div>
@@ -138,7 +138,7 @@
 
             <div class="faction-wrapper" id="secret-faction-wrapper" style="display: none;">
                 <div class="faction-section" style="width: 100%;">
-                    <h2 class="faction-title secret-faction" id="secret-faction-toggle" style="cursor: pointer; user-select: none;">Secret Characters <span id="secret-faction-chevron" style="font-size: 0.8em;">▼</span></h2>
+                    <h2 class="faction-title secret-faction" id="secret-faction-toggle" style="cursor:var(--cur-hand); user-select: none;">Secret Characters <span id="secret-faction-chevron" style="font-size: 0.8em;">▼</span></h2>
                     <div class="secret-collapse-wrapper">
                         <div class="button-group" id="secret-roster"></div>
                     </div>
@@ -148,16 +148,21 @@
         </div>
 
         <div id="opponentMenu">
-            <h1 class="title" style="margin:5px 0 0 0; font-size:1.6rem;">Choose Your Opponent</h1>
+            <h1 class="title" id="opponentTitle" style="margin:5px 0 0 0; font-size:1.6rem;">Choose Your Opponent</h1>
 
             <div class="vs-banner">
                 <span id="vsBannerPlayer" class="vs-player-name"></span>
                 <span class="vs-label">VS</span>
-                <span class="vs-question">???</span>
+                <span class="vs-question" id="vsBannerEnemy">???</span>
             </div>
 
             <div class="opponent-actions">
                 <button class="surprise-button" id="surpriseBtn">⚡ Surprise Me!</button>
+                <!-- Duo fights (THE DUO in game.js): 2v2 with an AI partner on each
+                     side. With the switch on, the pick below is taken three times
+                     through the same two columns — your partner, the opponent, their
+                     partner — and the title and the VS banner say which is live. -->
+                <button type="button" class="duo-toggle" id="duoToggleBtn" aria-pressed="false" title="Fight 2v2: pick a partner, then the opponent and their partner">👥 Duo: OFF</button>
                 <button class="back-button" id="backBtn">← Back</button>
             </div>
 
@@ -260,6 +265,8 @@
                     <div class="portrait-info">
                         <span id="playerLabel" class="portrait-name"></span>
                         <span id="playerWeaponLabel" class="portrait-weapon"></span>
+                        <!-- The partner's name in a duo; updateDuoHudLabels() shows it. -->
+                        <span id="playerPartnerLabel" class="portrait-partner" style="display:none;"></span>
                     </div>
                 </div>
                 <div class="health-bar-container">
@@ -275,6 +282,7 @@
                     <div class="portrait-info">
                         <span id="enemyLabel" class="portrait-name"></span>
                         <span id="enemyWeaponLabel" class="portrait-weapon"></span>
+                        <span id="enemyPartnerLabel" class="portrait-partner" style="display:none;"></span>
                     </div>
                 </div>
                 <div class="health-bar-container">
@@ -309,8 +317,8 @@
                     <div class="end-stat-box"><div class="end-stat-label">Accuracy</div><div class="end-stat-val" id="endAccuracy">—</div></div>
                 </div>
                 <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                    <button id="nextRoundButton" style="display:none;padding:15px 30px;font-size:1rem;background:linear-gradient(135deg,#005588,#003366);color:#00cfff;border:1px solid #00A4FF;font-family:'Orbitron',sans-serif;cursor:pointer;border-radius:6px;transition:0.2s;letter-spacing:1px;">Next Round ▶</button>
-                    <button id="rematchButton" style="display:none;padding:15px 30px;font-size:1rem;background:linear-gradient(135deg,#550000,#330000);color:#ff6666;border:1px solid #e94560;font-family:'Orbitron',sans-serif;cursor:pointer;border-radius:6px;transition:0.2s;letter-spacing:1px;">⚔️ Rematch</button>
+                    <button id="nextRoundButton" style="display:none;padding:15px 30px;font-size:1rem;background:linear-gradient(135deg,#005588,#003366);color:#00cfff;border:1px solid #00A4FF;font-family:'Orbitron',sans-serif;cursor:var(--cur-hand);border-radius:6px;transition:0.2s;letter-spacing:1px;">Next Round ▶</button>
+                    <button id="rematchButton" style="display:none;padding:15px 30px;font-size:1rem;background:linear-gradient(135deg,#550000,#330000);color:#ff6666;border:1px solid #e94560;font-family:'Orbitron',sans-serif;cursor:var(--cur-hand);border-radius:6px;transition:0.2s;letter-spacing:1px;">⚔️ Rematch</button>
                     <button id="restartButton">Return to Base</button>
                 </div>
             </div>
@@ -389,7 +397,7 @@
                 </div>
                 <div id="historyCount" style="text-align:center;color:rgba(255,255,255,0.3);font-size:0.65rem;letter-spacing:1px;font-family:'Orbitron',sans-serif;"></div>
                 <div id="historyEmpty" style="display:none;text-align:center;color:rgba(255,255,255,0.3);font-size:0.8rem;padding:20px;">No matches yet. Fight someone!</div>
-                <button id="historyClearBtn" style="align-self:flex-end;background:none;border:1px solid #553;color:#aa8;border-radius:6px;padding:5px 14px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:1px;">Clear History</button>
+                <button id="historyClearBtn" style="align-self:flex-end;background:none;border:1px solid #553;color:#aa8;border-radius:6px;padding:5px 14px;cursor:var(--cur-hand);font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:1px;">Clear History</button>
         </div>
 
         <!-- SHOP OVERLAY -->
@@ -397,7 +405,7 @@
             <div style="background:#0a0f1a;border:1px solid #334;border-radius:12px;padding:24px 20px;width:min(600px,95vw);max-height:80vh;display:flex;flex-direction:column;gap:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <h2 style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#ffd700;letter-spacing:2px;margin:0;">SHOP</h2>
-                    <button id="shopCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                    <button id="shopCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:var(--cur-hand);font-size:0.85rem;">Close</button>
                 </div>
                 <div style="background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);border-radius:8px;padding:12px;text-align:center;">
                     <div style="font-family:'Orbitron',sans-serif;font-size:0.75rem;color:rgba(255,215,0,0.7);letter-spacing:1px;margin-bottom:4px;">YOUR CREDITS</div>
@@ -415,7 +423,7 @@
             <div class="creator-panel">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <h2 id="creatorTitle" style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#8fbcff;letter-spacing:2px;margin:0;">THE ZERO POINT</h2>
-                    <button id="creatorCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                    <button id="creatorCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:var(--cur-hand);font-size:0.85rem;">Close</button>
                 </div>
 
                 <div class="creator-quote" id="creatorQuote">"In the beginning there was Nothing. Then, in a burst of pure creation, the Zero Point sprang into being."<br>It can fabricate new souls and new lifeforms. Tell it what to make.</div>
@@ -527,7 +535,7 @@
             <div class="armory-panel">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <h2 style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#ff8c42;letter-spacing:2px;margin:0;">THE ARMORY</h2>
-                    <button id="armoryCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                    <button id="armoryCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:var(--cur-hand);font-size:0.85rem;">Close</button>
                 </div>
 
                 <div class="armory-quote" id="armoryQuote">"Bring me a pattern and I will strike it. What it gains, it pays for."</div>
@@ -580,15 +588,15 @@
             <div style="background:#0a0f1a;border:1px solid #334;border-radius:12px;padding:24px 20px;width:min(600px,95vw);max-height:80vh;display:flex;flex-direction:column;gap:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <h2 style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#ffd700;letter-spacing:2px;margin:0;">CREDITS</h2>
-                    <button id="creditsCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                    <button id="creditsCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:var(--cur-hand);font-size:0.85rem;">Close</button>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:16px;align-items:center;text-align:center;padding:20px;">
                     <div style="font-family:'Orbitron',sans-serif;font-size:1.2rem;color:#fff;letter-spacing:1px;">Matthew</div>
                     <div style="font-size:0.9rem;color:rgba(255,255,255,0.7);">Main Coder</div>
                     <div style="font-family:'Orbitron',sans-serif;font-size:1.2rem;color:#fff;letter-spacing:1px;">Owen</div>
                     <div style="font-size:0.9rem;color:rgba(255,255,255,0.7);">Main Ideas Artist</div>
-                    <a href="https://discord.gg/nhaq55CHCQ" target="_blank" style="margin-top:12px;background:#5865F2;border:none;border-radius:8px;padding:12px 24px;color:#fff;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Join our Discord Server</a>
-                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSezUH3bQBfpPDf0KlQe3VSIMAmDa5hk4VFMXFHfFDFG0esDVA/viewform?usp=sharing&amp;ouid=105678526086473416359" target="_blank" style="background:#00A4FF;border:none;border-radius:8px;padding:12px 24px;color:#fff;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Give Feedback</a>
+                    <a href="https://discord.gg/nhaq55CHCQ" target="_blank" style="margin-top:12px;background:#5865F2;border:none;border-radius:8px;padding:12px 24px;color:#fff;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:var(--cur-hand);display:inline-flex;align-items:center;gap:8px;">Join our Discord Server</a>
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSezUH3bQBfpPDf0KlQe3VSIMAmDa5hk4VFMXFHfFDFG0esDVA/viewform?usp=sharing&amp;ouid=105678526086473416359" target="_blank" style="background:#00A4FF;border:none;border-radius:8px;padding:12px 24px;color:#fff;text-decoration:none;font-family:'Orbitron',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:var(--cur-hand);display:inline-flex;align-items:center;gap:8px;">Give Feedback</a>
                 </div>
             </div>
         </div>
@@ -634,7 +642,7 @@
             <div style="background:#0a0f1a;border:1px solid #334;border-radius:12px;padding:24px 20px;width:min(600px,95vw);max-height:80vh;display:flex;flex-direction:column;gap:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <h2 style="font-family:'Orbitron',sans-serif;font-size:1rem;color:#ff5bd1;letter-spacing:2px;margin:0;">✨ SPRITES</h2>
-                    <button id="spritesCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.85rem;">Close</button>
+                    <button id="spritesCloseBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:4px 12px;cursor:var(--cur-hand);font-size:0.85rem;">Close</button>
                 </div>
                 <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);line-height:1.45;">
                     One sprite may be equipped at a time.
@@ -669,8 +677,8 @@
                 </div>
                 <div id="confirmMessage" style="font-size:0.85rem;color:rgba(255,255,255,0.85);line-height:1.45;"></div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;">
-                    <button type="button" id="confirmCancelBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:7px 18px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:1px;">Cancel</button>
-                    <button type="button" id="confirmOkBtn" style="background:rgba(0,164,255,0.15);border:1px solid #00A4FF;color:#00cfff;border-radius:6px;padding:7px 18px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:1px;">OK</button>
+                    <button type="button" id="confirmCancelBtn" style="background:none;border:1px solid #444;color:#aaa;border-radius:6px;padding:7px 18px;cursor:var(--cur-hand);font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:1px;">Cancel</button>
+                    <button type="button" id="confirmOkBtn" style="background:rgba(0,164,255,0.15);border:1px solid #00A4FF;color:#00cfff;border-radius:6px;padding:7px 18px;cursor:var(--cur-hand);font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:1px;">OK</button>
                 </div>
             </div>
         </div>
@@ -730,7 +738,7 @@
 
                 <p class="season-card-lead">The fighters you take into this event are the REAL characters in your roster. Any of them can die here, and a fighter who dies is removed from your roster.</p>
                 <ul class="season-card-list">
-                    <li>Six rounds against the Burnt Legion. General Wheen holds the third, Lord Trick the last.</li>
+                    <li>Six rounds against the Burnt Legion. General Hawlo holds the third, Lord Trick the last.</li>
                     <li>Health carries from round to round. Everyone still standing is healed when a boss falls.</li>
                     <li>If your fighter dies you take over a teammate. The run ends when the whole team is down, and nothing is saved if you leave.</li>
                 </ul>
@@ -854,8 +862,8 @@
     </div>
 
 
-    <script src="sprite-kit.js?v=18"></script>
-    <script src="game.js?v=89"></script>
+    <script src="sprite-kit.js?v=19"></script>
+    <script src="game.js?v=95"></script>
     <script src="snap-intro.js?v=3"></script>
 </body>
 </html>

@@ -1,3 +1,58 @@
+
+/* ══════════════════════════════════════════════════════════════════════
+   CUSTOM CURSORS
+   ══════════════════════════════════════════════════════════════════════
+   Five states cover the whole game, drawn in cursors/ in the game's own
+   blue on navy: the arrow for everything idle, the hand for anything that
+   can be clicked, the red ring for anything disabled or locked, the I-beam
+   for the text boxes, and the arrow with a badge for the "???" locked
+   fighter buttons (makeLockedHintButton in game.js). The fight needs none:
+   while aiming with the mouse the OS cursor is hidden (cursor: none, set
+   by updateAimCursor) and drawAimReticle paints the reticle on the canvas.
+
+   Every cursor in the game goes through these five variables — the 60-odd
+   `cursor: pointer` and `cursor: not-allowed` declarations below, the
+   inline ones in index.html, and the ones game.js writes into shop rows —
+   because a keyword anywhere shows the OS cursor in the middle of a custom
+   set. Writing `cursor: var(--cur-hand)` instead of `cursor: pointer` is
+   the whole rule. Each value ends in the keyword it replaces, which is what
+   the browser falls back to if an image fails to load.
+
+   The images are 32x32 with the hotspot (the pixel that clicks) after the
+   URL: the arrow's tip, the hand's fingertip, the centre of the ring and
+   the I-beam. 32x32 is deliberate: Chrome refuses to draw a larger custom
+   cursor near the edge of the window (an anti-clickjacking rule), and
+   Firefox and Safari have had the same cap. The @2x copies are offered
+   through image-set() for high-DPI screens, where the 1x image would show
+   at half the size of the OS cursor; a browser that cannot take image-set
+   in a cursor keeps the 1x declaration above, which is why the variables
+   are set twice rather than once.
+
+   cursor is an inherited property, so the arrow on <html> reaches every
+   element that has no cursor of its own. Form controls do have one (the
+   browser's stylesheet gives buttons and inputs the OS arrow), so they are
+   named below and get the arrow, the hand or the I-beam by element. */
+:root {
+    --cur-arrow: url(cursors/arrow.png) 2 2, auto;
+    --cur-hand:  url(cursors/hand.png) 10 2, pointer;
+    --cur-no:    url(cursors/no.png) 12 12, not-allowed;
+    --cur-text:  url(cursors/text.png) 7 13, text;
+    --cur-help:  url(cursors/help.png) 2 2, help;
+}
+@supports (cursor: image-set(url("a.png") 1x, url("b.png") 2x) 4 3, auto) {
+    :root {
+        --cur-arrow: image-set(url(cursors/arrow.png) 1x, url(cursors/arrow@2x.png) 2x) 2 2, auto;
+        --cur-hand:  image-set(url(cursors/hand.png) 1x, url(cursors/hand@2x.png) 2x) 10 2, pointer;
+        --cur-no:    image-set(url(cursors/no.png) 1x, url(cursors/no@2x.png) 2x) 12 12, not-allowed;
+        --cur-text:  image-set(url(cursors/text.png) 1x, url(cursors/text@2x.png) 2x) 7 13, text;
+        --cur-help:  image-set(url(cursors/help.png) 1x, url(cursors/help@2x.png) 2x) 2 2, help;
+    }
+}
+html { cursor: var(--cur-arrow); }
+button, input, select, textarea, a { cursor: var(--cur-arrow); }
+button:not(:disabled), a[href] { cursor: var(--cur-hand); }
+button:disabled { cursor: var(--cur-no); }
+input[type="text"], input[type="search"], textarea { cursor: var(--cur-text); }
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Orbitron&display=swap');
 
 /* Creepster, the Halloween event's dripping horror face. SIL Open Font License,
@@ -197,7 +252,7 @@ body.aurebesh-mode th {
             background: radial-gradient(circle at 35% 30%, rgba(90, 190, 255, 0.4), rgba(10, 60, 110, 0.6));
             color: #fff;
             font-size: 1.2rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -240,7 +295,7 @@ body.aurebesh-mode th {
             background: rgba(0, 0, 0, 0.5);
             color: rgba(255, 255, 255, 0.9);
             font-size: 1rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -263,7 +318,7 @@ body.aurebesh-mode th {
             background: radial-gradient(circle at 35% 30%, rgba(255, 100, 120, 0.5), rgba(120, 20, 40, 0.65));
             color: #fff;
             font-size: 1.6rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -346,7 +401,7 @@ body.aurebesh-mode th {
             background: rgba(0, 0, 0, 0.45);
             color: rgba(255, 255, 255, 0.5);
             font-size: 0.75rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             padding: 0;
             line-height: 1;
             display: none;
@@ -439,7 +494,7 @@ body.aurebesh-mode th {
             color: #e8e8e8;
             font-family: 'Inter', sans-serif;
             font-size: 0.78rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             text-align: left;
         }
 
@@ -532,7 +587,7 @@ body.aurebesh-mode th {
             color: #e8e8e8;
             font-family: 'Inter', sans-serif;
             font-size: 0.78rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             text-align: center;
             line-height: 1.4;
             transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -601,7 +656,7 @@ body.aurebesh-mode th {
             border-radius: 2px;
             background: rgba(255, 255, 255, 0.12);
             outline: none;
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
 
         .settings-slider-row input[type="range"]::-webkit-slider-thumb {
@@ -613,7 +668,7 @@ body.aurebesh-mode th {
             background: #00A4FF;
             border: 2px solid #00cfff;
             box-shadow: 0 0 6px rgba(0, 164, 255, 0.5);
-            cursor: pointer;
+            cursor: var(--cur-hand);
             margin-top: -5px; /* center thumb on 4px track: -(14-4)/2 */
         }
 
@@ -624,7 +679,7 @@ body.aurebesh-mode th {
             background: #00A4FF;
             border: 2px solid #00cfff;
             box-shadow: 0 0 6px rgba(0, 164, 255, 0.5);
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
 
         .settings-slider-row input[type="range"]::-webkit-slider-runnable-track {
@@ -672,7 +727,7 @@ body.aurebesh-mode th {
             border: 1px solid #444 !important;
             background: rgba(255, 255, 255, 0.05) !important;
             color: rgba(255, 255, 255, 0.55) !important;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             text-align: center !important;
             line-height: 1.2 !important;
             width: auto !important;
@@ -872,7 +927,7 @@ body.aurebesh-mode th {
             white-space: nowrap;
             padding: 4px 9px;
             border-radius: 999px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             color: #b98cff;
             background: rgba(145, 70, 255, 0.12);
             border: 1px solid rgba(145, 70, 255, 0.45);
@@ -984,7 +1039,7 @@ body.aurebesh-mode th {
             color: var(--light-text);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 6px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             transition: all 0.15s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -1005,6 +1060,21 @@ body.aurebesh-mode th {
         .secret-button { background: linear-gradient(145deg, #4a004a 0%, #2a002a 100%); }
         .secret-button:hover { border-color: #ff00ff; filter: brightness(1.3); }
 
+        /* A fighter who fell in the Halloween event (makeFallenButton in game.js):
+           kept in its column, greyed under a skull, with a pumpkin-orange tag on a
+           second line saying where to get them back. Hover and focus lift the
+           grey, because the button does something: it opens the Shop. */
+        .game-button.is-fallen { opacity: 0.55; filter: grayscale(0.7); flex-wrap: wrap; row-gap: 2px; }
+        .game-button.is-fallen:hover, .game-button.is-fallen:focus-visible { opacity: 0.9; filter: none; border-color: #ff8c1a; }
+        .fallen-tag {
+            flex-basis: 100%;
+            font-size: 0.58rem;
+            font-weight: normal;
+            letter-spacing: 1px;
+            color: #ff8c1a;
+            text-transform: uppercase;
+        }
+
         /* Star button for favorites */
         .game-button {
             position: relative;
@@ -1018,7 +1088,7 @@ body.aurebesh-mode th {
             background: none;
             border: none;
             font-size: 1.2rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             padding: 0;
             width: 24px;
             height: 24px;
@@ -1236,7 +1306,7 @@ body.aurebesh-mode th {
             color: #000;
             border: none;
             font-family: 'Orbitron', sans-serif;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             border-radius: 6px;
             transition: 0.2s;
         }
@@ -1300,7 +1370,7 @@ body.aurebesh-mode th {
             background: linear-gradient(145deg, #ffd700, #ffa500);
             border: none;
             border-radius: 6px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             text-transform: uppercase;
         }
         .surprise-button:hover { transform: scale(1.05); box-shadow: 0 0 12px rgba(255, 200, 0, 0.6); }
@@ -1313,10 +1383,34 @@ body.aurebesh-mode th {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 6px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             text-transform: uppercase;
         }
         .back-button:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+        /* Duo switch on the opponent screen: shaped like Back, lit blue while 2v2
+           is on, so the three-step pick it causes is explained by something the
+           eye lands on. aria-pressed carries the state (game.js paints it). */
+        .duo-toggle {
+            padding: 10px 18px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            cursor: var(--cur-hand);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .duo-toggle:hover { background: rgba(255,255,255,0.12); color: #fff; }
+        .duo-toggle[aria-pressed="true"] {
+            color: #4ab0ff;
+            background: rgba(0,120,255,0.15);
+            border-color: #4ab0ff;
+            box-shadow: 0 0 10px rgba(74,176,255,0.35);
+        }
 
         .opponent-subtitle {
             font-size: 0.85rem;
@@ -1332,7 +1426,7 @@ body.aurebesh-mode th {
             color: var(--light-text);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 6px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             transition: all 0.15s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -1362,7 +1456,7 @@ body.aurebesh-mode th {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             font-size: 16px;
             display: flex;
             align-items: center;
@@ -1398,7 +1492,7 @@ body.aurebesh-mode th {
         .arena-row { display: flex; gap: 10px; justify-content: center; flex-shrink: 0; flex-wrap: wrap; }
         .arena-btn {
             padding: 7px 14px; font-size: 0.72rem; font-weight: bold; font-family: 'Orbitron', sans-serif;
-            border-radius: 6px; cursor: pointer; border: 2px solid transparent;
+            border-radius: 6px; cursor: var(--cur-hand); border: 2px solid transparent;
             text-transform: uppercase; letter-spacing: 1px; transition: all 0.15s;
             background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.55);
         }
@@ -1408,7 +1502,7 @@ body.aurebesh-mode th {
         .diff-row { display: flex; gap: 10px; justify-content: center; flex-shrink: 0; margin-bottom: 4px; }
         .diff-btn {
             padding: 8px 20px; font-size: 0.8rem; font-weight: bold; font-family: 'Orbitron', sans-serif;
-            border-radius: 6px; cursor: pointer; border: 2px solid transparent; text-transform: uppercase;
+            border-radius: 6px; cursor: var(--cur-hand); border: 2px solid transparent; text-transform: uppercase;
             letter-spacing: 1px; transition: all 0.15s;
         }
         .diff-btn.easy  { background: rgba(0,180,80,0.15);  color: #00cc55; border-color: #00441a; }
@@ -1451,6 +1545,9 @@ body.aurebesh-mode th {
         .portrait-info { display: flex; flex-direction: column; gap: 2px; }
         .portrait-name { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: bold; letter-spacing: 0.5px; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
         .portrait-weapon { font-size: 0.6rem; color: rgba(255,255,255,0.42); letter-spacing: 0.5px; }
+        /* "👥 Captain Rex" under the weapon line while a duo is on, greyed with a
+           skull once that partner is down. Hidden in a duel (updateDuoHudLabels). */
+        .portrait-partner { font-size: 0.6rem; letter-spacing: 0.5px; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
 
         /* ACHIEVEMENT ITEMS */
         .achievement-item {
@@ -2083,7 +2180,7 @@ body.aurebesh-mode th {
             padding: 16px 0;
             width: 280px;
             border-radius: 8px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             border: 1px solid rgba(255,255,255,0.15);
             transition: all 0.18s ease;
             position: relative;
@@ -2180,7 +2277,7 @@ body.aurebesh-mode th {
             background: rgba(255,255,255,0.03);
             color: rgba(255,255,255,0.2);
             border-color: rgba(255,255,255,0.07);
-            cursor: not-allowed;
+            cursor: var(--cur-no);
         }
 
         .splash-coming-tag {
@@ -2334,7 +2431,7 @@ body.aurebesh-mode th {
             letter-spacing: 2px;
             text-transform: uppercase;
             border-radius: 7px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             border: 1.5px solid transparent;
             transition: all 0.15s ease;
         }
@@ -2398,7 +2495,7 @@ body.aurebesh-mode th {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             font-size: 15px;
             display: flex;
             align-items: center;
@@ -2489,7 +2586,7 @@ body.aurebesh-mode th {
         }
         .control-key.wide { min-width: 64px; }
         /* A key chip the player can click to rebind (keyboard list only). */
-        .control-rebind { cursor: pointer; font: inherit; font-family: 'Orbitron', sans-serif; font-size: 0.68rem; }
+        .control-rebind { cursor: var(--cur-hand); font: inherit; font-family: 'Orbitron', sans-serif; font-size: 0.68rem; }
         .control-rebind:hover { border-color: #00A4FF; background: rgba(0,164,255,0.15); }
         .control-rebind.is-listening {
             border-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.12);
@@ -2524,7 +2621,7 @@ body.aurebesh-mode th {
             color: #e8e8e8;
             font-family: 'Inter', sans-serif;
             font-size: 0.82rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
         .controls-close-btn:hover { background: rgba(0,164,255,0.15); border-color: #00A4FF; }
         /* display:block above beats the [hidden] attribute, which left "All
@@ -2554,7 +2651,7 @@ body.aurebesh-mode th {
         .controls-suppress {
             display: flex; align-items: center; justify-content: center; gap: 7px;
             margin-top: 12px; font-size: 0.7rem; color: rgba(255,255,255,0.35);
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
         .controls-suppress input { width: 12px; height: 12px; accent-color: #00A4FF; margin: 0; }
 
@@ -2577,7 +2674,7 @@ body.aurebesh-mode th {
             padding: 10px 16px;
             font-family: 'Inter', sans-serif;
             font-size: 0.78rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
         .cancel-edit-btn:hover { background: rgba(255,255,255,0.06); border-color: #666; color: #ddd; }
         .edit-btn {
@@ -2587,7 +2684,7 @@ body.aurebesh-mode th {
             border-radius: 6px;
             padding: 6px 12px;
             font-size: 0.73rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
         .edit-btn:hover { background: rgba(127,178,224,0.12); border-color: #7fb2e0; }
 
@@ -2626,7 +2723,7 @@ body.aurebesh-mode th {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.72rem;
             letter-spacing: 1px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             transition: all 0.15s ease;
         }
         .creator-tab:hover { color: #fff; border-color: #44506b; }
@@ -2658,7 +2755,7 @@ body.aurebesh-mode th {
             font-size: 0.63rem;
             letter-spacing: 1px;
             white-space: nowrap;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             transition: all 0.15s ease;
         }
         .creator-subtab:hover { color: #fff; border-color: #3a4560; }
@@ -2734,7 +2831,7 @@ body.aurebesh-mode th {
             border: 1px solid #263042;
             border-radius: 7px;
             padding: 8px 10px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             text-align: left;
             color: #ddd;
             font-family: 'Inter', sans-serif;
@@ -2746,7 +2843,7 @@ body.aurebesh-mode th {
             background: rgba(143,188,255,0.14);
             box-shadow: 0 0 12px rgba(143,188,255,0.18);
         }
-        .creator-choice:disabled { opacity: 0.35; cursor: not-allowed; }
+        .creator-choice:disabled { opacity: 0.35; cursor: var(--cur-no); }
         .creator-choice .cc-name { font-size: 0.8rem; display: block; margin-bottom: 2px; }
         .creator-choice .cc-desc { font-size: 0.68rem; color: rgba(255,255,255,0.45); line-height: 1.4; }
         .creator-choice .cc-cost { font-size: 0.7rem; color: #8fbcff; }
@@ -2807,7 +2904,7 @@ body.aurebesh-mode th {
         .creator-color-input {
             width: 54px; height: 30px; padding: 0;
             border: 1px solid #2c3648; border-radius: 6px;
-            background: none; cursor: pointer;
+            background: none; cursor: var(--cur-hand);
         }
 
         .creator-preview {
@@ -2846,11 +2943,11 @@ body.aurebesh-mode th {
             font-size: 0.8rem;
             font-weight: bold;
             letter-spacing: 1px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             transition: all 0.15s ease;
         }
         .creator-make-btn:hover:not(:disabled) { background: #8fa6ff; box-shadow: 0 0 18px rgba(143,188,255,0.4); }
-        .creator-make-btn:disabled { background: #333a48; color: #777; cursor: not-allowed; }
+        .creator-make-btn:disabled { background: #333a48; color: #777; cursor: var(--cur-no); }
 
         .creator-roster { display: flex; flex-direction: column; gap: 8px; }
         .creator-made {
@@ -2874,7 +2971,7 @@ body.aurebesh-mode th {
             border-radius: 6px;
             padding: 6px 12px;
             font-size: 0.73rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
         .creator-unmake-btn:hover { background: rgba(204,119,119,0.12); border-color: #cc7777; }
 
@@ -2918,7 +3015,7 @@ body.aurebesh-mode th {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.72rem;
             letter-spacing: 1px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             transition: all 0.15s ease;
         }
         .armory-tab:hover { color: #fff; border-color: #555; }
@@ -2988,7 +3085,7 @@ body.aurebesh-mode th {
             border: 1px solid #333;
             border-radius: 7px;
             padding: 8px 10px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             text-align: left;
             color: #ddd;
             font-family: 'Inter', sans-serif;
@@ -3000,7 +3097,7 @@ body.aurebesh-mode th {
             background: rgba(255,140,66,0.14);
             box-shadow: 0 0 12px rgba(255,140,66,0.18);
         }
-        .armory-pattern:disabled { opacity: 0.35; cursor: not-allowed; }
+        .armory-pattern:disabled { opacity: 0.35; cursor: var(--cur-no); }
         .armory-pattern .ap-name { font-size: 0.8rem; display: block; margin-bottom: 2px; }
         .armory-pattern .ap-cost { font-size: 0.7rem; color: #ff8c42; }
         .armory-pattern .ap-lock { font-size: 0.66rem; color: rgba(255,255,255,0.35); }
@@ -3023,7 +3120,7 @@ body.aurebesh-mode th {
             border: 1px solid #333;
             border-radius: 7px;
             padding: 8px 10px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             text-align: left;
             color: #ddd;
             font-family: 'Inter', sans-serif;
@@ -3031,7 +3128,7 @@ body.aurebesh-mode th {
         }
         .armory-mod:hover:not(:disabled) { border-color: #666; }
         .armory-mod.selected { border-color: #ff8c42; background: rgba(255,140,66,0.12); }
-        .armory-mod:disabled { opacity: 0.3; cursor: not-allowed; }
+        .armory-mod:disabled { opacity: 0.3; cursor: var(--cur-no); }
         .armory-mod .am-name { font-size: 0.8rem; }
         .armory-mod .am-desc { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
         .armory-mod .am-cost { font-size: 0.75rem; color: #ff8c42; white-space: nowrap; }
@@ -3106,11 +3203,11 @@ body.aurebesh-mode th {
             font-size: 0.8rem;
             font-weight: bold;
             letter-spacing: 1px;
-            cursor: pointer;
+            cursor: var(--cur-hand);
             transition: all 0.15s ease;
         }
         .armory-forge-btn:hover:not(:disabled) { background: #ffa563; box-shadow: 0 0 18px rgba(255,140,66,0.4); }
-        .armory-forge-btn:disabled { background: #444; color: #777; cursor: not-allowed; }
+        .armory-forge-btn:disabled { background: #444; color: #777; cursor: var(--cur-no); }
 
         .armory-rack { display: flex; flex-direction: column; gap: 8px; }
         .armory-weapon {
@@ -3139,7 +3236,7 @@ body.aurebesh-mode th {
             color: #ddd;
             font-family: 'Inter', sans-serif;
             font-size: 0.75rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
         .armory-scrap-btn {
             background: none;
@@ -3148,7 +3245,7 @@ body.aurebesh-mode th {
             border-radius: 6px;
             padding: 6px 12px;
             font-size: 0.73rem;
-            cursor: pointer;
+            cursor: var(--cur-hand);
         }
         .armory-scrap-btn:hover { background: rgba(204,119,119,0.12); border-color: #cc7777; }
         .armory-equipped-tag {
@@ -3189,7 +3286,7 @@ body.aurebesh-mode th {
         .dossier-head-right { display: flex; align-items: center; gap: 10px; }
         .dossier-close {                          /* the close-button pattern every overlay header carries */
             background: none; border: 1px solid #444; color: #aaa; border-radius: 6px;
-            padding: 4px 12px; cursor: pointer; font-size: 0.85rem;
+            padding: 4px 12px; cursor: var(--cur-hand); font-size: 0.85rem;
         }
         .dossier-close:hover { color: #fff; border-color: #666; }
         .dossier-credits {
@@ -3219,7 +3316,7 @@ body.aurebesh-mode th {
         .achievement-item.is-ready .achievement-name { color: #7ff0a8; }
         .contract-claim {                         /* shape from #confirmOkBtn, green */
             background: rgba(0,204,85,0.15); border: 1px solid #00cc55; color: #7ff0a8;
-            border-radius: 6px; padding: 6px 13px; cursor: pointer;
+            border-radius: 6px; padding: 6px 13px; cursor: var(--cur-hand);
             font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px;
             flex-shrink: 0;
         }
@@ -3510,7 +3607,7 @@ body.reduced-motion .snap-layer-shade { display: none; }
     text-transform: uppercase;
     padding: 13px 10px;
     border-radius: 8px;
-    cursor: pointer;
+    cursor: var(--cur-hand);
     border: 1px solid;
     transition: all 0.18s ease;
 }
@@ -3594,7 +3691,7 @@ body.reduced-motion .snap-layer-shade { display: none; }
    is unreachable by gamepad (see snap-intro.js), and the tag says why. */
 .splash-btn-halloween.is-locked {
     filter: saturate(0.3) brightness(0.65);
-    cursor: not-allowed;
+    cursor: var(--cur-no);
 }
 /* Label colour as the fill, background colour as the text, like the other tiles' pills. */
 .splash-btn-halloween .splash-btn-tag { background: #ff7518; color: #2a0d12; }
@@ -3627,7 +3724,7 @@ body.reduced-motion .snap-layer-shade { display: none; }
     box-shadow: 0 0 24px rgba(255, 122, 0, 0.4);
     transform: translateY(-2px);
 }
-.season-card-btn-hw:disabled { opacity: 0.35; cursor: not-allowed; }
+.season-card-btn-hw:disabled { opacity: 0.35; cursor: var(--cur-no); }
 /* The quiet way out, under the orange one. */
 .season-card-btn-ghost {
     background: transparent;
@@ -3686,7 +3783,7 @@ body.reduced-motion .snap-layer-shade { display: none; }
     color: inherit;
     font: inherit;
     text-align: left;
-    cursor: pointer;
+    cursor: var(--cur-hand);
 }
 .hw-slot-main > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hw-slot-lead {
@@ -3708,7 +3805,7 @@ body.reduced-motion .snap-layer-shade { display: none; }
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.7rem;
     line-height: 1;
-    cursor: pointer;
+    cursor: var(--cur-hand);
 }
 .hw-slot-remove:hover { border-color: #ff6b6b; color: #ff6b6b; }
 .hw-pool {
@@ -3729,7 +3826,7 @@ body.reduced-motion .snap-layer-shade { display: none; }
     background: linear-gradient(135deg, #1a1326 0%, #0d0a14 100%);
     color: #fff;
     text-align: left;
-    cursor: pointer;
+    cursor: var(--cur-hand);
     transition: all 0.15s ease;
 }
 .hw-tile-name {
@@ -3744,7 +3841,7 @@ body.reduced-motion .snap-layer-shade { display: none; }
     background: linear-gradient(135deg, #3a1d00 0%, #1a0d05 100%);
     border-color: rgba(255, 140, 26, 0.6);
 }
-.hw-tile:disabled { opacity: 0.4; cursor: not-allowed; }
+.hw-tile:disabled { opacity: 0.4; cursor: var(--cur-no); }
 .hw-tile-count {
     position: absolute;
     top: 6px;

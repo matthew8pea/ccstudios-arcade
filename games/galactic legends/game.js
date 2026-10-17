@@ -896,6 +896,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // ── KEY BINDINGS ───────────────────────────────────────────
             // Which key does each battle action. Values are normalizeKey() names:
             // one lowercase character, or a KeyboardEvent.key name like 'Shift'.
+            // A letter or digit names the PHYSICAL key (KeyW is 'w' on every
+            // layout), so these defaults sit under the same fingers on AZERTY and
+            // QWERTZ — see normalizeKey() and keyFaces below for the labels.
             // The arrow keys are not in here and always move as well, so a player
             // who rebinds W A S D somewhere odd can still walk with the arrows.
             // Rebound from Settings ▸ Controls (see the CONTROLS OVERLAY block),
@@ -930,10 +933,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return out;
             }
-            /** How a binding reads on screen: 'Space' for ' ', 'W' for 'w'. */
+            /*  What a physical letter key has printed on it on this keyboard:
+             *  'w' -> 'Z' on AZERTY, 'y' -> 'Z' on QWERTZ, nothing at all on
+             *  QWERTY. Filled from navigator.keyboard.getLayoutMap() where a
+             *  browser offers it (Chromium, on https) and otherwise learnt from
+             *  the key events themselves, so the controls list and the "Press a
+             *  key…" capture show the letter the player actually sees.          */
+            const keyFaces = new Map();
+            function rememberKeyFace(letter, e) {
+                const face = e && e.key;
+                if (typeof face !== 'string' || face.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) return;
+                if (/[^\x00-\x1f\x7f ]/u.test(face)) keyFaces.set(letter, face.toUpperCase());
+            }
+            function learnKeyboardLayout() {
+                const kb = navigator.keyboard;
+                if (!kb || typeof kb.getLayoutMap !== 'function') return;
+                try {
+                    kb.getLayoutMap().then(map => {
+                        for (let c = 65; c <= 90; c++) {
+                            const letter = String.fromCharCode(c + 32);
+                            const face = map.get('Key' + String.fromCharCode(c));
+                            if (typeof face === 'string' && face.length === 1 && face.trim()) keyFaces.set(letter, face.toUpperCase());
+                        }
+                    }).catch(() => {});
+                } catch (e) {}
+            }
+            learnKeyboardLayout();
+            /** How a binding reads on screen: 'Space' for ' ', 'W' for 'w' — or
+             *  'Z' for 'w' on a keyboard that prints Z there. */
             function keyLabel(k) {
                 if (k === ' ') return 'Space';
-                if (k && k.length === 1) return k.toUpperCase();
+                if (k && k.length === 1) return (keyFaces.get(k) || k).toUpperCase();
                 return k || '?';
             }
             function boundKeyLabel(action) { return keyLabel(keyBindings[action]); }
@@ -1080,7 +1110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // ── WEAPON EMOJI MAP ───────────────────────────────────────
-            const weaponEmoji = { lightsaber:'⚔️', darksaber:'🖤', blaster:'🔫', zap:'⚡', staff:'🪄', bowcaster:'🏹', wrench:'🔧', lightning:'🌩️', computer:'💻', minigun:'💥', beam:'🔆', guards:'🛡️', sniper:'🎯', vibroblade:'🗡️', flamethrower:'🔥', submachine:'🔫', unarmed:'✋', iceblast:'❄️', repulsor:'💠', webshooter:'🕸️', claws:'🦠', zeroenergy:'🌀', mjolnir:'🔨', laevateinn:'🗡️', icedagger:'🗡️', glock:'🔫', gammafists:'👊', thingfists:'👊', pantherclaws:'🐾', scimitar:'🗡️', grootfists:'🌳', stormbreaker:'🪓', lasercannon:'☄️', destroyergun:'🔆', bow:'🏹', dualglocks:'🔫', shield:'🛡️', sonictaser:'⚡', mongerfists:'👊', abomfists:'👊', gauntletfists:'👊', realitystaff:'🔮', antmanfists:'👊', antbite:'🐜', poisonspit:'☣️', quadblaster:'💥', hydrapistol:'🔫', katanas:'⚔️', skeletonsword:'🗡️', halloweenblaster:'🎃' };
+            const weaponEmoji = { lightsaber:'⚔️', darksaber:'🖤', blaster:'🔫', zap:'⚡', staff:'🪄', bowcaster:'🏹', wrench:'🔧', lightning:'🌩️', computer:'💻', minigun:'💥', beam:'🔆', guards:'🛡️', sniper:'🎯', vibroblade:'🗡️', flamethrower:'🔥', submachine:'🔫', unarmed:'✋', iceblast:'❄️', repulsor:'💠', webshooter:'🕸️', claws:'🦠', zeroenergy:'🌀', mjolnir:'🔨', laevateinn:'🗡️', icedagger:'🗡️', glock:'🔫', gammafists:'👊', thingfists:'👊', pantherclaws:'🐾', scimitar:'🗡️', grootfists:'🌳', stormbreaker:'🪓', lasercannon:'☄️', destroyergun:'🔆', bow:'🏹', dualglocks:'🔫', shield:'🛡️', sonictaser:'⚡', mongerfists:'👊', abomfists:'👊', gauntletfists:'👊', realitystaff:'🔮', antmanfists:'👊', antbite:'🐜', poisonspit:'☣️', quadblaster:'💥', hydrapistol:'🔫', katanas:'⚔️', skeletonsword:'🗡️', halloweenblaster:'🎃', pumpkinlauncher:'🎃' };
             const factionEmoji = { heroes:'🔵', villains:'🔴', secret:'🟣' };
 
 
@@ -1142,10 +1172,11 @@ document.addEventListener('DOMContentLoaded', () => {
              *  `halloween: true`, the way the Marvel cast carries `marvel`, and
              *  validate.js checks the flag and this list against each other.
              *
-             *  Four of the six are free with the toggle. Lord Treat and Lord Trick
+             *  Six of the eight are free with the toggle. Lord Treat and Lord Trick
              *  are earned, each by five round wins as the general below them — see
              *  HALLOWEEN_LORD_UNLOCKS. Neither is sold in the Shop: the general is
-             *  the price.
+             *  the price. The Giant stands on both sides, the Twisted Giant being
+             *  the Burnt Legion's (THE HALLOWEEN GIANTS, beside the shields).
              *
              *  The Halloween event (THE HALLOWEEN EVENT, further down) draws its
              *  good guys from the heroes column here, so a fighter added to it later
@@ -1153,10 +1184,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const HALLOWEEN_SEASON = {
                 id: 'halloween',
                 label: 'Halloween',
-                heroes:   { title: 'The Bone Guard',   ids: ['skeleton', 'hawlo', 'lordtreat'] },
-                villains: { title: 'The Burnt Legion', ids: ['burntskeleton', 'wheen', 'lordtrick'] }
+                heroes:   { title: 'The Bone Guard',   ids: ['skeleton', 'wheen', 'halloweengiant', 'lordtreat'] },
+                villains: { title: 'The Burnt Legion', ids: ['burntskeleton', 'hawlo', 'twistedgiant', 'lordtrick'] }
             };
             function halloweenSeason() { return HALLOWEEN_SEASON; }
+
+            // ── DUO FIGHTS ─────────────────────────────────────────────
+            // 2v2 in Freeplay: an AI partner beside the player and one beside the
+            // opponent. Declared up here, with the difficulty, because
+            // loadGameSettings() reads duoMode during boot, long before the
+            // opponent-screen code has run; THE DUO, beside showOpponentPicker(),
+            // has the rest.
+            let duoMode = false;      // the switch on the opponent screen; saved with the settings
+            const duoPick = { partnerId: null, opponentId: null, enemyPartnerId: null }; // the picks in progress
+            let seriesDuo = null;     // { partnerId, enemyPartnerId } for the series on; null in a duel
 
             // ── DIFFICULTY ─────────────────────────────────────────────
             let currentDifficulty = 'normal';
@@ -2410,7 +2451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const banishFrom = battleSession;
                 setTimeout(() => {
                     if (banishFrom !== battleSession) return;
-                    setupGame(playerId, nextOpp.id, { carryHp: carried });
+                    setupGame(playerId, nextOpp.id, { carryHp: carried, duo: seriesDuo });
                 }, 0);
             }
 
@@ -2933,7 +2974,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const saved = loadVersioned('galacticDuelHalloween', {});
                     const fallen = saved && saved.fallen;
                     if (fallen && typeof fallen === 'object') {
-                        Object.keys(fallen).forEach(id => { if (fallen[id]) halloweenFallen[id] = true; });
+                        // Only a fighter the event can still field stays fallen: a
+                        // general moved to the villains (Hawlo, 2026-10-17) cannot be
+                        // on the team again, so an old save's death of his is let go
+                        // rather than greying him out across the roster for 95 credits.
+                        const pool = halloweenPoolIds();
+                        Object.keys(fallen).forEach(id => { if (fallen[id] && pool.includes(id)) halloweenFallen[id] = true; });
                     }
                 } catch (e) { halloweenFallen = {}; }
             }
@@ -2944,8 +2990,10 @@ document.addEventListener('DOMContentLoaded', () => {
              *  300 and a blaster at 150, so swapping it for their blaster takes off
              *  150, and Paz Vizsla's 250 for 35 more HP puts a point of health at
              *  about 1.4 credits. The Halloween heroes are priced the same way, with
-             *  something on top for a shield and a gun that explodes.             */
-            const HALLOWEEN_WORTH = { fox: 36, cody: 43, skeleton: 60, hawlo: 100, lordtreat: 170 };
+             *  something on top for a shield and a gun that explodes. The Giant has
+             *  no shield and no summon, but 350 HP and a 70-point launcher: 160,
+             *  between a general and a lord.                                      */
+            const HALLOWEEN_WORTH = { fox: 36, cody: 43, skeleton: 60, wheen: 100, lordtreat: 170, hawlo: 100, halloweengiant: 160 };
             function halloweenRevivePrice(id) {
                 const worth = HALLOWEEN_WORTH[id];
                 return worth ? Math.round(worth * 0.95) : 50;
@@ -3748,8 +3796,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 'wrixel': 'Free with the Zero Event: clear the event and he is on the roster, at no cost and from no shop',
                                 // Read off the table that grants them, so the hint
                                 // cannot quote a different number from the rule.
-                                'lordtreat': `Special unlock: Win ${HALLOWEEN_LORD_UNLOCKS.lordtreat.wins} rounds as General Hawlo`,
-                                'lordtrick': `Special unlock: Win ${HALLOWEEN_LORD_UNLOCKS.lordtrick.wins} rounds as General Wheen`,
+                                'lordtreat': `Special unlock: Win ${HALLOWEEN_LORD_UNLOCKS.lordtreat.wins} rounds as General Wheen`,
+                                'lordtrick': `Special unlock: Win ${HALLOWEEN_LORD_UNLOCKS.lordtrick.wins} rounds as General Hawlo`,
                             };
                             hint = unlockHints[char.secretUnlock] || 'Unlock through special conditions';
                         }
@@ -4151,7 +4199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 padding: 8px 16px;
                                 font-family:${getUiFontStack()};
                                 font-size: 0.8rem;
-                                cursor: pointer;
+                                cursor: var(--cur-hand);
                                 font-weight: bold;
                                 white-space: nowrap;
                             "
@@ -4306,7 +4354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 padding: 8px 16px;
                                 font-family:${getUiFontStack()};
                                 font-size: 0.8rem;
-                                cursor: ${isPurchased || eventLocked ? 'default' : canAfford ? 'pointer' : 'not-allowed'};
+                                cursor: ${isPurchased || eventLocked ? 'var(--cur-arrow)' : canAfford ? 'var(--cur-hand)' : 'var(--cur-no)'};
                                 font-weight: bold;
                             "
                             ${isPurchased || eventLocked ? 'disabled' : ''}
@@ -4374,7 +4422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 padding: 8px 16px;
                                 font-family:${getUiFontStack()};
                                 font-size: 0.8rem;
-                                cursor: ${owned ? 'default' : canAfford ? 'pointer' : 'not-allowed'};
+                                cursor: ${owned ? 'var(--cur-arrow)' : canAfford ? 'var(--cur-hand)' : 'var(--cur-no)'};
                                 font-weight: bold;
                             "
                             ${owned ? 'disabled' : ''}
@@ -4415,6 +4463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const heading = document.createElement('div');
                 heading.style.cssText = `font-family:${getUiFontStack()};font-size:0.7rem;letter-spacing:2px;color:rgba(255,255,255,0.35);margin-top:8px;`;
                 heading.textContent = '🎃 REVIVE A FALLEN FIGHTER';
+                heading.id = 'shopReviveHeading';
                 shopItemsContainer.appendChild(heading);
 
                 fallen.forEach(char => {
@@ -4449,7 +4498,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 padding: 8px 16px;
                                 font-family:${getUiFontStack()};
                                 font-size: 0.8rem;
-                                cursor: ${canAfford ? 'pointer' : 'not-allowed'};
+                                cursor: ${canAfford ? 'var(--cur-hand)' : 'var(--cur-no)'};
                                 font-weight: bold;
                             "
                         >${cost} CR</button>
@@ -4471,6 +4520,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateCreditsDisplay();
                 renderShopItems();
                 rebuildAllRosters();
+                if (opponentMenu.style.display !== 'none' && selectedPlayerCharId) rebuildOpponentRosters();
                 updateSecretFactionSectionVisibility();
                 showAnnouncement(`${char.name} is back on the roster.`, char.color, 4000, '🎃 REVIVED', 100);
             }
@@ -4559,23 +4609,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const btnKamino = document.getElementById('btnKamino');
             if (btnKamino) btnKamino.addEventListener('click', openCreator);
 
-            const btnShop = document.getElementById('btnShop');
-            if (btnShop) {
-                btnShop.addEventListener('click', () => {
-                    updateCreditsDisplay();
-                    renderShopItems();
-                    // Everything on the shelf has now been shown, so the tile's
-                    // "n new" pill only counts what is listed after this.
-                    markShopSeen();
-                    shopOverlay.style.display = 'flex';
-                });
+            /** Open the Shop. `atRevive` scrolls it to the fallen fighters' rows:
+             *  that is where a fallen roster button sends the player, and the
+             *  overlay is fixed over the whole page, so it opens from the roster
+             *  and the opponent screen as well as from the splash tile. */
+            function openShop(atRevive = false) {
+                updateCreditsDisplay();
+                renderShopItems();
+                // Everything on the shelf has now been shown, so the tile's
+                // "n new" pill only counts what is listed after this.
+                markShopSeen();
+                shopOverlay.style.display = 'flex';
+                if (atRevive) {
+                    const heading = document.getElementById('shopReviveHeading');
+                    if (heading) setTimeout(() => heading.scrollIntoView({ block: 'start' }), 0);
+                }
             }
-            shopCloseBtn.addEventListener('click', () => {
+            const btnShop = document.getElementById('btnShop');
+            if (btnShop) btnShop.addEventListener('click', () => openShop());
+            function closeShop() {
                 shopOverlay.style.display = 'none';
                 refreshSplashState();   // a purchase changes credits and the sub-line
-            });
+                // Opened from the opponent screen (a fallen button there), a revive
+                // has to show up in its columns without leaving the screen.
+                if (opponentMenu.style.display !== 'none' && selectedPlayerCharId) rebuildOpponentRosters();
+            }
+            shopCloseBtn.addEventListener('click', closeShop);
             shopOverlay.addEventListener('click', (e) => {
-                if (e.target === shopOverlay) shopOverlay.style.display = 'none';
+                if (e.target === shopOverlay) closeShop();
             });
 
             // Credits overlay
@@ -4984,6 +5045,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     seenFirstFightCard = !!saved.seenFirstFightCard;
                     keyBindings = sanitizeKeyBindings(saved.keyBindings);
                     hasWonSeries = !!saved.hasWonSeries;
+                    duoMode = !!saved.duoMode;
                     shopSeenIds = Array.isArray(saved.shopSeenIds) ? saved.shopSeenIds.filter(id => typeof id === 'string') : [];
                     // Sprites — kept verbatim rather than filtered by build, so a
                     // save round-tripped through the shipped game comes back to a
@@ -5062,6 +5124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     seenFirstFightCard,
                     keyBindings,
                     hasWonSeries,
+                    duoMode,
                     shopSeenIds,
                     ownedSprites,
                     equippedSpriteId,
@@ -6067,67 +6130,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 // to share is tuned for a wrench.
                 punch:                0.12,
             };
-            const sfxSounds = {
-                zap:                  new Audio(SFX_DIR + 'Zap.mp3'),
-                forceLightning:       new Audio(SFX_DIR + 'ForceLightning.mp3'),
+            const sfxSources = {
+                zap:                  SFX_DIR + 'Zap.mp3',
+                forceLightning:       SFX_DIR + 'ForceLightning.mp3',
                 // Wrench / vibroblade impacts. This used to borrow
                 // LightsaberClash.mp3 as a stand-in, which is why a wrench sounded
                 // like a blade — the sounds folder ships BluntHit.mp3, so it uses it.
-                bluntHit:             new Audio(SFX_DIR + 'BluntHit.mp3'),
-                blasterShot:          new Audio(SFX_DIR + 'Blaster.mp3'),
+                bluntHit:             SFX_DIR + 'BluntHit.mp3',
+                blasterShot:          SFX_DIR + 'Blaster.mp3',
                 // Star-Lord's Quad Blasters. They borrowed Blaster.mp3 until this
                 // shipped. 0.68s against a 620ms cooldown, so a held trigger barely
                 // overlaps itself and it needs no entry in sfxMaxDurations.
-                quadBlasterShot:      new Audio(SFX_DIR + 'QuadBlasterShot.mp3'),
+                quadBlasterShot:      SFX_DIR + 'QuadBlasterShot.mp3',
                 // The Halloween Blaster's own shot. 0.73s against an 850ms
                 // cooldown, so it never overlaps itself and needs no entry in
                 // sfxMaxDurations either.
-                halloweenBlasterShot: new Audio(SFX_DIR + 'Halloween%20Blaster%20Shot.mp3'),
-                bowcasterShot:        new Audio(SFX_DIR + 'Bowcaster.mp3'),
-                gunshot:              new Audio(SFX_DIR + 'Gunshot.mp3'),
+                halloweenBlasterShot: SFX_DIR + 'Halloween%20Blaster%20Shot.mp3',
+                bowcasterShot:        SFX_DIR + 'Bowcaster.mp3',
+                gunshot:              SFX_DIR + 'Gunshot.mp3',
                 // Both were borrowing other samples until now — the minigun fired
                 // Blaster.mp3, the sniper fired Gunshot.mp3 alongside four other guns.
-                minigun:              new Audio(SFX_DIR + 'Minigun.mp3'),
-                sniper:               new Audio(SFX_DIR + 'Sniper.mp3'),
-                dash:                 new Audio(SFX_DIR + 'Dash.mp3'),
-                lightsaberIgnite:     new Audio(SFX_DIR + 'LightsaberIgnite.mp3'),
-                lightsaberIgniteSith: new Audio(SFX_DIR + 'LightsaberIgniteSith.mp3'),
-                lightsaberHum:        new Audio(SFX_DIR + 'LightsaberHum.mp3'),
-                lightsaberHumSith:    new Audio(SFX_DIR + 'LightsaberHumSith.mp3'),
-                lightsaberClash:      new Audio(SFX_DIR + 'LightsaberClash.mp3'),
-                lightsaberDeflect:    new Audio(SFX_DIR + 'LightsaberDeflect.mp3'),
-                lightsaberSwing:      new Audio(SFX_DIR + 'LightsaberSwing.mp3'),
-                lightsaberSwingSith:  new Audio(SFX_DIR + 'LightsaberSwingSith.mp3'),
-                lightsaberThrow:      new Audio(SFX_DIR + 'LightsaberThrow.mp3'),
-                lightsaberReturn:     new Audio(SFX_DIR + 'LightsaberReturn.mp3'),
+                minigun:              SFX_DIR + 'Minigun.mp3',
+                sniper:               SFX_DIR + 'Sniper.mp3',
+                dash:                 SFX_DIR + 'Dash.mp3',
+                lightsaberIgnite:     SFX_DIR + 'LightsaberIgnite.mp3',
+                lightsaberIgniteSith: SFX_DIR + 'LightsaberIgniteSith.mp3',
+                lightsaberHum:        SFX_DIR + 'LightsaberHum.mp3',
+                lightsaberHumSith:    SFX_DIR + 'LightsaberHumSith.mp3',
+                lightsaberClash:      SFX_DIR + 'LightsaberClash.mp3',
+                lightsaberDeflect:    SFX_DIR + 'LightsaberDeflect.mp3',
+                lightsaberSwing:      SFX_DIR + 'LightsaberSwing.mp3',
+                lightsaberSwingSith:  SFX_DIR + 'LightsaberSwingSith.mp3',
+                lightsaberThrow:      SFX_DIR + 'LightsaberThrow.mp3',
+                lightsaberReturn:     SFX_DIR + 'LightsaberReturn.mp3',
                 // The Darksaber is one blade, not a faction — it gets a single set
                 // rather than the Jedi/Sith split the lightsaber has. There is
                 // deliberately no darksaberClash: it shares LightsaberClash.mp3.
-                darksaberIgnite:      new Audio(SFX_DIR + 'DarksaberIgnite.mp3'),
-                darksaberHum:         new Audio(SFX_DIR + 'DarksaberHum.mp3'),
-                darksaberSwing:       new Audio(SFX_DIR + 'DarksaberSwing.mp3'),
-                darksaberThrow:       new Audio(SFX_DIR + 'DarksaberThrow.mp3'),
-                darksaberReturn:      new Audio(SFX_DIR + 'DarksaberReturn.mp3'),
+                darksaberIgnite:      SFX_DIR + 'DarksaberIgnite.mp3',
+                darksaberHum:         SFX_DIR + 'DarksaberHum.mp3',
+                darksaberSwing:       SFX_DIR + 'DarksaberSwing.mp3',
+                darksaberThrow:       SFX_DIR + 'DarksaberThrow.mp3',
+                darksaberReturn:      SFX_DIR + 'DarksaberReturn.mp3',
                 // Electrostaff — a crackling metal pole, not a plasma blade. Up to
                 // now all seven of its wielders borrowed the lightsaber set outright.
                 // Unlike the Darksaber this one does have its own clash. There is no
                 // ElectrostaffReturn sample, so a thrown staff still comes home on
                 // the lightsaber's — see bladeReturnSfx().
-                electrostaffIgnite:   new Audio(SFX_DIR + 'ElectrostaffIgnite.mp3'),
-                electrostaffHum:      new Audio(SFX_DIR + 'ElectrostaffHum.mp3'),
-                electrostaffSwing:    new Audio(SFX_DIR + 'ElectrostaffSwing.mp3'),
-                electrostaffThrow:    new Audio(SFX_DIR + 'ElectrostaffThrow.mp3'),
-                electrostaffClash:    new Audio(SFX_DIR + 'ElectrostaffClash.mp3'),
+                electrostaffIgnite:   SFX_DIR + 'ElectrostaffIgnite.mp3',
+                electrostaffHum:      SFX_DIR + 'ElectrostaffHum.mp3',
+                electrostaffSwing:    SFX_DIR + 'ElectrostaffSwing.mp3',
+                electrostaffThrow:    SFX_DIR + 'ElectrostaffThrow.mp3',
+                electrostaffClash:    SFX_DIR + 'ElectrostaffClash.mp3',
                 // Vader's Force Choke — see the FORCE CHOKE section further down.
                 // Drop ForceChoke.mp3 into sounds/ to give it a voice; until then
                 // the loading screen's error handler counts it as resolved and the
                 // ability simply casts silently rather than blocking the boot.
-                forceChoke:           new Audio(SFX_DIR + 'ForceChoke.mp3'),
+                forceChoke:           SFX_DIR + 'ForceChoke.mp3',
                 // The neck snap that finishes a choke — a short, dry one-shot.
-                neckSnap:             new Audio(SFX_DIR + 'NeckSnap.mp3'),
+                neckSnap:             SFX_DIR + 'NeckSnap.mp3',
                 // A ~9s continuous roar. Looped and sustained rather than played
                 // per shot — see pulseFlamethrower().
-                flamethrower:         new Audio(SFX_DIR + 'Flamethrower.mp3'),
+                flamethrower:         SFX_DIR + 'Flamethrower.mp3',
 
                 // ── MARVEL ─────────────────────────────────────────────────
                 // These four filenames carry spaces as they were authored, and the
@@ -6141,40 +6204,192 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Spider-Man's alone and it is there because the primary is the
                 // fastest trigger in the season at 190ms, so one sample repeated at
                 // that rate reads as a stuck loop rather than as web-slinging.
-                webshooter1:          new Audio(SFX_DIR + 'Webshooter%201.mp3'),
-                webshooter2:          new Audio(SFX_DIR + 'Webshooter%202.mp3'),
+                webshooter1:          SFX_DIR + 'Webshooter%201.mp3',
+                webshooter2:          SFX_DIR + 'Webshooter%202.mp3',
                 // Iron Man's draw and release. The chargeup is the only sample in
                 // the game played through its ORIGINAL element rather than a clone,
                 // because it is the only one that has to be STOPPED on command —
                 // stopSound() reaches sfxSounds entries and a clone is unreachable
                 // by name. One element models one draw, which is exactly the
                 // constraint: chargeShot holds one draw at a time.
-                repulsorCharge:       new Audio(SFX_DIR + 'Repulsor%20Chargeup.mp3'),
-                repulsorShoot:        new Audio(SFX_DIR + 'Repulsor%20Shoot.mp3'),
+                repulsorCharge:       SFX_DIR + 'Repulsor%20Chargeup.mp3',
+                repulsorShoot:        SFX_DIR + 'Repulsor%20Shoot.mp3',
                 // Hawkeye's draw and loose, the second weapon to use the machinery
                 // the Repulsors brought in. The draw sample is ~1.05s against the
                 // bow's 1200ms full draw, so the last ~150ms of a maximum pull are
                 // silent — the bow's timing is a documented balance number and the
                 // sample bends to it rather than the other way round.
-                arrowCharge:          new Audio(SFX_DIR + 'Arrow%20Charge.mp3'),
-                arrowShoot:           new Audio(SFX_DIR + 'Arrow%20Shoot.mp3'),
+                arrowCharge:          SFX_DIR + 'Arrow%20Charge.mp3',
+                arrowShoot:           SFX_DIR + 'Arrow%20Shoot.mp3',
                 // A fist landing. Every blunt weapon in the game shared one clang
                 // until this arrived; now the five fist sets get their own and
                 // everything else — hammers, metal blades, claws, the shield —
                 // keeps BluntHit. See the impact branch in applyStatusAndDamage.
-                punch:                new Audio(SFX_DIR + 'Punch.mp3'),
+                punch:                SFX_DIR + 'Punch.mp3',
             };
 
-            sfxSounds.lightsaberHum.loop = true;
-            sfxSounds.lightsaberHumSith.loop = true;
-            // Same mechanics as the lightsaber hum: looped, started ~900ms after the
-            // ignite, remembered in activeSaberHumKey so a pause can restore it.
-            sfxSounds.darksaberHum.loop = true;
-            sfxSounds.electrostaffHum.loop = true;
-            // Sustained while the trigger is held — see pulseForceLightning()
-            // and pulseFlamethrower().
-            sfxSounds.forceLightning.loop = true;
-            sfxSounds.flamethrower.loop = true;
+            // Sounds that loop rather than fire once: the three hums (started
+            // ~900ms after the ignite, remembered in activeSaberHumKey so a pause
+            // can restore them) and the two streams sustained while the trigger is
+            // held — see pulseForceLightning() and pulseFlamethrower().
+            const SFX_LOOP_NAMES = new Set(['lightsaberHum', 'lightsaberHumSith', 'darksaberHum', 'electrostaffHum', 'forceLightning', 'flamethrower']);
+
+            /*  ── THE SFX ENGINE: WEB AUDIO ─────────────────────────────────────
+             *  Sound effects used to be <audio> elements, cloned for every shot.
+             *  Each clone was its own media player and its own MP3 decode, and
+             *  Chromium stops creating media players past roughly 75 at once (40
+             *  on phones): a long Minigun fight or a Halloween wave hit that
+             *  ceiling and shots went silent until the clones were collected. Now
+             *  each file is decoded ONCE into an AudioBuffer and every play is a
+             *  BufferSourceNode through one master GainNode — no player cap, the
+             *  SFX slider moves sounds already in the air (a clone kept the volume
+             *  it was born with), and a one-shot gets a touch of pitch variation
+             *  for free (SFX_PITCH_JITTER).
+             *
+             *  The rest of this file did not have to learn any of that: SfxVoice
+             *  below keeps the handful of <audio> properties the SFX code used
+             *  (paused, loop, volume, currentTime, play, pause, cloneNode, 'ended'),
+             *  so playSound()'s throttle, the clone set, the length caps and the
+             *  sustain windows all read exactly as before.
+             *
+             *  Opened from disk (file://) Chromium refuses fetch() for the files,
+             *  so there — and anywhere without an AudioContext — sfxSounds holds
+             *  real <audio> elements and everything runs the old way. Music stays
+             *  on <audio> elements everywhere: five long streams, nothing to
+             *  overlap, and a media element streams where a buffer would decode.
+             *
+             *  The context starts suspended until the first gesture (the autoplay
+             *  rule). tryStartMusic() resumes it on the same input that starts the
+             *  music, and every play() asks again, so a context the browser
+             *  suspended later wakes on the next shot.                            */
+            const sfxCtx = (() => {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                try { return new Ctx(); } catch (e) { return null; }
+            })();
+            const SFX_WEB_AUDIO = !!sfxCtx && location.protocol !== 'file:';
+            const sfxMaster = SFX_WEB_AUDIO ? sfxCtx.createGain() : null;
+            if (sfxMaster) {
+                sfxMaster.gain.value = sfxVolume;
+                sfxMaster.connect(sfxCtx.destination);
+            }
+            function resumeSfxContext() {
+                if (!sfxCtx || sfxCtx.state !== 'suspended') return;
+                try { const p = sfxCtx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+            }
+            // How far a one-shot's pitch may wander either way (3% = half a semitone):
+            // twelve Blaster bolts stop being twelve identical samples. 0 turns it off.
+            const SFX_PITCH_JITTER = 0.03;
+
+            function loadSfxBuffer(url) {
+                return fetch(url)
+                    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); })
+                    // Callback form, not the promise form: Safari's decodeAudioData
+                    // only grew the promise in 14.1.
+                    .then(data => new Promise((ok, fail) => sfxCtx.decodeAudioData(data, ok, fail)))
+                    .catch(() => null);
+            }
+
+            class SfxVoice {
+                /** `shared` is the decode an original and its clones have in common. */
+                constructor(name, shared) {
+                    this.name = name;
+                    this.loop = false;
+                    this.paused = true;
+                    this._volume = 1;
+                    this._rate = 1;
+                    this._source = null;
+                    this._gain = null;
+                    this._listeners = { ended: [], error: [] };
+                    this._shared = shared || { buffer: null, failed: false, ready: null };
+                    if (!this._shared.ready) {
+                        this._shared.ready = loadSfxBuffer(sfxSources[name]).then(buf => {
+                            this._shared.buffer = buf;
+                            if (!buf) this._shared.failed = true;
+                        });
+                    }
+                    // The loading screen counts this voice as landed when it settles.
+                    this.whenReady = this._shared.ready;
+                }
+                get volume() { return this._volume; }
+                set volume(v) {
+                    this._volume = Math.max(0, Math.min(1, Number(v) || 0));
+                    if (this._gain) this._gain.gain.setTargetAtTime(this._volume, sfxCtx.currentTime, 0.005);
+                }
+                get playbackRate() { return this._rate; }
+                set playbackRate(r) {
+                    this._rate = r;
+                    if (this._source) this._source.playbackRate.value = r;
+                }
+                // Only ever assigned 0, meaning "from the top": restarts a voice
+                // that is playing (the charge draw), nothing for one that is not.
+                get currentTime() { return 0; }
+                set currentTime(t) { if (!this.paused && this._shared.buffer) this._start(); }
+                play() {
+                    resumeSfxContext();
+                    if (this._shared.buffer) { this._start(); return Promise.resolve(); }
+                    if (this._shared.failed) return Promise.reject(new Error('sfx failed: ' + this.name));
+                    // Asked for before the decode landed: start when it does, unless
+                    // paused again in the meantime.
+                    this.paused = false;
+                    return this._shared.ready.then(() => {
+                        if (!this._shared.buffer) { this.paused = true; throw new Error('sfx failed: ' + this.name); }
+                        if (!this.paused && !this._source) this._start();
+                    });
+                }
+                pause() { this._stopSource(); this.paused = true; }
+                cloneNode() {
+                    const v = new SfxVoice(this.name, this._shared);
+                    v.loop = this.loop;
+                    v._volume = this._volume;
+                    return v;
+                }
+                addEventListener(type, fn) { if (this._listeners[type]) this._listeners[type].push(fn); }
+                removeEventListener(type, fn) {
+                    if (this._listeners[type]) this._listeners[type] = this._listeners[type].filter(f => f !== fn);
+                }
+                _emit(type) {
+                    const list = this._listeners[type];
+                    this._listeners[type] = [];   // every listener here is { once: true }
+                    list.forEach(fn => { try { fn(); } catch (e) {} });
+                }
+                _start() {
+                    this._stopSource();
+                    const src = sfxCtx.createBufferSource();
+                    src.buffer = this._shared.buffer;
+                    src.loop = this.loop;
+                    src.playbackRate.value = this._rate;
+                    const gain = sfxCtx.createGain();
+                    gain.gain.value = this._volume;
+                    src.connect(gain);
+                    gain.connect(sfxMaster);
+                    src.onended = () => {
+                        if (this._source !== src) return;   // stopped on purpose, already replaced
+                        this._source = null; this._gain = null; this.paused = true;
+                        try { gain.disconnect(); } catch (e) {}
+                        this._emit('ended');
+                    };
+                    this._source = src; this._gain = gain; this.paused = false;
+                    src.start(0);
+                }
+                _stopSource() {
+                    const src = this._source, gain = this._gain;
+                    if (!src) return;
+                    this._source = null; this._gain = null;
+                    src.onended = null;
+                    try { src.stop(0); } catch (e) {}
+                    try { src.disconnect(); } catch (e) {}
+                    try { gain.disconnect(); } catch (e) {}
+                }
+            }
+
+            // Name -> the voice (or, on file://, the <audio> element) playSound() reads.
+            const sfxSounds = {};
+            Object.keys(sfxSources).forEach(k => {
+                const snd = SFX_WEB_AUDIO ? new SfxVoice(k) : new Audio(sfxSources[k]);
+                snd.loop = SFX_LOOP_NAMES.has(k);
+                sfxSounds[k] = snd;
+            });
 
             // Dark-side blades get their own ignite / hum / swing set. Roster
             // faction is the primary signal; the colour test is the fallback that
@@ -6326,9 +6541,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return usesSithSaber(entity) ? baseName + 'Sith' : baseName;
             }
 
+            function sfxBaseVolume(name) { return sfxBaseVolumes[name] || 0.12; }
+            /** The SFX slider. Through Web Audio it is the master gain, so a sound
+             *  already playing follows the slider; a short ramp rather than a jump,
+             *  so dragging it does not zipper. The <audio> fallback bakes it into
+             *  every element's volume the way it always did. */
             function applySfxVolume() {
+                if (SFX_WEB_AUDIO) {
+                    const t = sfxCtx.currentTime;
+                    sfxMaster.gain.cancelScheduledValues(t);
+                    sfxMaster.gain.setValueAtTime(sfxMaster.gain.value, t);
+                    sfxMaster.gain.linearRampToValueAtTime(sfxVolume, t + 0.03);
+                    Object.keys(sfxSounds).forEach(k => { sfxSounds[k].volume = sfxBaseVolume(k); });
+                    return;
+                }
                 Object.keys(sfxSounds).forEach(k => {
-                    sfxSounds[k].volume = (sfxBaseVolumes[k] || 0.12) * sfxVolume;
+                    sfxSounds[k].volume = sfxBaseVolume(k) * sfxVolume;
                 });
             }
             applySfxVolume();
@@ -6484,6 +6712,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 assetsToTrack.forEach(audio => {
+                    // A Web Audio voice (see SfxVoice) lands when its decode settles,
+                    // one way or the other; the rest are <audio> elements.
+                    if (audio.whenReady) { audio.whenReady.then(bumpProgress, bumpProgress); return; }
                     try { audio.preload = 'auto'; } catch (e) {}
                     if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or better — already good to go
                         bumpProgress();
@@ -6615,7 +6846,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const FLAME_SUSTAIN_MS = 200;
             let flameSustainUntil = 0;
 
-            function playSound(name, minGapMs = 50) {
+            function playSound(name, minGapMs = 50, rate = 1) {
                 if (sfxVolume === 0) return;
                 const snd = sfxSounds[name];
                 if (!snd) return;
@@ -6634,6 +6865,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Clone for overlapping one-shots
                 const clone = snd.cloneNode();
                 clone.volume = snd.volume;
+                // Web Audio only: an <audio> clone would time-stretch instead.
+                // `rate` pitches a borrowed sample down for a bigger gun (the
+                // Pumpkin Launcher on the Halloween Blaster's shot); from disk,
+                // where these are <audio> elements, it is ignored and plays as is.
+                if (SFX_WEB_AUDIO && (SFX_PITCH_JITTER || rate !== 1)) clone.playbackRate = rate * (1 + (Math.random() * 2 - 1) * SFX_PITCH_JITTER);
                 _activeSfxClones.add(clone);
                 // Release the reference however it finishes — played out, errored,
                 // or rejected — so the set only ever holds what is really audible.
@@ -6868,6 +7104,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // The Halloween Blaster has its own sample. Its 850ms trigger never
                 // comes near the throttle.
                 else if (wk === 'halloweenblaster') playSound('halloweenBlasterShot', 60);
+                // The Giants' Pumpkin Launcher has no sample of its own, so it takes
+                // the Halloween Blaster's an octave-ish down: the same family of gun,
+                // heard as the bigger one. Over http only — see playSound.
+                else if (wk === 'pumpkinlauncher') playSound('halloweenBlasterShot', 60, 0.6);
                 else if (wk === 'minigun') playSound('minigun', 60);
                 else if (wk === 'flamethrower') pulseFlamethrower();
                 else if (wk === 'sniper' || wk === 'boomsniper') playSound('sniper', 200);
@@ -7063,6 +7303,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 MUSIC_START_EVENTS.forEach(ev => document.removeEventListener(ev, tryStartMusic, true));
             }
             function tryStartMusic() {
+                // Same gesture the browser wants for the music unlocks Web Audio.
+                resumeSfxContext();
                 if (musicStarted) return;
                 // Whatever screen we are on decides the track; at boot that is
                 // the splash, which uses the menu music.
@@ -9002,6 +9244,22 @@ document.addEventListener('DOMContentLoaded', () => {
                  *  applyStatusAndDamage — so a wall of shields is not safe from
                  *  it, only the fighter holding the one it hit.               */
                 halloweenblaster: { key: 'halloweenblaster', label: 'Halloween Blaster', damage: 30, variance: 0.10, speed: 9, cooldown: 850, spin: false, draw: 'bolt', color: '#ff7a1a', length: 22, explodes: { radius: 110, fraction: 0.5 } },
+                /*  Both Giants'. "About 70 damage a shot, and it reloads really
+                 *  slowly" is the whole brief, and it is built literally: a
+                 *  one-round magazine, so every pumpkin is followed by a reload the
+                 *  HUD shows (RELOADING...), and the reload is 2.6 seconds — three
+                 *  Halloween Blaster triggers. 70 every 2.6s is about 27 dps, under
+                 *  half a Blaster. The fight is in the one shot: dodge it or eat it.
+                 *
+                 *  Slow in the air too (7, a Blaster is 8), because a pumpkin is a
+                 *  lump and not a bolt, and the same `explodes` as the generals' gun
+                 *  so it bursts on whoever it lands on: 0.45 of the hit out to
+                 *  120px. It does not hit the fighter it struck twice — see
+                 *  halloweenblaster above.
+                 *
+                 *  Deflectable. A Jedi batting a pumpkin back at a giant is the
+                 *  best thing that can happen in this fight.                    */
+                pumpkinlauncher: { key: 'pumpkinlauncher', label: 'Pumpkin Launcher', damage: 70, variance: 0.08, speed: 7, cooldown: 500, spin: false, draw: 'pumpkin', color: '#ff8a1c', length: 16, magSize: 1, reloadMs: 2600, explodes: { radius: 120, fraction: 0.45 } },
                 // Obadiah Stane's, and the mechanic is the Mandarin's rather than a
                 // new one: `freezeMs` is read by applyFreeze() and by nothing else, and
                 // it is the only thing in the game that stops a fighter instead of
@@ -10965,7 +11223,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // that the opponent's magazine is on the HUD that stall would be
             // visible, so the timer runs every frame for everyone.
             function tickReload(e, now) {
-                if (!e.isReloading) return;
+                if (!e.isReloading) {
+                    // A one-round gun (the Giants' Pumpkin Launcher) reloads the
+                    // moment the round leaves, rather than on the next pull of the
+                    // trigger. Otherwise a player who taps fire waits out the
+                    // weapon's cooldown, then pulls again into an empty tube, and
+                    // only then starts the 2.6s, so a tap costs a second more than
+                    // a held trigger does.
+                    const cfg = e.weaponConfig;
+                    if (cfg && cfg.magSize === 1 && e.magAmmo === 0) {
+                        e.isReloading = true;
+                        e.reloadEndsAt = now + cfg.reloadMs;
+                    }
+                    return;
+                }
                 if (now >= e.reloadEndsAt) {
                     e.isReloading = false;
                     e.magAmmo = e.weaponConfig.magSize;
@@ -12180,7 +12451,9 @@ document.addEventListener('DOMContentLoaded', () => {
                      *
                      *  The two sides are the same numbers on purpose, the way Thor
                      *  and Ragnarok are: retune a line and retune its mirror. What
-                     *  tells them apart is the look and Wheen's 2% call.
+                     *  tells them apart is the look and Hawlo's 2% call. (The generals swapped
+                     *  sides on 2026-10-17 at the owner's ask: Wheen leads the Bone Guard
+                     *  now and Hawlo the Burnt Legion; each kept his own look.)
                      *
                      *  110 for a skeleton is low because a skeleton is mostly what
                      *  the generals bring with them: three at once off a Lord is
@@ -12195,11 +12468,43 @@ document.addEventListener('DOMContentLoaded', () => {
                      *  Skeleto…". The Shop, roster and announcements keep the
                      *  full name. */
                     { id: 'skeleton', name: 'Skeleton Warrior', color: '#e8e2cf', hp: 110, weapon: 'skeletonsword', saberColor: '#d9dde2', halloween: true, tacticalProfile: 'brawler', bio: 'Bone, a sword and a shield, and nothing left to lose. Hold Interact to raise the shield.' },
-                    { id: 'hawlo', name: 'General Hawlo', color: '#ff8c1a', hp: 190, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'disciplined', bio: 'Commands the Bone Guard from behind a shield. Hold Interact to block, and Q raises two Skeleton Warriors once a round.' },
+                    { id: 'wheen', name: 'General Wheen', color: '#7a2fbf', hp: 190, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'disciplined', bio: 'Commands the Bone Guard from behind a shield. Hold Interact to block, and Q raises two Skeleton Warriors once a round.' },
                     { id: 'lordtreat', name: 'Lord Treat', color: '#ffc21a', hp: 230, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'calculated', secretUnlock: 'lordtreat', bio: 'Lord of the Bone Guard. Hold Interact to block, and Q raises three Skeleton Warriors once a round.' },
+                    /*  THE GIANTS. One fighter on both sides, as asked: the Bone
+                     *  Guard's Halloween Giant and the Burnt Legion's Twisted Giant
+                     *  are the same numbers, and only the look tells them apart
+                     *  (rotten pumpkin, a green light in it, spikes and a sickly
+                     *  aura on the twisted one). Retune them together, the way Thor
+                     *  and Ragnarok are retuned.
+                     *
+                     *  "Slow but 2x bigger": `sizeMult` 2 doubles the body (the
+                     *  sprite, the target a bolt has to hit, the reach of a swing
+                     *  at him), and `speedMult` 0.6 is his walk. Both are read by
+                     *  the Character constructor off the id, so every way onto the
+                     *  field gets them. Giant-Man is the same size and walks at
+                     *  0.8; a giant who is not shrinking back in 15 seconds walks
+                     *  slower than one who is.
+                     *
+                     *  350 HP, more than anyone in the cast bar the dev team's
+                     *  Cousin Crew, because twice the target at six-tenths the speed
+                     *  means he gets hit by nearly everything. At 300 a headless
+                     *  Giant against Hawlo went down faster than General Wheen did
+                     *  at 190 (Hawlo's two skeletons cannot miss him); 350 puts a
+                     *  Blaster about 5.5s of steady hits from killing him, against
+                     *  his three pumpkins (~5.2s) for a 150 HP gunman. No shield and
+                     *  no summon: the launcher is the whole kit, so Interact and Q
+                     *  do nothing for him.
+                     *
+                     *  'disciplined', 100-220px: far enough to land a pumpkin on
+                     *  something, near enough that it has not wandered off before
+                     *  the pumpkin gets there. Free with the toggle, like the
+                     *  generals. */
+                    { id: 'halloweengiant', name: 'Halloween Giant', color: '#6b4a2b', hp: 350, weapon: 'pumpkinlauncher', halloween: true, tacticalProfile: 'disciplined', sizeMult: 2, speedMult: 0.6, bio: 'Twice the size of anyone on the field and slow on his feet. Every pumpkin hits for about 70 and bursts on whoever it lands on, then the launcher takes its time to reload.' },
                     { id: 'burntskeleton', name: 'Burnt Skeleton Warrior', arenaName: 'Burnt Skeleton', color: '#3c3c40', hp: 110, weapon: 'skeletonsword', saberColor: '#b9b2aa', halloween: true, tacticalProfile: 'brawler', bio: 'A Skeleton Warrior that went through the fire and kept the heat. Hold Interact to raise the shield.' },
-                    { id: 'wheen', name: 'General Wheen', color: '#7a2fbf', hp: 190, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'disciplined', bio: 'Commands the Burnt Legion. Hold Interact to block, and Q raises two Burnt Skeleton Warriors once a round. Now and then Lord Trick answers too.' },
+                    { id: 'hawlo', name: 'General Hawlo', color: '#ff8c1a', hp: 190, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'disciplined', bio: 'Commands the Burnt Legion. Hold Interact to block, and Q raises two Burnt Skeleton Warriors once a round. Now and then Lord Trick answers too.' },
                     { id: 'lordtrick', name: 'Lord Trick', color: '#9b1b4a', hp: 230, weapon: 'halloweenblaster', halloween: true, tacticalProfile: 'calculated', secretUnlock: 'lordtrick', bio: 'Lord of the Burnt Legion. Hold Interact to block, and Q raises three Burnt Skeleton Warriors once a round.' },
+                    // The Halloween Giant's mirror — see THE GIANTS above.
+                    { id: 'twistedgiant', name: 'Twisted Giant', color: '#3e2a4f', hp: 350, weapon: 'pumpkinlauncher', halloween: true, tacticalProfile: 'disciplined', sizeMult: 2, speedMult: 0.6, bio: 'The Halloween Giant, gone rotten and fighting for the Burnt Legion. The same size, the same slow walk and the same pumpkins, with something green burning in them.' },
 
                     /*  Reachable only by redeeming ZERO in Settings, which is also the
                      *  only door left to the event he is named for. No `marvel` flag on
@@ -12364,7 +12669,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const btn = document.createElement('button');
                 btn.className = cssClass;
                 btn.style.opacity = '0.4';
-                btn.style.cursor = 'help';
+                // The custom help cursor (CUSTOM CURSORS in styles.css): a keyword
+                // here would put the OS cursor on the one button that is a question.
+                btn.style.cursor = 'var(--cur-help)';
                 btn.innerHTML = '???';
                 btn.style.borderLeftColor = '#666666';
                 btn.style.borderLeftWidth = '3px';
@@ -12393,6 +12700,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.addEventListener('blur', hideStatCard);
                 }
 
+                return btn;
+            }
+
+            /** A fighter who fell in the Halloween event: greyed, with a skull and
+             *  a tag saying where to get them back, and the Shop a click away. They
+             *  used to be left out of the columns altogether, which read as a bug —
+             *  the Bone Guard shrank to one name with nothing to say why
+             *  (2026-10-17). Every column renders through renderRosterColumn(), so
+             *  this shows on the roster, the opponent screen and a duo's partner
+             *  pick alike; the Halloween team card has its own greyed tile.       */
+            function makeFallenButton(char, cssClass) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = cssClass + ' is-fallen';
+                btn.dataset.character = char.id;
+                btn.dataset.fallen = 'true';
+                const cost = halloweenRevivePrice(char.id);
+                btn.innerHTML = `<span style="margin-right:5px;font-size:0.9em">💀</span>${char.name}`
+                    + `<span class="fallen-tag">Fallen · ${cost} cr to revive in the Shop</span>`;
+                btn.style.borderLeftColor = '#ff8c1a';
+                btn.style.borderLeftWidth = '3px';
+                btn.title = `${char.name} fell in the Halloween event. Buy them back in the Shop for ${cost} credits.`;
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    hideStatCard();
+                    openShop(true);
+                });
                 return btn;
             }
 
@@ -12503,11 +12838,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 container.innerHTML = '';
                 [...list].sort(rosterOrder).forEach(char => {
+                    if (searchTerm && !char.name.toLowerCase().includes(searchTerm)) return;
                     // Catches retired fighters too, so none of them reaches
                     // even a locked hint button: a locked entry is an invitation to go
-                    // and buy it, and the shop no longer opens that door.
-                    if (isCharacterRetired(char)) return;
-                    if (searchTerm && !char.name.toLowerCase().includes(searchTerm)) return;
+                    // and buy it, and the shop no longer opens that door. The one
+                    // exception is a fighter who fell in the Halloween event: the
+                    // Shop does sell them back, so they stay in the column, greyed,
+                    // saying so (makeFallenButton).
+                    if (isCharacterRetired(char)) {
+                        if (isHalloweenFallen(char.id) && !char.vaulted) container.appendChild(makeFallenButton(char, cssClass));
+                        return;
+                    }
                     if (!isAvailable(char)) {
                         container.appendChild(makeLockedHintButton(char, cssClass));
                         return;
@@ -13069,9 +13410,30 @@ document.addEventListener('DOMContentLoaded', () => {
              *     combo below and killed the rest of the handler.
              *
              *  Named keys ('ArrowLeft', 'Shift', 'Escape') are longer than one
-             *  character and pass through untouched. */
+             *  character and pass through untouched.
+             *
+             *  3. LAYOUT. e.key is also the character of the player's keyboard
+             *     layout, so the W A S D defaults landed on different keys for
+             *     AZERTY (where that key prints Z) and QWERTZ players, and on
+             *     Cyrillic or Greek layouts produced letters nothing was bound to.
+             *     Letters and digits are therefore read from e.code — the PHYSICAL
+             *     key, 'KeyW' whatever is printed on it — and named 'w' as before,
+             *     so the same finger moves up on every keyboard. e.key still
+             *     supplies the label (see keyFaces), and still names every other
+             *     key: Space, Shift, punctuation, and events that carry no code
+             *     (the smoke test's synthetic ones, some extensions'). */
             function normalizeKey(e) {
-                const k = e && e.key;
+                if (!e) return null;
+                const code = e.code;
+                if (typeof code === 'string') {
+                    if (code.length === 4 && code.startsWith('Key')) {
+                        const letter = code[3].toLowerCase();
+                        rememberKeyFace(letter, e);
+                        return letter;
+                    }
+                    if (code.length === 6 && code.startsWith('Digit')) return code[5];
+                }
+                const k = e.key;
                 if (typeof k !== 'string' || k === '') return null;
                 return k.length === 1 ? k.toLowerCase() : k;
             }
@@ -14254,7 +14616,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Per-entity AI movement multiplier, on top of the tactical
                     // profile's own speedMult. 1 = normal.
-                    this.speedMult = 1;
+                    //
+                    // A roster entry can be built bigger and slower than the
+                    // standard body (`sizeMult` / `speedMult`: the Halloween
+                    // Giants). Read here, off the id, because this is the one door
+                    // every fighter comes through: the duel's two principals never
+                    // copied a roster `speedMult`, and none of the spawn helpers
+                    // knew about size. The helpers that write `data.speedMult || 1`
+                    // after this come out the same.
+                    const build = characterId ? findRosterChar(characterId) : null;
+                    this.speedMult = (build && build.speedMult) || 1;
+                    if (build && build.sizeMult) this.sizeMult = build.sizeMult;
 
                     // Next moment an arena hazard may tick damage on this entity.
                     // One shared clock across every hazard type, so standing in
@@ -14465,6 +14837,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         bladeless: true,   // game.js owns the beam and its trail
                         state: spriteState,
                         phase: spritePhase,
+                        // A one-round gun shows its round (the Giants' pumpkin)
+                        // until it is fired, and an empty tube for the reload.
+                        loaded: !(this.isReloading || this.magAmmo === 0),
                         // The kit flashes the torso inside the body transform, so
                         // the helmet, shoulders and weapon stay readable through a
                         // hit. The overlay this replaces was a flat disc in world
@@ -14565,7 +14940,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // where it would otherwise stop being readable.
                     const halfPlate = tw / 2 + 5;
                     const px = Math.min(Math.max(this.x, halfPlate + 2), canvasLogicalW - halfPlate - 2);
-                    const py = Math.max(this.y - CHARACTER_SIZE - 14, 9);
+                    // Over the head of whoever is bigger than the standard body
+                    // (a Giant, Giant-Man), or the plate sits on his face.
+                    const py = Math.max(this.y - Math.max(CHARACTER_SIZE, bodyRadius(this)) - 14, 9);
                     ctx.fillStyle = 'rgba(0,0,0,0.55)';
                     ctx.beginPath(); ctx.roundRect(px - tw/2 - 5, py - 7, tw + 10, 14, 3); ctx.fill();
                     ctx.fillStyle = this.isMainEntity ? '#ffffff' : 'rgba(255,255,255,0.7)';
@@ -14935,6 +15312,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.fillStyle = grad;
                         ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
                         ctx.globalAlpha = 1;
+                    } else if (this.weaponConfig.draw === 'pumpkin') {
+                        drawPumpkinRound(this);
                     } else {
                         ctx.rotate(this.rotation);
                         ctx.fillStyle = this.color;
@@ -15030,6 +15409,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const opp = zeroPointEncounterOpponent(playerCharId);
                 if (!opp) return;
+                // The encounter is one-on-one and starts the fight straight from its
+                // button; with the duo switch on it would skip the picks, so it
+                // waits until the switch is off.
+                if (duoMode) return;
 
                 // Secret-roster styling rather than the villain column's, so it reads
                 // as the one entry here that is not part of the ordinary roster.
@@ -15055,10 +15438,18 @@ document.addEventListener('DOMContentLoaded', () => {
             function rebuildOpponentRosters() {
                 if (!selectedPlayerCharId) return;
 
+                // Which pick this screen is taking. A duel takes one; a duo takes
+                // three in a row through these same two columns (THE DUO, below),
+                // and the step alone decides who may be clicked and what a click
+                // does.
+                const step = duoStep();
                 const opts = {
                     searchBox: oppSearchInput,
-                    isAvailable: isCharacterAvailableAsOpponent,
+                    // Your own partner is anyone you could play as; the other two
+                    // picks are opponents and go through the opponent rule.
+                    isAvailable: step === 'partner' ? isCharacterUnlocked : isCharacterAvailableAsOpponent,
                     onPick: char => {
+                        if (duoMode) { takeDuoPick(step, char); return; }
                         hideStatCard();
                         mainMenu.style.display = 'none';
                         opponentMenu.style.display = 'none';
@@ -15066,9 +15457,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     // The fighter you are already playing, marked where they appear in
                     // the opposing list — a mirror match is allowed, it just should not
-                    // be picked by accident.
+                    // be picked by accident. In a duo the picks already made are
+                    // marked solid, so the third step still shows the first two.
                     decorate: (btn, char) => {
                         if (char.id === selectedPlayerCharId) btn.style.outline = '2px dashed rgba(255,255,255,0.3)';
+                        if (duoMode && (char.id === duoPick.partnerId || char.id === duoPick.opponentId)) btn.style.outline = '2px solid rgba(74,176,255,0.7)';
                     }
                 };
 
@@ -15086,10 +15479,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pChar = findRosterChar(playerCharId);
                 if (!pChar) return;
 
-                vsBannerPlayer.textContent = pChar.name;
-                vsBannerPlayer.style.color = pChar.color;
-
-                rebuildOpponentRosters();
+                // Opening the screen starts the picks over: whoever was chosen
+                // last time belonged to the last fight. The banner, the title and
+                // both columns are painted from there.
+                resetDuoPick();
+                refreshDuoScreen();
 
                 mainMenu.style.display = 'none';
                 opponentMenu.style.display = 'flex';
@@ -15102,6 +15496,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             surpriseBtn.addEventListener('click', () => {
                 if (!selectedPlayerCharId) return;
+                // With the switch on, Surprise Me fills whichever of the three picks
+                // are still open and starts the duo.
+                if (duoMode) { surpriseDuo(); return; }
                 const all = [...characters.heroes, ...characters.villains];
                 // findRosterChar rather than a search of the two Galactic columns:
                 // every season fighter lives in characters.secret, so the old lookup
@@ -15167,6 +15564,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             backBtn.addEventListener('click', () => {
+                // In a duo, Back first takes back the last pick, so a mis-tapped
+                // partner does not cost the fighter pick as well. With nothing
+                // picked yet it leaves the screen as it always did. Escape on this
+                // screen comes through here too.
+                if (duoMode && undoDuoPick()) return;
                 playMenuMusic();
                 opponentMenu.style.display = 'none';
                 mainMenu.style.display = 'flex';
@@ -15179,6 +15581,292 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedPlayerCharId = null;
                 showSplashMenu();
             });
+
+
+            /*  ══════════════════════════════════════════════════════════════════
+             *  THE DUO — 2v2 in Freeplay
+             *  ══════════════════════════════════════════════════════════════════
+             *
+             *  An AI partner stands beside the player and one beside the opponent.
+             *  When the player's fighter falls, the partner is handed over and the
+             *  round goes on: it is lost only when both are down, and won when both
+             *  opponents are. That is the Halloween event's take-over
+             *  (halloweenTakeOver) without the run around it, which is why the two
+             *  read alike. Everything else — the series, the clock, history,
+             *  mastery, achievements, credits — is a duel's, because both sides got
+             *  a partner and the fight is as fair as it was.
+             *
+             *  PICKING. The switch on the opponent screen turns the one pick into
+             *  three through the same two columns: your partner, the opponent,
+             *  their partner. The title and the VS banner say which is live, Back
+             *  takes back the last one, and Surprise Me fills whatever is left. A
+             *  third roster on the screen was the alternative; 215 fighters do not
+             *  fit twice.
+             *
+             *  WHO MAY BE PICKED. Your partner is anyone you could play as (unlocked
+             *  and not retired); the two on the other side go through the opponent
+             *  rule like any opponent. Your partner carries the weapon forged for
+             *  them, as you do. Partners fight with their weapon and not their
+             *  Interact special — those are gated to the principal (canX() asks
+             *  isMainEntity), as the event's allies are — and gain it when they
+             *  take the lead.
+             *
+             *  STATE. duoMode is the switch (saved with the settings), duoPick the
+             *  three picks in progress, seriesDuo the pair for the series being
+             *  played: setupGame sets it from matchOpts.duo, and Next Round and
+             *  Rematch hand it back, so a duo stays a duo for the whole best-of-5.
+             *  All three are declared beside the difficulty, up top, because the
+             *  settings loader runs before this code does.
+             *
+             *  Every duo fighter carries `duoMember`. A backup trooper, a summon or
+             *  a Gamorrean guard does not, so a take-over can never hand the player
+             *  a clone, and the clock's side comparison counts only the four who
+             *  were picked.                                                          */
+            const duoToggleBtn = document.getElementById('duoToggleBtn');
+            const opponentTitle = document.getElementById('opponentTitle');
+            const vsBannerEnemy = document.getElementById('vsBannerEnemy');
+            const playerPartnerLabel = document.getElementById('playerPartnerLabel');
+            const enemyPartnerLabel = document.getElementById('enemyPartnerLabel');
+
+            function resetDuoPick() {
+                duoPick.partnerId = null;
+                duoPick.opponentId = null;
+                duoPick.enemyPartnerId = null;
+            }
+
+            /** Which pick the opponent screen is taking: 'partner', 'opponent' or
+             *  'enemyPartner'. A duel is always on 'opponent'. */
+            function duoStep() {
+                if (!duoMode) return 'opponent';
+                if (!duoPick.partnerId) return 'partner';
+                if (!duoPick.opponentId) return 'opponent';
+                return 'enemyPartner';
+            }
+
+            function paintDuoToggle() {
+                if (!duoToggleBtn) return;
+                duoToggleBtn.textContent = duoMode ? '👥 Duo: ON' : '👥 Duo: OFF';
+                duoToggleBtn.setAttribute('aria-pressed', duoMode ? 'true' : 'false');
+            }
+
+            /** Title, banner, switch and both columns, from the step we are on. */
+            function refreshDuoScreen() {
+                const pChar = findRosterChar(selectedPlayerCharId);
+                if (!pChar) return;
+                const partner = duoPick.partnerId ? findRosterChar(duoPick.partnerId) : null;
+                const opp = duoPick.opponentId ? findRosterChar(duoPick.opponentId) : null;
+                const step = duoStep();
+
+                vsBannerPlayer.textContent = partner ? `${pChar.name} & ${partner.name}` : pChar.name;
+                vsBannerPlayer.style.color = pChar.color;
+                if (vsBannerEnemy) {
+                    vsBannerEnemy.textContent = !duoMode ? '???' : opp ? `${opp.name} & ???` : '??? & ???';
+                    vsBannerEnemy.style.color = opp ? opp.color : '';
+                }
+                if (opponentTitle) {
+                    opponentTitle.textContent = step === 'partner' ? 'Choose Your Partner'
+                        : step === 'enemyPartner' ? 'Choose Their Partner'
+                        : 'Choose Your Opponent';
+                }
+                paintDuoToggle();
+                rebuildOpponentRosters();
+            }
+
+            if (duoToggleBtn) duoToggleBtn.addEventListener('click', () => {
+                duoMode = !duoMode;
+                saveGameSettings();
+                resetDuoPick();
+                refreshDuoScreen();
+            });
+
+            /** One pick taken with the switch on. The third one starts the fight;
+             *  the others move the screen on to the next step. */
+            function takeDuoPick(step, char) {
+                if (step === 'partner') duoPick.partnerId = char.id;
+                else if (step === 'opponent') duoPick.opponentId = char.id;
+                else duoPick.enemyPartnerId = char.id;
+                if (duoPick.partnerId && duoPick.opponentId && duoPick.enemyPartnerId) { startDuoFight(); return; }
+                hideStatCard();
+                refreshDuoScreen();
+                // Back to the top, where the title now names the next pick, and
+                // somewhere for a pad or keyboard to stand.
+                opponentMenu.scrollTop = 0;
+                setTimeout(() => { if (surpriseBtn) surpriseBtn.focus(); }, 0);
+            }
+
+            /** Take back the last pick. False when there is none, which lets Back
+             *  leave the screen instead. */
+            function undoDuoPick() {
+                if (duoPick.enemyPartnerId) duoPick.enemyPartnerId = null;
+                else if (duoPick.opponentId) duoPick.opponentId = null;
+                else if (duoPick.partnerId) duoPick.partnerId = null;
+                else return false;
+                refreshDuoScreen();
+                opponentMenu.scrollTop = 0;
+                return true;
+            }
+
+            function startDuoFight() {
+                const duo = { partnerId: duoPick.partnerId, enemyPartnerId: duoPick.enemyPartnerId };
+                const oppId = duoPick.opponentId;
+                hideStatCard();
+                mainMenu.style.display = 'none';
+                opponentMenu.style.display = 'none';
+                setupGame(selectedPlayerCharId, oppId, { duo });
+            }
+
+            /** The half of the roster a fighter stands on — heroes for a hero,
+             *  villains for a villain — out of surpriseRosterOf()'s two lists. */
+            function ownSideOf(char) {
+                const r = surpriseRosterOf(char);
+                const opposing = new Set(r.opposing.map(c => c.id));
+                const own = r.sides.filter(c => !opposing.has(c.id));
+                return own.length ? own : r.sides;
+            }
+            function pickRandomOf(list) { return list.length ? list[Math.floor(Math.random() * list.length)] : null; }
+
+            /** Surprise Me with the switch on: fill the picks not yet made and go.
+             *  Partners come from their own fighter's side of the roster — Anakin
+             *  gets a Jedi or a clone, Maul a Sith or a droid — and the opponent
+             *  from the player's opposite number, as a duel's does. None of the
+             *  duel's special rolls (Sith C-3PO, the carbonite) run here: those are
+             *  one-on-one stories. */
+            function surpriseDuo() {
+                const pChar = findRosterChar(selectedPlayerCharId);
+                if (!pChar) return;
+                const playable = c => c.id !== pChar.id && !isCharacterRetired(c) && isCharacterUnlocked(c);
+                if (!duoPick.partnerId) {
+                    const pick = pickRandomOf(ownSideOf(pChar).filter(playable))
+                        || pickRandomOf(surpriseRosterOf(pChar).sides.filter(playable));
+                    if (!pick) return;
+                    duoPick.partnerId = pick.id;
+                }
+                if (!duoPick.opponentId) {
+                    const roster = surpriseRosterOf(pChar);
+                    let pool = roster.opposing.filter(isCharacterAvailableAsOpponent);
+                    if (!pool.length) pool = roster.sides.filter(c => c.id !== pChar.id && isCharacterAvailableAsOpponent(c));
+                    if (!pool.length) pool = [...characters.heroes, ...characters.villains].filter(c => c.id !== pChar.id && isCharacterAvailableAsOpponent(c));
+                    const pick = pickRandomOf(pool);
+                    if (!pick) return;
+                    duoPick.opponentId = pick.id;
+                }
+                if (!duoPick.enemyPartnerId) {
+                    const oChar = findRosterChar(duoPick.opponentId);
+                    const fightable = c => c.id !== oChar.id && isCharacterAvailableAsOpponent(c);
+                    const pick = pickRandomOf(ownSideOf(oChar).filter(fightable))
+                        || pickRandomOf(surpriseRosterOf(oChar).sides.filter(fightable));
+                    if (!pick) return;
+                    duoPick.enemyPartnerId = pick.id;
+                }
+                startDuoFight();
+            }
+
+            /** Stand a partner beside a principal, a little behind and above them.
+             *  `hpMult` is the difficulty's health multiplier for the enemy pair and
+             *  1 for the player's — the same split setupGame makes for the two
+             *  principals. */
+            function spawnDuoPartner(id, team, beside, hpMult) {
+                const data = findRosterChar(id);
+                if (!data || !beside) return null;
+                const m = CHARACTER_SIZE * 2;
+                const x = Math.max(m, Math.min(canvasLogicalW - m, beside.x + (team === 'player' ? -70 : 70)));
+                const y = Math.max(m, Math.min(canvasLogicalH - m, beside.y - 95));
+                // Your partner carries the weapon forged for them, as you do, with
+                // the roster damage withheld in the same case (see setupGame).
+                let weaponKey = data.weapon, weaponDamage = data.weaponDamage;
+                if (team === 'player') {
+                    weaponKey = getEquippedWeaponKey(data.id, data.weapon);
+                    if (weaponKey !== data.weapon) weaponDamage = undefined;
+                }
+                const ent = new Character(x, y, data.color, data.arenaName || data.name,
+                    Math.round(effectiveCharHp(data) * hpMult), weaponKey, data.saberColor,
+                    data.isDroid, data.isWookiee, team, false, data.isClone, weaponDamage, data.id);
+                ent.tacticalProfileOverride = data.tacticalProfile || null;
+                ent.speedMult = data.speedMult || 1;
+                ent.duoMember = true;
+                entities.push(ent);
+                return ent;
+            }
+
+            /** The duo fighter on `team` who is not the principal, or null.
+             *  `aliveOnly` false also returns a dead one, for the HUD line. */
+            function duoPartnerOf(team, aliveOnly = true) {
+                for (let i = 0; i < entities.length; i++) {
+                    const e = entities[i];
+                    if (e.duoMember && e.team === team && !e.isMainEntity && (e.isAlive || !aliveOnly)) return e;
+                }
+                return null;
+            }
+
+            /** The player's fighter is dead: hand them their partner, if standing.
+             *  Returns false when there is nobody, which is the round lost. Mirrors
+             *  halloweenTakeOver(), down to letting go of the shield. */
+            function duoTakeOver() {
+                if (!seriesDuo) return false;
+                const best = duoPartnerOf('player');
+                if (!best) return false;
+                const fallen = mainPlayer;
+                fallen.isMainEntity = false;
+                best.isMainEntity = true;
+                best.shieldRaised = false;
+                mainPlayer = best;
+                // The end of the round reads pCharData for who fought it; from here
+                // that is the partner, as it is in the event.
+                pCharData = findRosterChar(best.characterId) || pCharData;
+                syncPlayerHudCard();
+                showAnnouncement(`${fallen.name} is down. You fight on as ${best.name}.`, '#4ab0ff', 4000, '👥 TAKE OVER', 100, true);
+                return true;
+            }
+
+            /** Per frame, from gameLoop: when the opponent principal falls with
+             *  their partner standing, the partner becomes mainEnemy. The HUD, the
+             *  clock's comparison and the AI hooks that run for mainEnemy alone
+             *  (updateShapelessTransform) all read it directly, and the principal
+             *  flag moves with it so the partner gains what the lead had. */
+            function updateDuoEnemyLead() {
+                if (!seriesDuo || !mainEnemy || mainEnemy.isAlive) return;
+                const next = duoPartnerOf('enemy');
+                if (!next) return;
+                const fallen = mainEnemy;
+                fallen.isMainEntity = false;
+                next.isMainEntity = true;
+                mainEnemy = next;
+                setEnemyHud(findRosterChar(next.characterId) || eCharData, next);
+                showAnnouncement(`${fallen.name} is down. ${next.name} fights on.`, '#ff6666', 3500, '👥 THEIR TURN', 100, true);
+            }
+
+            /** A side's health as one number for the clock: what the pair has left
+             *  over what the pair started with, so a lost partner weighs in. */
+            function duoSidePct(team) {
+                let hp = 0, max = 0;
+                for (let i = 0; i < entities.length; i++) {
+                    const e = entities[i];
+                    if (!e.duoMember || e.team !== team) continue;
+                    max += e.maxHealth;
+                    if (e.isAlive) hp += e.health;
+                }
+                return max > 0 ? hp / max : 0;
+            }
+
+            /** The "👥 Captain Rex" line under each HUD card: the partner in their
+             *  colour, greyed with a skull once down, hidden in a duel. Cached
+             *  writes, because updateHUD calls this every frame. */
+            function updateDuoHudLabels() {
+                const paint = (lab, team) => {
+                    if (!lab) return;
+                    const partner = seriesDuo ? duoPartnerOf(team, false) : null;
+                    if (!partner) {
+                        if (lab.style.display !== 'none') { lab.style.display = 'none'; lab._lastText = null; }
+                        return;
+                    }
+                    if (lab.style.display === 'none') lab.style.display = '';
+                    setTextCached(lab, `${partner.isAlive ? '👥' : '💀'} ${partner.name}`);
+                    const color = partner.isAlive ? partner.color : 'rgba(255,255,255,0.35)';
+                    if (lab._lastColor !== color) { lab.style.color = color; lab._lastColor = color; }
+                };
+                paint(playerPartnerLabel, 'player');
+                paint(enemyPartnerLabel, 'enemy');
+            }
 
             /** A character's health as it stands now. Applied at the point the
              *  fighter is built rather than by rewriting the roster entry, so the
@@ -15804,6 +16492,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 entities = [mainPlayer, mainEnemy];
 
+                // A duo: a partner beside each principal (THE DUO). Rebuilt every
+                // round, as the principals are; seriesDuo is what Next Round and
+                // Rematch hand back in, and a round without it is a duel.
+                seriesDuo = matchOpts.duo && matchOpts.duo.partnerId && matchOpts.duo.enemyPartnerId
+                    ? { partnerId: matchOpts.duo.partnerId, enemyPartnerId: matchOpts.duo.enemyPartnerId }
+                    : null;
+                if (seriesDuo) {
+                    mainPlayer.duoMember = true;
+                    mainEnemy.duoMember = true;
+                    spawnDuoPartner(seriesDuo.partnerId, 'player', mainPlayer, 1);
+                    spawnDuoPartner(seriesDuo.enemyPartnerId, 'enemy', mainEnemy, ds.hpMult);
+                }
+
                 // Carried health, for a match that is a continuation of one already
                 // in progress rather than a new one — the Unstable Zero Point
                 // throwing the player into a different arena is still the same fight
@@ -15925,6 +16626,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 zeroPointTerrain = null;
                 spawnCover();
                 spawnHazards();
+
+                // Paint the HUD once now rather than leave the previous round's
+                // numbers up through the countdown. The health line, the backup
+                // bars and a duo's partner lines are all written by updateHUD(),
+                // which otherwise runs only from the loop — and the loop starts
+                // after GO!, so round two of a duo opened on round one's skulls.
+                updateHUD();
 
                 // ── 3-2-1 COUNTDOWN ──────────────────────────────────
                 // Freeze the HUD timer until after the countdown
@@ -16227,14 +16935,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             /*  How big a fighter is, as a multiple of the standard body. 1 for
-             *  everyone except Ant-Man in either form and his ants, which is why
-             *  it is a field nobody else sets rather than a roster stat.
+             *  everyone except Ant-Man in either form and his ants, and the two
+             *  Halloween Giants, whose roster entries carry `sizeMult: 2` (read
+             *  by the Character constructor).
              *
              *  Read at the three places size has to mean something: a bolt
-             *  hitting a body, a swing reaching one, and the sprite. Everything
-             *  else that uses CHARACTER_SIZE (cover, walls, where the name plate
-             *  sits) stays on the standard body. A giant clipping a pillar's
-             *  edge is cosmetic; a giant a bolt passes through is not.         */
+             *  hitting a body, a swing reaching one, and the sprite — and, for
+             *  the bigger ones only, where the name plate sits and how close to
+             *  the arena edge they may stand, or a giant's head hangs off the
+             *  screen with his name across his face. Everything else that uses
+             *  CHARACTER_SIZE (cover, walls) stays on the standard body. A giant
+             *  clipping a pillar's edge is cosmetic; a giant a bolt passes
+             *  through is not.                                                 */
             function bodyScale(e) { return (e && e.sizeMult) || 1; }
             function bodyRadius(e) { return CHARACTER_SIZE * bodyScale(e); }
 
@@ -17994,7 +18706,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Also a flame weapon, and it was firing silently: same cue as the Mk 1-5.
             function startFlameBlast(e) { return fireSpecial(e, FLAME_BLAST_CONFIG, FLAME_BLAST_COOLDOWN, 'flameBlastReadyAt', pulseFlamethrower, 46); }
             /*  pulseForceLightning rather than playSound('forceLightning'): that
-             *  sample is a LOOP (see sfxSounds.forceLightning.loop), and the only
+             *  sample is a LOOP (see SFX_LOOP_NAMES), and the only
              *  thing that ever cuts it is updateForceLightningLoop() watching the
              *  sustain clock that pulseForceLightning sets. Firing it directly
              *  starts a drone that nothing turns off until the match ends.       */
@@ -18034,7 +18746,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         weapon: e.weapon, weaponConfig: e.weaponConfig,
                         maxHealth: e.maxHealth, kit: e.kit,
                         isDroid: e.isDroid, isWookiee: e.isWookiee, isClone: e.isClone,
-                        speedMult: e.speedMult,
+                        speedMult: e.speedMult, sizeMult: e.sizeMult,
                         tacticalProfileOverride: e.tacticalProfileOverride
                     };
                 }
@@ -18046,7 +18758,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     kit: (typeof SpriteKit !== 'undefined' && SpriteKit.kitFor)
                         ? SpriteKit.kitFor(target) : e.kit,
                     isDroid: target.isDroid, isWookiee: target.isWookiee, isClone: target.isClone,
-                    speedMult: target.speedMult,
+                    speedMult: target.speedMult, sizeMult: target.sizeMult,
                     tacticalProfileOverride: target.tacticalProfileOverride
                 });
 
@@ -18080,6 +18792,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.isWookiee = !!form.isWookiee;
                 e.isClone = !!form.isClone;
                 e.speedMult = form.speedMult || 1;
+                // A stolen Giant is worn at a Giant's size, and put back after.
+                e.sizeMult = form.sizeMult || 1;
                 e.tacticalProfileOverride = form.tacticalProfileOverride || null;
 
                 // Everything below is state that belonged to the weapon he was
@@ -18267,9 +18981,83 @@ document.addEventListener('DOMContentLoaded', () => {
             // Which side's shields are burnt. Read off the season rather than listed
             // again, so a villain added to that column later is drawn to match.
             const HALLOWEEN_BURNT_IDS = new Set(HALLOWEEN_SEASON.villains.ids);
-            // The red aura is the Burnt Skeleton Warriors' alone, as asked — Wheen
+            // The red aura is the Burnt Skeleton Warriors' alone, as asked — Hawlo
             // and Lord Trick are burnt by allegiance, not by fire.
             const HALLOWEEN_AURA_IDS = new Set(['burntskeleton']);
+
+            /*  ── THE HALLOWEEN GIANTS ───────────────────────────────────────
+             *  The fighter and his numbers are in the roster (THE GIANTS) and his
+             *  gun in WEAPON_LIBRARY (pumpkinlauncher); the pumpkin head is
+             *  sprite-kit's `pumpkin` helmet. What lives here is the twisted
+             *  side's look in the arena: a sickly green-to-violet haze under the
+             *  body, and pumpkins that come out rotten with a green light in them.
+             *  A pumpkin keeps the look it was fired with, so one a Jedi bats back
+             *  is still the Twisted Giant's pumpkin on its way home.           */
+            const TWISTED_GIANT_IDS = new Set(['twistedgiant']);
+            const PUMPKIN_ROUND_LOOKS = {
+                ripe:    { hi: '#ffd58a', base: '#ff8a1c', deep: '#a8400a', rib: 'rgba(110, 35, 0, 0.6)', stem: '#3f5a1e', glow: '#ffd23a' },
+                twisted: { hi: '#c49a5a', base: '#8a4a16', deep: '#2a1206', rib: 'rgba(20, 10, 0, 0.7)', stem: '#1a1f10', glow: '#8dff3a' }
+            };
+
+            function drawTwistedAura(e) {
+                const s = bodyScale(e);
+                const pulse = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(Date.now() / 420 + e.y * 0.01);
+                const r = (CHARACTER_SIZE + 10 + pulse * 5) * s;
+                const g = ctx.createRadialGradient(e.x, e.y, CHARACTER_SIZE * 0.5 * s, e.x, e.y, r);
+                g.addColorStop(0, 'rgba(120, 255, 70, 0.34)');
+                g.addColorStop(0.6, 'rgba(110, 40, 160, 0.22)');
+                g.addColorStop(1, 'rgba(60, 0, 90, 0)');
+                ctx.save();
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+
+            /** One pumpkin in flight, drawn at the origin of the Projectile's own
+             *  translate. It tumbles on the clock rather than on `spin`, which
+             *  would also make it a thrown blade to the code that reads `spin`. */
+            function drawPumpkinRound(b) {
+                if (b.pumpkinTwisted === undefined) {
+                    b.pumpkinTwisted = !!(b.owner && TWISTED_GIANT_IDS.has(b.owner.characterId));
+                }
+                const L = b.pumpkinTwisted ? PUMPKIN_ROUND_LOOKS.twisted : PUMPKIN_ROUND_LOOKS.ripe;
+                const r = 7.5;
+                ctx.rotate(b.spinAngle + (reducedMotion ? 0 : frameNow * 0.008));
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = L.glow;
+                const grad = ctx.createRadialGradient(-2.4, -2.4, 0.8, 0, 0, r * 1.2);
+                grad.addColorStop(0, L.hi);
+                grad.addColorStop(0.5, L.base);
+                grad.addColorStop(1, L.deep);
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = L.rib;
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 5; i++) {
+                    const a = (i / 5) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.quadraticCurveTo(Math.cos(a + 0.4) * r * 0.6, Math.sin(a + 0.4) * r * 0.6,
+                                         Math.cos(a) * r, Math.sin(a) * r);
+                    ctx.stroke();
+                }
+                ctx.fillStyle = L.stem;
+                ctx.fillRect(-1.4, -1.4, 2.8, 2.8);
+                // The carved face, lit from inside.
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = L.glow;
+                ctx.fillStyle = L.glow;
+                [-1, 1].forEach(sg => {
+                    ctx.beginPath();
+                    ctx.moveTo(2.2, sg * 2.6); ctx.lineTo(4.4, sg * 1.2); ctx.lineTo(4.4, sg * 4.0);
+                    ctx.closePath(); ctx.fill();
+                });
+                ctx.beginPath();
+                ctx.moveTo(5.2, -3.2); ctx.quadraticCurveTo(7.6, 0, 5.2, 3.2);
+                ctx.quadraticCurveTo(6.2, 0, 5.2, -3.2);
+                ctx.fill();
+            }
 
             function canRaiseShield(e) {
                 return !!(e && e.isAlive && HALLOWEEN_SHIELD_IDS.has(e.characterId));
@@ -18399,6 +19187,7 @@ document.addEventListener('DOMContentLoaded', () => {
              *  the Sith aura's flat fill on top would hide how dark they are, which
              *  is the other half of the look. */
             function drawBurntAura(e) {
+                if (TWISTED_GIANT_IDS.has(e.characterId)) { drawTwistedAura(e); return; }
                 if (!HALLOWEEN_AURA_IDS.has(e.characterId)) return;
                 const s = bodyScale(e);
                 const pulse = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(Date.now() / 260 + e.x * 0.01);
@@ -18422,18 +19211,18 @@ document.addEventListener('DOMContentLoaded', () => {
              *  The skeletons come up in a ring around whoever raised them and fight
              *  on that side, whoever it is — the player, or the opponent. They do
              *  NOT crumble when their general falls. A round is won when every enemy
-             *  is down, so an opposing Wheen's two burnt skeletons are two more
+             *  is down, so an opposing Hawlo's two burnt skeletons are two more
              *  fighters to beat, which is the whole of what makes the summon matter.
              *
-             *  Wheen's `callIn` is the 2% asked for: on the same press, once in
-             *  fifty, Lord Trick comes up with her skeletons. He arrives as a plain
-             *  fighter on her side — shield, Halloween Blaster — but he is not a
+             *  Hawlo's `callIn` is the 2% asked for: on the same press, once in
+             *  fifty, Lord Trick comes up with the general's skeletons. He arrives as
+             *  a plain fighter on that side — shield, Halloween Blaster — but he is not a
              *  main entity, so he cannot raise skeletons of his own. That would turn
              *  a 2% surprise into three more bodies on top of it.                 */
             const HALLOWEEN_SUMMONS = {
-                hawlo:     { unitId: 'skeleton',      count: 2 },
+                wheen:     { unitId: 'skeleton',      count: 2 },
                 lordtreat: { unitId: 'skeleton',      count: 3 },
-                wheen:     { unitId: 'burntskeleton', count: 2, callIn: { id: 'lordtrick', chance: 0.02 } },
+                hawlo:     { unitId: 'burntskeleton', count: 2, callIn: { id: 'lordtrick', chance: 0.02 } },
                 lordtrick: { unitId: 'burntskeleton', count: 3 }
             };
             // How far from the summoner the ring is raised. Clear of the body and
@@ -18517,8 +19306,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             /*  ── HALLOWEEN: THE LORDS ───────────────────────────────────────
-             *  Lord Treat is earned by winning five rounds as General Hawlo, and
-             *  Lord Trick by five as General Wheen. "Matches" is rounds here for the
+             *  Lord Treat is earned by winning five rounds as General Wheen, and
+             *  Lord Trick by five as General Hawlo. "Matches" is rounds here for the
              *  same reason it is for the Jedi Hunter: a round is the unit the game
              *  records, in the per-fighter stats this reads.
              *
@@ -18527,8 +19316,8 @@ document.addEventListener('DOMContentLoaded', () => {
              *  searching for `gameUnlocks.<flag> = true`. A computed key would pass
              *  every test and still read to it as a fighter nobody can unlock.   */
             const HALLOWEEN_LORD_UNLOCKS = {
-                lordtreat: { general: 'hawlo', wins: 5 },
-                lordtrick: { general: 'wheen', wins: 5 }
+                lordtreat: { general: 'wheen', wins: 5 },
+                lordtrick: { general: 'hawlo', wins: 5 }
             };
 
             function checkHalloweenLordUnlocks() {
@@ -18553,7 +19342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             /*  ══ THE HALLOWEEN EVENT ═══════════════════════════════════════════
              *  Six rounds against the Burnt Legion with a team of six real roster
              *  fighters: the player and five allies. The order is the owner's —
-             *  5 Burnt Skeletons three at a time, 7 four at a time, General Wheen
+             *  5 Burnt Skeletons three at a time, 7 four at a time, General Hawlo
              *  with 4, the first two again, then Lord Trick with 7. (It opened at
              *  15 / 20 / 10 / 20 and a full team died in round two; the owner cut
              *  rounds one and two to a third and had the rest scaled to match.)
@@ -18583,7 +19372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rounds: [
                     { total: 5, atOnce: 3 },
                     { total: 7, atOnce: 4 },
-                    { boss: 'wheen',     total: 4, atOnce: 3 },
+                    { boss: 'hawlo',     total: 4, atOnce: 3 },
                     { total: 5, atOnce: 3 },
                     { total: 7, atOnce: 4 },
                     { boss: 'lordtrick', total: 7, atOnce: 4 }
@@ -21091,8 +21880,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Cover push-out
                     checkEntityCoverCollision(e, tickScale);
 
-                    e.x = Math.max(CHARACTER_SIZE, Math.min(canvasLogicalW - CHARACTER_SIZE, e.x));
-                    e.y = Math.max(CHARACTER_SIZE, Math.min(canvasLogicalH - CHARACTER_SIZE, e.y));
+                    // A giant keeps his whole body on the screen; anyone smaller
+                    // than the standard body still gets the standard margin.
+                    const edge = Math.max(CHARACTER_SIZE, bodyRadius(e));
+                    e.x = Math.max(edge, Math.min(canvasLogicalW - edge, e.x));
+                    e.y = Math.max(edge, Math.min(canvasLogicalH - edge, e.y));
 
                     updateAnzellanEscorts(e, tickScale);
                 });
@@ -21181,7 +21973,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         // on steel, and the Halloween Blaster's round
                                         // already lands on BluntHit when it explodes, so
                                         // neither should ever ring like a lightsaber.
-                                        if (a.type === 'skeletonsword' || a.type === 'halloweenblaster') playSound('bluntHit', 90);
+                                        if (a.type === 'skeletonsword' || a.type === 'halloweenblaster' || a.type === 'pumpkinlauncher') playSound('bluntHit', 90);
                                         else if (a.type !== 'flamethrower') playSound('lightsaberDeflect', 90);
                                         for (let s = 0; s < 8; s++) {
                                             if (clashParticles.length >= MAX_CLASH_PARTICLES) break;
@@ -21862,6 +22654,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 renderSubBars('player', 'playerSubBars');
                 renderSubBars('enemy', 'enemySubBars');
+                updateDuoHudLabels();
 
             }
 
@@ -22194,6 +22987,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (teamSummary) teamSummary.style.display = 'none';
 
                 const seriesOver = playerWins >= SERIES_WINS_NEEDED || enemyWins >= SERIES_WINS_NEEDED;
+                const duoTag = seriesDuo ? ' · DUO' : '';
                 const nextRoundBtn = document.getElementById('nextRoundButton');
                 const rematchBtn   = document.getElementById('rematchButton');
                 const seriesDisplay = document.getElementById('seriesScoreDisplay');
@@ -22203,7 +22997,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     rematchBtn.style.display = 'inline-block';
                     const finalMsg = playerWins >= SERIES_WINS_NEEDED ? '★ SERIES VICTORY ★' : '✗ SERIES DEFEAT';
                     messageText.textContent = finalMsg;
-                    seriesDisplay.textContent = `FINAL: ${playerWins} — ${enemyWins}`;
+                    seriesDisplay.textContent = `FINAL: ${playerWins} — ${enemyWins}${duoTag}`;
 
                     if (playerWins >= SERIES_WINS_NEEDED) {
                         spawnVictoryConfetti();
@@ -22251,7 +23045,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     nextRoundBtn.style.display = 'inline-block';
                     rematchBtn.style.display = 'none';
                     messageText.textContent = message;
-                    seriesDisplay.textContent = `SERIES: ${playerWins} — ${enemyWins}`;
+                    seriesDisplay.textContent = `SERIES: ${playerWins} — ${enemyWins}${duoTag}`;
                 }
                 seriesDisplay.style.display = 'block';
 
@@ -22386,7 +23180,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!mainPlayer.isAlive) {
                     // In the Halloween event a dead fighter hands the player a living
                     // teammate; the round only ends when there is nobody to hand.
-                    if (!(halloweenRun && halloweenTakeOver())) {
+                    // A duo does the same with the one partner (duoTakeOver).
+                    if (!(halloweenRun && halloweenTakeOver()) && !duoTakeOver()) {
                         // The old Snap! also unlocked here, from dying as Fox to Vader.
                         // Krk! is specifically the player performing the neck snap, so
                         // the only place it can unlock is performNeckSnap().
@@ -22420,6 +23215,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // that is empty for the 450ms between one skeleton falling and the
                 // next walking in does not read as a cleared round.
                 updateHalloweenWave();
+                // A duo's opponent principal falling hands mainEnemy to their
+                // partner the same way, before anything below reads it.
+                updateDuoEnemyLead();
                 let anyEnemyAlive = false;
                 for (let i = 0; i < entities.length && !anyEnemyAlive; i++) {
                     const e = entities[i];
@@ -22475,8 +23273,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (seriesTimeRemaining <= 0) {
                         seriesTimeRemaining = 0;
                         if (!mainPlayer || !mainEnemy) return;
-                        const pPct = mainPlayer.health / mainPlayer.maxHealth;
-                        const ePct = mainEnemy.health / mainEnemy.maxHealth;
+                        // A duo is judged as a pair — see duoSidePct().
+                        const pPct = seriesDuo ? duoSidePct('player') : mainPlayer.health / mainPlayer.maxHealth;
+                        const ePct = seriesDuo ? duoSidePct('enemy') : mainEnemy.health / mainEnemy.maxHealth;
                         // The player has to be strictly ahead to take a round on time.
                         // A dead heat used to go to the player, which paid out a win
                         // for three minutes of hiding behind a crate with neither side
@@ -22588,7 +23387,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // "Continue" in the Halloween event: the next round of the run.
                     if (halloweenRun && !halloweenRun.over) { setupHalloweenRound(); return; }
                     isNextRound = true;
-                    setupGame(seriesPlayerCharId, seriesEnemyCharId);
+                    setupGame(seriesPlayerCharId, seriesEnemyCharId, { duo: seriesDuo });
                 });
             }
 
@@ -22613,7 +23412,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     // Start a fresh series with the same matchup and arena
                     resetSeriesAndEffects();
-                    setupGame(seriesPlayerCharId, seriesEnemyCharId);
+                    setupGame(seriesPlayerCharId, seriesEnemyCharId, { duo: seriesDuo });
                 });
             }
 
@@ -22853,7 +23652,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // cleared on blur for exactly this reason; keys were not.
             window.addEventListener('blur', resetKeyboardInput);
             document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) return;
+                if (!document.hidden) { resumeSfxContext(); return; }
                 resetKeyboardInput();
                 // Leaving the tab mid-fight pauses it. The browser stops drawing a
                 // hidden tab, so the fight was frozen anyway — but the clock was not,

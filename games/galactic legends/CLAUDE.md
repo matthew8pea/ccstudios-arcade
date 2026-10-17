@@ -18,13 +18,14 @@ install and nothing to compile.
 | `sprite-kit.js` | Draws fighters. Weapon "families" decide how a weapon is held. |
 | `snap-intro.js` | The Thanos Snap cutscene on the splash screen. Vaulted (`SNAP_INTRO_VAULTED` in `game.js`): it no longer plays by itself, and the `THANOS` redeem code plays it. |
 | `validate.js` | Data-integrity checker. Run it after any data change. |
-| `smoke.js` | Runtime smoke test: boots the page headless and plays a first match. |
+| `smoke.js` | Runtime smoke test: boots the page headless and plays a first match. `--duo` plays it as a 2v2. |
 | `fortnite-pack.js` | A content pack. **Not loaded by index.html** — see Content packs. |
 | `devlog.md` | Release notes drafted for itch.io. 2000-character limit per post. |
 | `make-zip.bat` / `make-zip.ps1` | Builds `GalacticLegends.zip` in Downloads for the itch.io upload. Allow-list of shipped files: **a new file the game loads must be added to it.** |
+| `cursors/` | The custom cursor images, five states at 1x and @2x, referenced only from `styles.css` (see CUSTOM CURSORS at its top). |
 | `fonts/` | `Creepster-Regular.ttf` (SIL OFL, licence beside it) for the Halloween cards' titles (the splash tile uses Orbitron like the others), loaded by `@font-face` in `styles.css`. |
 
-`sounds/`, `music/`, `aurebesh/`, `fonts/` are assets. `node` is **not on PATH** — use
+`sounds/`, `music/`, `aurebesh/`, `fonts/`, `cursors/` are assets. `node` is **not on PATH** — use
 `"/c/Program Files/nodejs/node.exe"`.
 
 ---
@@ -38,6 +39,35 @@ means bumping its `?v=N` in `index.html`, or browsers serve the old file.
 rotation, never deleted. `vaulted: true` on a record, or a `*_VAULTED` const for
 a feature, filtered at one point of use. The ledger is `THE VAULT — INDEX` near
 the top of `game.js`. Add a row there when you vault something.
+
+**Cursors go through the `--cur-*` variables.** Never write `cursor: pointer`
+(or `not-allowed`, `help`, `text`, `default`) as a keyword, in `styles.css`, inline
+in `index.html` or from `game.js`: write `cursor: var(--cur-hand)` (`--cur-no`,
+`--cur-help`, `--cur-text`, `--cur-arrow`). A keyword shows the OS cursor in the
+middle of the custom set. The variables and the images are explained under
+CUSTOM CURSORS at the top of `styles.css`.
+**Sound effects play through Web Audio** (SOUND EFFECTS block in `game.js`, since
+v94): `sfxSources` is the name -> URL table, `SfxVoice` decodes each file once and
+plays a BufferSourceNode per shot through `sfxMaster` (the SFX slider), and
+`sfxSounds` holds those voices. They mimic the few `<audio>` members the SFX code
+uses, so `playSound`/`stopSound`/the fades read as before. Opened from disk
+(`file://`) Chromium refuses `fetch()`, so `SFX_WEB_AUDIO` is false there and
+`sfxSounds` holds real `<audio>` elements again; test sound changes over http
+(smoke.js serves one) AND from disk. Music stays on `<audio>`. Add a sound by
+adding a row to `sfxSources` and `sfxBaseVolumes` (and `SFX_LOOP_NAMES` if it loops).
+
+**Letter and digit keys are physical.** `normalizeKey()` reads `e.code` for
+`KeyA`-`KeyZ` and `Digit0`-`Digit9` and names them `'w'`, `'4'`, so the W A S D
+defaults sit under the same fingers on AZERTY/QWERTZ/Cyrillic layouts. Labels come
+from `keyFaces` (navigator.keyboard layout map, else learnt from key events), so a
+French player's controls list reads Z Q S D. Everything else still goes by `e.key`.
+
+The five shapes are traces of the Windows Aero cursors (aero_arrow, aero_link,
+aero_unavail, aero_helpsel, beam_r) recoloured navy/cyan and scaled 1.2x around
+the Windows hotspot, so the tip sits where the OS tip sits; the hotspot numbers
+in `styles.css` belong to those images. Regenerate with
+`/mnt/project-files/tools/cursor-trace/trace.py` (`python3 -I trace.py 1.2 out 1.0 1`,
+Windows frames in its `win/` folder) rather than redrawing by hand.
 
 **Run `validate.js`.** It cross-checks characters, weapons, arenas, shop items,
 unlock flags and seasons, and prints the vault ledger. It never opens the page,
@@ -113,6 +143,7 @@ by the season toggle.
 | Halloween shield / summons / lord unlocks | `HALLOWEEN_SHIELD_IDS` / `HALLOWEEN_SUMMONS` / `HALLOWEEN_LORD_UNLOCKS` | 18228 / 18411 / 18507 |
 | Halloween event: start a run / build a round / end a round | `startHalloweenRun` / `setupHalloweenRound` / `endHalloweenRound` | 18767 / 18822 / 19025 |
 | Halloween event: waves, deaths, take-over | `updateHalloweenWave` / `onHalloweenTeamDeath` / `halloweenTakeOver` | 18934 / 18974 / 18996 |
+| Duo fights: the picks, the partners, the hand-overs | `THE DUO` block: `takeDuoPick` / `surpriseDuo` / `spawnDuoPartner` / `duoTakeOver` / `updateDuoEnemyLead` | 15220 (state `duoMode` at 1167) |
 | Shop: buy back a fallen fighter | `renderHalloweenReviveItems` / `reviveHalloweenFighter` | 4411 |
 | Roster columns | `renderRosterColumn` / `rebuildAllRosters` | 10991 / 11032 |
 | HUD cards | `syncPlayerHudCard` / `refreshHudIdentity` / `setEnemyHud` | 13649 / 13686 / 18494 |
@@ -150,6 +181,21 @@ base game ships with none. `fortnite-pack.js` is one, and `index.html` does not
 load it — adding one `<script>` tag above `game.js` puts it back. The pack file's
 own header documents what stayed behind in `game.js` and why.
 
+**A duo is a duel with a partner on each side.** The Duo switch on the opponent
+screen (`duoMode`, saved with the settings) turns the one pick into three through
+the same two columns: your partner, the opponent, their partner. The title and
+the VS banner say which step is live; Back takes back the last pick; Surprise Me
+fills what is left. `setupGame` reads `matchOpts.duo`, stores it in `seriesDuo`
+and stands a `spawnDuoPartner()` beside each principal; Next Round and Rematch
+hand `seriesDuo` back so the pair lasts the series. The four picked fighters
+carry `duoMember` (a backup trooper or a summon does not). When the player's
+fighter dies `duoTakeOver()` hands them the partner, as the event does; when the
+opponent dies `updateDuoEnemyLead()` makes their partner `mainEnemy`, with the
+principal flag. The round is won when no enemy is alive, which is the existing
+check, and on the clock the sides are compared as pairs (`duoSidePct`).
+Everything else — series, history, mastery, achievements, credits — is a duel's.
+Partners use their weapon, not their Interact special, until they take the lead.
+
 **The Halloween event is a run, not a match.** `halloweenRun` is non-null from
 `startHalloweenRun()` until the run ends or the player leaves; `setupGame` still
 builds each round, then `setupHalloweenRound()` rebuilds `entities` (the team,
@@ -158,11 +204,22 @@ and `Character.updateHealth` each have one `halloweenRun` guard; the round end
 is `endHalloweenRound()`, which reuses the result screen and relabels its
 buttons (`resetBorrowedButtonLabels()` puts them back). A named team fighter
 killed by an enemy goes into `halloweenFallen` and is saved at once; from then
-on `isCharacterRetired()` hides them everywhere until the Shop's revive row is
-bought. Skeleton Warriors (`HALLOWEEN_EXPENDABLE_IDS`) die for the run only.
+on `isCharacterRetired()` keeps them out of every pick until the Shop's revive
+row is bought. They still show in every roster column, greyed under a skull
+with the revive price (`makeFallenButton`, the one retired case
+`renderRosterColumn` draws); clicking one opens the Shop at the revive rows. Skeleton Warriors (`HALLOWEEN_EXPENDABLE_IDS`) die for the run only.
 Nothing about a run itself is saved. The splash tile opens only once
 `hasWonSeries` is true. Event rounds play `music/ThisIsHalloween.mp3`
 (`halloweenBattleMusic`, checked first in `playBattleMusic`) and nothing else does.
+
+**A roster entry can be bigger and slower.** `sizeMult` and `speedMult` on a
+character (the Halloween Giant and the Twisted Giant: 2 and 0.6) are read by the
+`Character` constructor off its id, so every way onto the field gets them.
+`bodyScale()`/`bodyRadius()` turn the size into the sprite, the bolt hit test,
+melee reach, the name plate height and the arena-edge margin; cover and walls
+stay on `CHARACTER_SIZE`. Their Pumpkin Launcher is a one-round magazine
+(`magSize: 1`, `reloadMs`), so the HUD shows the reload; sprite-kit draws the
+pumpkin in its mouth while `loaded` (passed from `Character.draw`).
 
 **The dev menu** is hidden on itch.io (`isDevMenuHost`). It carries grant
 buttons, a Groot level slider, a strict-errors toggle and a Snap replay.
@@ -177,6 +234,7 @@ pass before an upload:
 ```
 "/c/Program Files/nodejs/node.exe" validate.js
 "/c/Program Files/nodejs/node.exe" smoke.js             # add --shipped for ?debug=0
+"/c/Program Files/nodejs/node.exe" smoke.js --duo       # the same fight as a 2v2 (Rex and Dooku as partners)
 ```
 
 `smoke.js` needs only Node and Edge or Chrome (`SMOKE_BROWSER` points it at one it
